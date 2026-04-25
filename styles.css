@@ -754,6 +754,45 @@ input[type="range"] {
   font-style: normal;
 }
 
+.bar-wrap[data-chart-tip]::after {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  z-index: 30;
+  display: none;
+  width: max-content;
+  max-width: 180px;
+  padding: 6px 8px;
+  border: 1px solid #4a4037;
+  border-radius: 6px;
+  color: white;
+  background: #2e332f;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+  content: attr(data-chart-tip);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.bar-wrap[data-chart-tip]:hover::after,
+.bar-wrap[data-chart-tip]:focus-visible::after {
+  display: block;
+}
+
+.bar-wrap.edge-start[data-chart-tip]::after {
+  left: 0;
+  transform: none;
+}
+
+.bar-wrap.edge-end[data-chart-tip]::after {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
 .line-chart {
   display: block;
   width: 100%;
@@ -776,10 +815,89 @@ input[type="range"] {
   stroke-width: 3;
 }
 
+.line-chart.wine polyline,
+.metric-card.wine .sparkline polyline {
+  stroke: var(--wine);
+}
+
+.line-chart.gold polyline,
+.metric-card.gold .sparkline polyline {
+  stroke: var(--gold);
+}
+
+.line-chart.leaf polyline,
+.metric-card.leaf .sparkline polyline {
+  stroke: var(--leaf);
+}
+
+.line-chart.clay polyline,
+.metric-card.clay .sparkline polyline {
+  stroke: var(--clay);
+}
+
 .line-chart circle {
   fill: var(--wine);
   stroke: white;
   stroke-width: 1.5;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.metric-card {
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffdfa;
+}
+
+.metric-card span,
+.metric-card em {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.metric-card strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 16px;
+}
+
+.metric-card em {
+  margin-top: 2px;
+}
+
+.sparkline,
+.spark-empty {
+  width: 100%;
+  height: 44px;
+  margin-top: 7px;
+}
+
+.sparkline polyline {
+  fill: none;
+  stroke: var(--blue);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.sparkline circle {
+  fill: var(--wine);
+  stroke: white;
+  stroke-width: 1.3;
+}
+
+.spark-empty {
+  border-radius: 6px;
+  background: #f2eadf;
 }
 
 .orders,
@@ -1068,6 +1186,10 @@ input[type="range"] {
   .chart-grid {
     grid-template-columns: 1fr;
   }
+
+  .metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -1084,6 +1206,7 @@ input[type="range"] {
   .score-grid,
   .tutorial-grid,
   .brief-grid,
+  .metric-grid,
   .perk-tree,
   .forecast-grid {
     grid-template-columns: 1fr;

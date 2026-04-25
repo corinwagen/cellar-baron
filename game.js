@@ -1724,8 +1724,9 @@ function analyticsPanel() {
       </div>
       <div class="chart-grid">
         ${barChart("Monthly Revenue", state.history, "revenue", "gold")}
-        ${lineChart("Net Worth Trend", state.history, "netWorth")}
+        ${lineChart("Net Worth Trend", state.history, "netWorth", { format: money, tone: "blue" })}
       </div>
+      ${metricTrends(state.history)}
     </section>
   `;
 }
@@ -1764,23 +1765,43 @@ function barChart(title, history, key, tone) {
     <div class="chart-card">
       <div class="chart-head"><strong>${title}</strong><span>${money(max)} high</span></div>
       <div class="bar-chart ${tone}">
-        ${data.map(point => `
-          <div class="bar-wrap" ${tip(`Month ${point.month}: ${money(point[key])}`)}>
+        ${data.map((point, index) => {
+          const edgeClass = index === 0 ? " edge-start" : index === data.length - 1 ? " edge-end" : "";
+          const label = `Month ${point.month}: ${money(point[key])}`;
+          return `
+          <div class="bar-wrap${edgeClass}" tabindex="0" data-chart-tip="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">
             <span style="height: ${Math.max(3, Math.round((point[key] / max) * 100))}%;"></span>
             <em>${point.month}</em>
           </div>
-        `).join("")}
+        `;
+        }).join("")}
       </div>
     </div>
   `;
 }
 
-function lineChart(title, history, key) {
+function metricTrends(history) {
+  const metrics = [
+    { title: "Prestige", key: "prestige", tone: "wine", max: 120 },
+    { title: "Demand", key: "demand", tone: "gold", max: 130 },
+    { title: "Quality", key: "quality", tone: "leaf", max: 120 },
+    { title: "Cash", key: "cash", tone: "blue", format: money },
+    { title: "Cases", key: "cases", tone: "clay" }
+  ];
+  return `
+    <div class="metric-grid">
+      ${metrics.map(metric => sparkline(metric.title, history, metric.key, metric)).join("")}
+    </div>
+  `;
+}
+
+function lineChart(title, history, key, options = {}) {
   const data = history && history.length ? history.slice(-12) : [];
   if (!data.length) return `<div class="chart-card"><strong>${title}</strong><div class="empty">Close a month to start the graph.</div></div>`;
+  const format = options.format || (value => Math.round(value));
   const values = data.map(point => point[key]);
   const min = Math.min(0, ...values);
-  const max = Math.max(1, ...values);
+  const max = Math.max(options.max || 1, ...values);
   const range = Math.max(1, max - min);
   const points = data.map((point, index) => {
     const x = data.length === 1 ? 50 : 8 + (index / (data.length - 1)) * 84;
@@ -1789,14 +1810,52 @@ function lineChart(title, history, key) {
   }).join(" ");
   return `
     <div class="chart-card">
-      <div class="chart-head"><strong>${title}</strong><span>${money(data[data.length - 1][key])}</span></div>
-      <svg class="line-chart" viewBox="0 0 100 100" role="img" aria-label="${title}">
+      <div class="chart-head"><strong>${title}</strong><span>${format(data[data.length - 1][key])}</span></div>
+      <svg class="line-chart ${options.tone || "blue"}" viewBox="0 0 100 100" role="img" aria-label="${title}">
         <line x1="6" y1="88" x2="96" y2="88"></line>
         <polyline points="${points}"></polyline>
         ${data.map((point, index) => {
           const x = data.length === 1 ? 50 : 8 + (index / (data.length - 1)) * 84;
           const y = 88 - ((point[key] - min) / range) * 76;
-          return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.2"><title>Month ${point.month}: ${money(point[key])}</title></circle>`;
+          return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.2"><title>Month ${point.month}: ${format(point[key])}</title></circle>`;
+        }).join("")}
+      </svg>
+    </div>
+  `;
+}
+
+function sparkline(title, history, key, options = {}) {
+  const data = history && history.length ? history.slice(-12) : [];
+  if (!data.length) {
+    return `<div class="metric-card"><span>${title}</span><strong>-</strong><div class="spark-empty"></div></div>`;
+  }
+  const format = options.format || (value => Math.round(value));
+  const values = data.map(point => point[key]);
+  const min = Math.min(0, ...values);
+  const max = Math.max(options.max || 1, ...values);
+  const range = Math.max(1, max - min);
+  const points = data.map((point, index) => {
+    const x = data.length === 1 ? 50 : 6 + (index / (data.length - 1)) * 88;
+    const y = 34 - ((point[key] - min) / range) * 28;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const latest = data[data.length - 1][key];
+  const first = data[0][key];
+  const delta = latest - first;
+  const deltaText = `${delta >= 0 ? "+" : ""}${options.format ? money(delta) : Math.round(delta)}`;
+  return `
+    <div class="metric-card ${options.tone || "blue"}">
+      <div>
+        <span>${title}</span>
+        <strong>${format(latest)}</strong>
+        <em>${deltaText} / 12 mo</em>
+      </div>
+      <svg class="sparkline" viewBox="0 0 100 40" role="img" aria-label="${title} trend">
+        <polyline points="${points}"></polyline>
+        ${data.map((point, index) => {
+          const x = data.length === 1 ? 50 : 6 + (index / (data.length - 1)) * 88;
+          const y = 34 - ((point[key] - min) / range) * 28;
+          return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.8"><title>Month ${point.month}: ${format(point[key])}</title></circle>`;
         }).join("")}
       </svg>
     </div>
