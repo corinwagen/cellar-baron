@@ -233,6 +233,215 @@ const STAFF_POOL = [
   }
 ];
 
+const STAFF_ADVANCEMENTS = {
+  ines: [
+    {
+      id: "soil-ledger",
+      branch: "Field",
+      title: "Soil Ledger",
+      cost: 3,
+      text: "Turns vineyard work into steadier row recovery.",
+      effects: { vineyard: 1 }
+    },
+    {
+      id: "cover-crop-guild",
+      branch: "Ecology",
+      title: "Cover Crop Guild",
+      cost: 6,
+      requires: "soil-ledger",
+      text: "Adds sustainable vigor and keeps bad weather from compounding as hard.",
+      effects: { vineyard: 1, eventRisk: 0.94 },
+      immediate: { sustainability: 7 }
+    },
+    {
+      id: "harvest-triage",
+      branch: "Harvest",
+      title: "Harvest Triage",
+      cost: 6,
+      requires: "soil-ledger",
+      text: "Protects quality when the vineyard is under pressure.",
+      effects: { vineyard: 2 },
+      immediate: { quality: 4 }
+    }
+  ],
+  marco: [
+    {
+      id: "barrel-library",
+      branch: "Cellar",
+      title: "Barrel Library",
+      cost: 3,
+      text: "Improves blending decisions and cellar conversion.",
+      effects: { cellar: 1 }
+    },
+    {
+      id: "lees-program",
+      branch: "Texture",
+      title: "Lees Program",
+      cost: 6,
+      requires: "barrel-library",
+      text: "Builds quality and prestige in slower, premium styles.",
+      effects: { cellar: 1, brand: 1 },
+      immediate: { quality: 5 }
+    },
+    {
+      id: "bottling-spec",
+      branch: "Process",
+      title: "Bottling Spec",
+      cost: 6,
+      requires: "barrel-library",
+      text: "Reduces cellar mistakes during bottling runs.",
+      effects: { bottling: 1, bottlingCost: 0.94 }
+    }
+  ],
+  asha: [
+    {
+      id: "buyer-map",
+      branch: "Trade",
+      title: "Buyer Map",
+      cost: 3,
+      text: "Finds better-fit buyers and raises sales action output.",
+      effects: { sales: 1 }
+    },
+    {
+      id: "allocation-game",
+      branch: "Scarcity",
+      title: "Allocation Game",
+      cost: 6,
+      requires: "buyer-map",
+      text: "Turns prestige into stronger demand without racing price downward.",
+      effects: { sales: 1, brand: 1 },
+      immediate: { demand: 6 }
+    },
+    {
+      id: "export-books",
+      branch: "Wholesale",
+      title: "Export Books",
+      cost: 6,
+      requires: "buyer-map",
+      text: "Improves contract flow and gives the estate more trade leverage.",
+      effects: { sales: 2 },
+      immediate: { influence: 4 }
+    }
+  ],
+  beatrice: [
+    {
+      id: "floor-script",
+      branch: "Service",
+      title: "Floor Script",
+      cost: 3,
+      text: "Makes hospitality turns more reliable and less draining.",
+      effects: { hospitality: 1 }
+    },
+    {
+      id: "club-rituals",
+      branch: "Club",
+      title: "Club Rituals",
+      cost: 6,
+      requires: "floor-script",
+      text: "Builds direct-sales loyalty from tasting room guests.",
+      effects: { hospitality: 1, sales: 1 },
+      immediate: { demand: 4 }
+    },
+    {
+      id: "calm-harvest",
+      branch: "Culture",
+      title: "Calm Harvest",
+      cost: 6,
+      requires: "floor-script",
+      text: "Keeps the team functional when the calendar gets ugly.",
+      effects: { hospitality: 1 },
+      immediate: { morale: 8 }
+    }
+  ],
+  omar: [
+    {
+      id: "cash-calendar",
+      branch: "Finance",
+      title: "Cash Calendar",
+      cost: 3,
+      text: "Improves grant chasing and working-capital timing.",
+      effects: { finance: 1 }
+    },
+    {
+      id: "supplier-hedge",
+      branch: "Risk",
+      title: "Supplier Hedge",
+      cost: 6,
+      requires: "cash-calendar",
+      text: "Cuts fixed burn and blunts supply shocks.",
+      effects: { finance: 1, costCut: 0.96, eventRisk: 0.95 }
+    },
+    {
+      id: "quiet-covenants",
+      branch: "Banking",
+      title: "Quiet Covenants",
+      cost: 6,
+      requires: "cash-calendar",
+      text: "Improves bank confidence and gives more room to breathe.",
+      effects: { finance: 2 },
+      immediate: { influence: 6, morale: 2 }
+    }
+  ],
+  lucy: [
+    {
+      id: "house-voice",
+      branch: "Brand",
+      title: "House Voice",
+      cost: 3,
+      text: "Makes the winery story coherent across channels.",
+      effects: { brand: 1 }
+    },
+    {
+      id: "critic-dinner",
+      branch: "Luxury",
+      title: "Critic Dinner",
+      cost: 6,
+      requires: "house-voice",
+      text: "Helps strong wine convert into reputation.",
+      effects: { brand: 1, sales: 1 },
+      immediate: { prestige: 5 }
+    },
+    {
+      id: "collector-list",
+      branch: "Allocation",
+      title: "Collector List",
+      cost: 6,
+      requires: "house-voice",
+      text: "Raises direct-sales ceiling when demand is already hot.",
+      effects: { brand: 2 }
+    }
+  ],
+  samir: [
+    {
+      id: "line-balance",
+      branch: "Ops",
+      title: "Line Balance",
+      cost: 3,
+      text: "Gets more cases through the bottling line.",
+      effects: { bottling: 1 }
+    },
+    {
+      id: "maintenance-window",
+      branch: "Reliability",
+      title: "Maintenance Window",
+      cost: 6,
+      requires: "line-balance",
+      text: "Lowers bottling friction and supplier surprises.",
+      effects: { bottling: 1, bottlingCost: 0.93, eventRisk: 0.96 }
+    },
+    {
+      id: "build-sequencing",
+      branch: "Capital",
+      title: "Build Sequencing",
+      cost: 6,
+      requires: "line-balance",
+      text: "Makes construction planning cheaper and less disruptive.",
+      effects: { buildDiscount: 0.94 },
+      immediate: { morale: 3 }
+    }
+  ]
+};
+
 const BUILDINGS = [
   {
     id: "block",
@@ -514,6 +723,15 @@ const TABS = [
   { id: "people", name: "People", tip: "Senior staff, payroll, traits, and morale pressure." }
 ];
 
+const ACTION_XP = {
+  vineyard: ["ines"],
+  cellar: ["marco"],
+  bottle: ["marco", "samir"],
+  sales: ["asha", "lucy"],
+  hospitality: ["beatrice", "lucy"],
+  finance: ["omar", "samir"]
+};
+
 function rand() {
   return Math.random();
 }
@@ -577,6 +795,7 @@ function createState() {
     price: 28,
     actionsLeft: 3,
     staff: [],
+    staffProgress: {},
     staffMarket: ["ines", "asha", "marco"],
     buildings: { block: 0, tank: 1, barrel: 1, line: 0, room: 0, lab: 0 },
     rows: makeRows(4),
@@ -636,6 +855,7 @@ function loadGame() {
   if (!raw) return;
   state = JSON.parse(raw);
   ensureHistory(state);
+  ensureAllStaffProgress(state);
   helpOpen = !state.tutorialSeen;
   render();
 }
@@ -649,25 +869,50 @@ function resetGame() {
 }
 
 function staffBonus(s, key) {
-  return s.staff.reduce((sum, id) => {
+  const base = s.staff.reduce((sum, id) => {
     const person = STAFF_POOL.find(p => p.id === id);
     if (!person) return sum;
     return sum + (person.effects[key] || 0);
   }, 0);
+  return base + staffPerkBonus(s, key);
 }
 
-function staffCostMod(s) {
+function staffPerkBonus(s, key) {
+  ensureAllStaffProgress(s);
+  return s.staff.reduce((sum, id) => {
+    return sum + unlockedPerks(s, id).reduce((perkSum, perk) => perkSum + (perk.effects?.[key] || 0), 0);
+  }, 0);
+}
+
+function staffPerkProduct(s, key) {
+  ensureAllStaffProgress(s);
   return s.staff.reduce((mod, id) => {
-    const person = STAFF_POOL.find(p => p.id === id);
-    return mod * (person?.effects.costCut || 1);
+    return mod * unlockedPerks(s, id).reduce((perkMod, perk) => perkMod * (perk.effects?.[key] || 1), 1);
   }, 1);
 }
 
+function staffCostMod(s) {
+  const base = s.staff.reduce((mod, id) => {
+    const person = STAFF_POOL.find(p => p.id === id);
+    return mod * (person?.effects.costCut || 1);
+  }, 1);
+  return base * staffPerkProduct(s, "costCut");
+}
+
+function buildDiscountMod(s) {
+  const base = s.staff.reduce((m, staffId) => {
+    const person = STAFF_POOL.find(p => p.id === staffId);
+    return m * (person?.effects.buildDiscount || 1);
+  }, 1);
+  return base * staffPerkProduct(s, "buildDiscount");
+}
+
 function eventRiskMod(s) {
-  return s.staff.reduce((mod, id) => {
+  const base = s.staff.reduce((mod, id) => {
     const person = STAFF_POOL.find(p => p.id === id);
     return mod * (person?.effects.eventRisk || 1);
   }, philosophy().risk);
+  return base * staffPerkProduct(s, "eventRisk");
 }
 
 function bottlingCost(s) {
@@ -676,6 +921,7 @@ function bottlingCost(s) {
     const person = STAFF_POOL.find(p => p.id === id);
     cost *= person?.effects.bottlingCost || 1;
   });
+  cost *= staffPerkProduct(s, "bottlingCost");
   if (s.marketMods.glassShortage) cost += 1.4;
   return Math.max(1.4, cost);
 }
@@ -734,6 +980,71 @@ function reservedCases(s) {
 
 function availableCases(s) {
   return Math.max(0, s.inventory.cases - reservedCases(s));
+}
+
+function ensureStaffProgress(s, id) {
+  if (!s.staffProgress) s.staffProgress = {};
+  if (!s.staffProgress[id]) s.staffProgress[id] = { xp: 0, perks: [] };
+  if (!Array.isArray(s.staffProgress[id].perks)) s.staffProgress[id].perks = [];
+  if (typeof s.staffProgress[id].xp !== "number") s.staffProgress[id].xp = 0;
+  return s.staffProgress[id];
+}
+
+function ensureAllStaffProgress(s) {
+  if (!s) return;
+  if (!s.staffProgress) s.staffProgress = {};
+  (s.staff || []).forEach(id => ensureStaffProgress(s, id));
+}
+
+function unlockedPerks(s, staffId) {
+  const progress = ensureStaffProgress(s, staffId);
+  const defs = STAFF_ADVANCEMENTS[staffId] || [];
+  return defs.filter(perk => progress.perks.includes(perk.id));
+}
+
+function canUnlockPerk(s, staffId, perk) {
+  const progress = ensureStaffProgress(s, staffId);
+  if (progress.perks.includes(perk.id)) return false;
+  if (progress.xp < perk.cost) return false;
+  if (perk.requires && !progress.perks.includes(perk.requires)) return false;
+  return true;
+}
+
+function grantStaffXp(s, ids, amount) {
+  ids.forEach(id => {
+    if (!s.staff.includes(id)) return;
+    const progress = ensureStaffProgress(s, id);
+    progress.xp += amount;
+  });
+}
+
+function grantActionXp(s, actionId) {
+  grantStaffXp(s, ACTION_XP[actionId] || [], 2);
+}
+
+function grantMonthlyStaffXp(s) {
+  grantStaffXp(s, s.staff, 1);
+}
+
+function unlockAdvancement(staffId, perkId) {
+  if (!state || !state.staff.includes(staffId)) return;
+  const perk = (STAFF_ADVANCEMENTS[staffId] || []).find(item => item.id === perkId);
+  if (!perk || !canUnlockPerk(state, staffId, perk)) return;
+  const progress = ensureStaffProgress(state, staffId);
+  progress.xp -= perk.cost;
+  progress.perks.push(perk.id);
+  applyImmediatePerk(state, perk);
+  const person = STAFF_POOL.find(p => p.id === staffId);
+  log(state, `${person.name} advanced: ${perk.title}.`);
+  normalizeState(state);
+  render();
+}
+
+function applyImmediatePerk(s, perk) {
+  const immediate = perk.immediate || {};
+  Object.entries(immediate).forEach(([key, value]) => {
+    s[key] = (s[key] || 0) + value;
+  });
 }
 
 function addOrder(s, forcedType) {
@@ -813,10 +1124,7 @@ function buyBuilding(id) {
   const b = BUILDINGS.find(item => item.id === id);
   const owned = state.buildings[id] || 0;
   if (!b || owned >= b.max || state.actionsLeft <= 0 || state.event || state.gameOver) return;
-  const discount = state.staff.reduce((m, staffId) => {
-    const person = STAFF_POOL.find(p => p.id === staffId);
-    return m * (person?.effects.buildDiscount || 1);
-  }, 1);
+  const discount = buildDiscountMod(state);
   const cost = Math.round(b.baseCost * Math.pow(1.28, owned) * region().costMod * discount);
   if (state.cash < cost) return;
   state.cash -= cost;
@@ -839,6 +1147,7 @@ function hireStaff(id) {
   if (state.cash < signing) return;
   state.cash -= signing;
   state.staff.push(id);
+  ensureStaffProgress(state, id);
   state.staffMarket = state.staffMarket.filter(staffId => staffId !== id);
   while (state.staffMarket.length < 3) {
     const candidates = STAFF_POOL.filter(p => !state.staff.includes(p.id) && !state.staffMarket.includes(p.id));
@@ -876,6 +1185,7 @@ function useAction(id) {
   if (state.cash < cost) return;
   state.cash -= cost;
   action.apply(state);
+  grantActionXp(state, id);
   state.actionsLeft -= 1;
   normalizeState(state);
   checkGameOver();
@@ -909,6 +1219,7 @@ function monthlyTick(s) {
   const costs = fixedCosts(s);
   s.cash -= costs;
   s.inventory.glass += 120 + s.buildings.line * 70;
+  grantMonthlyStaffXp(s);
 
   applyWeather(s);
   decayAndOrders(s);
@@ -1439,9 +1750,9 @@ function lineChart(title, history, key) {
 
 function artBanner(kind, label) {
   const map = {
-    vineyard: "assets/vineyard.jpg",
-    commercial: "assets/tasting-room.jpg",
-    cellar: "assets/cellar.jpg"
+    vineyard: "assets/vineyard.png",
+    commercial: "assets/tasting-room.png",
+    cellar: "assets/cellar.png"
   };
   return `
     <section class="scene-art ${kind}" style="background-image: linear-gradient(90deg, rgba(31,36,33,.58), rgba(31,36,33,.08)), url('${map[kind]}');">
@@ -1593,10 +1904,7 @@ function buildingsPanel() {
       <div class="buildings">
         ${BUILDINGS.map(building => {
           const owned = state.buildings[building.id] || 0;
-          const discount = state.staff.reduce((m, staffId) => {
-            const person = STAFF_POOL.find(p => p.id === staffId);
-            return m * (person?.effects.buildDiscount || 1);
-          }, 1);
+          const discount = buildDiscountMod(state);
           const cost = Math.round(building.baseCost * Math.pow(1.28, owned) * region().costMod * discount);
           return `
             <div class="building">
@@ -1638,11 +1946,12 @@ function staffPanel() {
 
 function staffView(person, employed) {
   const signing = Math.round(person.salary * 1.4);
+  const progress = employed ? ensureStaffProgress(state, person.id) : null;
   return `
     <div class="staff">
       <div class="staff-head">
         <div class="staff-id">
-          <img src="assets/staff/${person.id}.jpg" alt="${person.name}" onerror="this.style.display='none'">
+          <img src="assets/${person.id}.png" alt="${person.name}" onerror="this.style.display='none'">
           <strong>${person.name}</strong>
         </div>
         <span class="tag">${person.role}</span>
@@ -1657,6 +1966,40 @@ function staffView(person, employed) {
           ? `<button class="ghost" onclick="fireStaff('${person.id}')">Release</button>`
           : `<button onclick="hireStaff('${person.id}')" ${state.cash < signing || state.staff.length >= 5 ? "disabled" : ""}>Hire ${money(signing)}</button>`}
       </div>
+      ${employed ? advancementTree(person, progress) : ""}
+    </div>
+  `;
+}
+
+function advancementTree(person, progress) {
+  const perks = STAFF_ADVANCEMENTS[person.id] || [];
+  return `
+    <div class="advancement">
+      <div class="advancement-head">
+        <strong>Advancement</strong>
+        <span class="tag">${progress.xp} XP</span>
+      </div>
+      <div class="perk-tree">
+        ${perks.map(perk => perkCard(person.id, perk, progress)).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function perkCard(staffId, perk, progress) {
+  const unlocked = progress.perks.includes(perk.id);
+  const blocked = perk.requires && !progress.perks.includes(perk.requires);
+  const affordable = progress.xp >= perk.cost;
+  const status = unlocked ? "unlocked" : blocked ? "blocked" : affordable ? "ready" : "locked";
+  const label = unlocked ? "Unlocked" : blocked ? "Requires prior perk" : `Unlock ${perk.cost} XP`;
+  return `
+    <div class="perk ${status}">
+      <div class="perk-head">
+        <span>${perk.branch}</span>
+        <strong>${perk.title}</strong>
+      </div>
+      <p>${perk.text}</p>
+      <button onclick="unlockAdvancement('${staffId}', '${perk.id}')" ${unlocked || blocked || !affordable ? "disabled" : ""}>${label}</button>
     </div>
   `;
 }
@@ -1723,6 +2066,7 @@ window.rejectOrder = rejectOrder;
 window.buyBuilding = buyBuilding;
 window.hireStaff = hireStaff;
 window.fireStaff = fireStaff;
+window.unlockAdvancement = unlockAdvancement;
 window.resolveEvent = resolveEvent;
 
 render();
