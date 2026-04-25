@@ -579,6 +579,34 @@ const EVENT_DECK = [
       { label: "Prepay supplier", cost: 9500, effect: s => { s.inventory.glass += 1000; s.influence += 2; } },
       { label: "Stretch inventory", effect: s => { s.marketMods.glassShortage = 4; s.morale -= 2; } }
     ]
+  },
+  {
+    id: "investor",
+    title: "A Growth Investor Circles the Estate",
+    body: "A polished investor offers capital, distribution access, and quarterly targets. It could fund the next leap, but the estate will answer to someone impatient.",
+    image: "assets/investor.png",
+    minMonth: 10,
+    condition: s => !s.investor && (s.prestige >= 38 || s.debt >= 45000 || s.month >= 16),
+    choices: [
+      {
+        label: "Take the term sheet",
+        effect: s => {
+          s.cash += 95000;
+          s.influence += 10;
+          s.demand += 8;
+          s.investor = { pressureMonths: 12, strikes: 0 };
+          log(s, "Investor capital arrived. Board pressure will last for the next year.");
+        }
+      },
+      {
+        label: "Stay independent",
+        effect: s => {
+          s.prestige += 3;
+          s.morale += 5;
+          s.influence -= 1;
+        }
+      }
+    ]
   }
 ];
 
@@ -804,6 +832,7 @@ function createState() {
     log: [],
     marketHeat: 52,
     marketMods: {},
+    investor: null,
     event: null,
     lastWeather: "Clear",
     tutorialSeen: false,
@@ -929,7 +958,8 @@ function bottlingCost(s) {
 function fixedCosts(s) {
   const salaries = s.staff.reduce((sum, id) => sum + (STAFF_POOL.find(p => p.id === id)?.salary || 0), 0);
   const base = 6200 + s.rows.length * 1050 + s.buildings.tank * 520 + s.buildings.barrel * 620 + s.buildings.room * 720;
-  return Math.round((base + salaries) * region().costMod * philosophy().cost * staffCostMod(s));
+  const investorOverhead = s.investor?.pressureMonths > 0 ? 4500 : 0;
+  return Math.round((base + salaries + investorOverhead) * region().costMod * philosophy().cost * staffCostMod(s));
 }
 
 function netWorth(s) {
@@ -1220,6 +1250,7 @@ function monthlyTick(s) {
   s.cash -= costs;
   s.inventory.glass += 120 + s.buildings.line * 70;
   grantMonthlyStaffXp(s);
+  applyInvestorPressure(s, costs);
 
   applyWeather(s);
   decayAndOrders(s);
@@ -1254,6 +1285,27 @@ function monthlyTick(s) {
   s.actionsLeft = 3 + (s.morale > 78 ? 1 : 0);
   s.season = seasonName(s.month);
   log(s, `Month closed: direct sales ${money(sales.revenue)}, fixed costs ${money(costs)}.`);
+}
+
+function applyInvestorPressure(s, costs) {
+  if (!s.investor || s.investor.pressureMonths <= 0) return;
+  const last = s.history.length ? s.history[s.history.length - 1] : null;
+  const revenueThisMonth = s.totalRevenue - (last?.totalRevenue || 0);
+  const missedTarget = revenueThisMonth < costs * 1.15 || s.cash < 55000;
+  if (missedTarget) {
+    s.investor.strikes += 1;
+    s.morale -= 3;
+    s.prestige -= s.investor.strikes >= 3 ? 3 : 1;
+    log(s, "Investor pressure bit into morale after a weak monthly close.");
+  } else {
+    s.demand += 2;
+    s.influence += 1;
+    log(s, "The investor liked the month and opened another commercial door.");
+  }
+  s.investor.pressureMonths -= 1;
+  if (s.investor.pressureMonths <= 0) {
+    log(s, "The investor's first-year pressure eased. The estate keeps the capital structure.");
+  }
 }
 
 function seasonName(month) {
@@ -1576,15 +1628,18 @@ function kpi(label, value) {
 function eventPanel() {
   if (!state.event) return "";
   return `
-    <section class="panel event-banner">
-      <strong>${state.event.title}</strong>
-      <div class="small">${state.event.body}</div>
-      <div class="event-buttons">
-        ${state.event.choices.map((choice, index) => `
-          <button onclick="resolveEvent(${index})" ${choice.cost && state.cash < choice.cost ? "disabled" : ""}>
-            ${choice.label}${choice.cost ? ` (${money(choice.cost)})` : ""}
-          </button>
-        `).join("")}
+    <section class="panel event-banner ${state.event.image ? "with-art" : ""}">
+      ${state.event.image ? `<img src="${state.event.image}" alt="${state.event.title}">` : ""}
+      <div>
+        <strong>${state.event.title}</strong>
+        <div class="small">${state.event.body}</div>
+        <div class="event-buttons">
+          ${state.event.choices.map((choice, index) => `
+            <button onclick="resolveEvent(${index})" ${choice.cost && state.cash < choice.cost ? "disabled" : ""}>
+              ${choice.label}${choice.cost ? ` (${money(choice.cost)})` : ""}
+            </button>
+          `).join("")}
+        </div>
       </div>
     </section>
   `;

@@ -959,6 +959,21 @@ input[type="range"] {
   background: #fff7df;
 }
 
+.event-banner.with-art {
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: start;
+}
+
+.event-banner img {
+  width: 112px;
+  aspect-ratio: 1;
+  border: 1px solid #d5be8a;
+  border-radius: 6px;
+  object-fit: cover;
+  object-position: center top;
+  background: #f1e3bf;
+}
+
 .event-banner strong {
   color: #6d4611;
 }
@@ -1076,6 +1091,15 @@ input[type="range"] {
 
   .row-card {
     grid-template-columns: 1fr;
+  }
+
+  .event-banner.with-art {
+    grid-template-columns: 1fr;
+  }
+
+  .event-banner img {
+    width: 100%;
+    max-height: 220px;
   }
 
   .hero-copy h1 {
