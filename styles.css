@@ -374,6 +374,26 @@ button:disabled {
   line-height: 1.35;
 }
 
+.season-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.season-strip span {
+  padding: 4px 7px;
+  border: 1px solid #e0cfaa;
+  border-radius: 999px;
+  color: var(--muted);
+  background: #fffdfa;
+  font-size: 11px;
+}
+
+.season-strip strong {
+  color: var(--ink);
+}
+
 .brief-card {
   text-align: left;
 }
@@ -420,6 +440,143 @@ button:disabled {
   font-size: 22px;
   line-height: 1.15;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.estate-map {
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbf7ee;
+  box-shadow: var(--shadow);
+}
+
+.map-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.map-head strong,
+.map-head span {
+  display: block;
+}
+
+.map-head strong {
+  font-size: 16px;
+}
+
+.map-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(92px, 1fr));
+  gap: 7px;
+}
+
+.estate-tile {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  aspect-ratio: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #c9bea9;
+  text-align: left;
+  background: #f3ecd9;
+}
+
+.tile-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.estate-tile.vine-tile {
+  background: #dcebcf;
+}
+
+.estate-tile.cellar,
+.estate-tile.bottle,
+.estate-tile.warehouse {
+  background: #e7ded4;
+}
+
+.estate-tile.sales,
+.estate-tile.office {
+  background: #efe1d6;
+}
+
+.estate-tile.water {
+  background: #d7e7ea;
+}
+
+.estate-tile.road,
+.estate-tile.yard {
+  background: #e9ddc4;
+}
+
+.estate-tile.open {
+  border-style: dashed;
+  background: #f8f4e9;
+}
+
+.estate-tile.rough {
+  color: #7f7669;
+  background: #eee9df;
+}
+
+.tile-label {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 100%;
+  gap: 2px;
+  padding: 24px 7px 6px;
+  color: white;
+  background: linear-gradient(rgba(31, 36, 33, 0), rgba(31, 36, 33, 0.78) 45%, rgba(31, 36, 33, 0.9));
+}
+
+.tile-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  bottom: auto;
+  width: auto;
+  max-width: calc(100% - 10px);
+  padding: 5px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 6px;
+  background: rgba(31, 36, 33, 0.72);
+}
+
+.tile-badge .tile-title {
+  display: none;
+}
+
+.tile-title {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.estate-tile strong {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 11px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .compact {
@@ -602,6 +759,16 @@ button:disabled {
   line-height: 1.28;
 }
 
+.action-card .effect {
+  color: #315f7d;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.action-card.offseason {
+  opacity: 0.66;
+}
+
 .action-card em {
   color: var(--blue);
   font-size: 11px;
@@ -645,6 +812,59 @@ input[type="range"] {
 
 .meter.danger > span {
   background: var(--danger);
+}
+
+.flow-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffdfa;
+}
+
+.flow-step span,
+.flow-step em {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.flow-step strong {
+  display: block;
+  margin: 2px 0;
+  font-size: 14px;
+}
+
+.flow-arrow {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.debt-panel {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid #d8c5a6;
+  border-radius: 6px;
+  background: #fff8e8;
+}
+
+.debt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.debt-actions button {
+  min-height: 31px;
+  padding: 4px 8px;
+  font-size: 12px;
 }
 
 .two-col {
@@ -1203,6 +1423,7 @@ input[type="range"] {
   .actions,
   .two-col,
   .event-buttons,
+  .flow-panel,
   .score-grid,
   .tutorial-grid,
   .brief-grid,
@@ -1212,8 +1433,21 @@ input[type="range"] {
     grid-template-columns: 1fr;
   }
 
+  .flow-arrow {
+    display: none;
+  }
+
   .row-card {
     grid-template-columns: 1fr;
+  }
+
+  .map-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .map-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .event-banner.with-art {
