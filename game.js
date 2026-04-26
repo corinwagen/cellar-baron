@@ -64,7 +64,7 @@ const REGIONS = [
     costMod: 1.28,
     qualityMod: 1.22,
     weather: { heat: 0.7, frost: 1.3, rain: 1.15, drought: 0.55 },
-    varietals: ["pinot", "chardonnay"]
+    varietals: ["pinot", "chardonnay", "gamay"]
   },
   {
     id: "barossa",
@@ -161,6 +161,16 @@ const VARIETALS = {
     difficulty: 0.92,
     barrelNeed: 0.85,
     blurb: "Generous yield and strong supermarket appeal."
+  },
+  gamay: {
+    name: "Gamay",
+    tags: ["Early drinking", "Light"],
+    yield: 1.1,
+    quality: 1.0,
+    demand: 1.02,
+    difficulty: 0.82,
+    barrelNeed: 0.3,
+    blurb: "Light, fruity, and quick to market. Low oak needs and reliable yield, but little prestige upside."
   }
 };
 
@@ -848,12 +858,21 @@ const ACTIONS = [
     cost: 3000,
     apply: s => {
       const capacity = 220 + s.buildings.tank * 120 + staffBonus(s, "cellar") * 70;
-      const used = Math.min(s.inventory.grapes, capacity);
-      s.inventory.grapes -= used;
-      s.inventory.bulkWine += Math.round(used * 0.72);
+      const lot = (s.vintages || []).find(v => v.grapes > 0);
+      const used = lot ? Math.min(lot.grapes, capacity) : 0;
+      if (lot && used > 0) {
+        lot.grapes -= used;
+        lot.bulkWine += Math.round(used * 0.72);
+        const target = agingTarget(s);
+        if (lot.agingTarget === 0 && target > 0) lot.agingTarget = target;
+        const monthsLeft = Math.max(0, lot.agingTarget - lot.agingMonths);
+        const ageStatus = monthsLeft === 0 ? "ready to bottle" : `${monthsLeft} month${monthsLeft !== 1 ? "s" : ""} until ready`;
+        log(s, `Cellar work fermented ${Math.round(used)} CE from ${lot.label} — ${ageStatus}. Target: ${lot.agingTarget} months.`);
+      } else {
+        log(s, "Cellar work: blending, racking, and tasting with no unfermented grapes on hand.");
+      }
       s.quality += 2 + s.buildings.barrel + staffBonus(s, "cellar");
       s.prestige += Math.max(1, Math.floor((s.buildings.barrel * varietal(s).barrelNeed) / 2));
-      log(s, `Cellar work converted ${Math.round(used)} grape units into maturing wine.`);
     }
   },
   {
@@ -861,19 +880,24 @@ const ACTIONS = [
     name: "Bottle Cases",
     detail: "Bottle finished wine into sellable cases.",
     seasons: ["Cellar", "Dormant", "Budbreak", "Flowering"],
-    consequence: "Uses bulk wine and glass; creates sellable cases.",
+    consequence: "Uses aged bulk wine and glass; creates sellable cases.",
     cost: 2400,
     apply: s => {
       const glassPenalty = s.marketMods.glassShortage ? 0.72 : 1;
       const capacity = Math.floor((280 + s.buildings.line * 170 + staffBonus(s, "bottling") * 95) * glassPenalty);
-      const bulkNeeded = Math.min(s.inventory.bulkWine, capacity);
-      const glassNeeded = Math.min(s.inventory.glass, bulkNeeded);
-      const cases = Math.floor(Math.min(bulkNeeded, glassNeeded));
-      s.inventory.bulkWine -= cases;
+      const ready = readyVintages(s);
+      if (!ready.length) { log(s, "No wine has finished aging yet."); return; }
+      const lot = ready[0];
+      const bulkAvail = Math.min(lot.bulkWine, capacity);
+      const cases = Math.floor(Math.min(bulkAvail, s.inventory.glass));
+      if (cases <= 0) return;
+      lot.bulkWine -= cases;
+      lot.bottled = (lot.bottled || 0) + cases;
       s.inventory.glass -= cases;
       s.inventory.cases += cases;
       s.cash -= Math.round(cases * bottlingCost(s));
-      log(s, `Bottled ${cases} cases.`);
+      s.currentVintageScore = lot.score;
+      log(s, `Bottled ${cases} cases from ${lot.label} — ${lot.bulkWine} CE remaining. ${vintageScoreLabel(lot.score)} vintage (${vintageScoreStars(lot.score)}).`);
     }
   },
   {
@@ -973,11 +997,17 @@ const ACTIONS = [
           log(s, "Post-harvest vineyard walk and first fermentation batches started.");
         }
       } else if (s.season === "Cellar") {
-        const cases = Math.min(s.inventory.bulkWine, 90 + staffBonus(s, "cellar") * 25);
-        s.inventory.bulkWine -= cases;
-        s.inventory.cases += Math.round(cases * 0.95);
+        const ready = readyVintages(s);
+        const lot = ready[0] || null;
+        const cases = lot ? Math.min(lot.bulkWine, 90 + staffBonus(s, "cellar") * 25) : 0;
+        if (lot && cases > 0) {
+          lot.bulkWine -= cases;
+          s.inventory.cases += Math.round(cases * 0.95);
+          log(s, `Cellar topping and racking finished ${cases} cases from ${lot.label}.`);
+        } else {
+          log(s, "Cellar topping and racking tightened the post-harvest pipeline.");
+        }
         s.quality += 1;
-        log(s, "Cellar topping and racking tightened the post-harvest pipeline.");
       } else {
         s.rows.forEach(row => { row.health = clamp(row.health + 5, 20, 100); });
         s.quality += 1;
@@ -1051,6 +1081,12 @@ const SEASONAL_ACTIONS = {
     consequence: "Restore row health and prepare next year's vintage."
   }
 };
+
+const AGING_TARGETS = {
+  sauvignon: 3, riesling: 3, chardonnay: 5, pinot: 6,
+  merlot: 5, malbec: 6, cabernet: 8, shiraz: 7, gamay: 2
+};
+const REGION_AGING_BONUS = { bordeaux: 2, burgundy: 3, napa: 1, mosel: 0, mendoza: 0, barossa: 0 };
 
 function rand() {
   return Math.random();
@@ -1167,11 +1203,23 @@ function createState() {
     buildings: { block: 0, tank: 1, barrel: 1, line: 0, room: 0, lab: 0 },
     rows: makeRows(d.rows),
     inventory: {
-      grapes: Math.round(800 * inventoryMod),
-      bulkWine: Math.round(620 * inventoryMod),
       cases: Math.round(360 * inventoryMod),
       glass: Math.round(1600 * inventoryMod)
     },
+    vintages: [{
+      id: "opening",
+      year: START_YEAR,
+      score: 3,
+      label: `${START_YEAR} Opening Stock`,
+      grapes: Math.round(800 * inventoryMod),
+      bulkWine: Math.round(620 * inventoryMod),
+      agingMonths: 999,
+      agingTarget: 0,
+      bottled: 0,
+      purchased: true
+    }],
+    vintageWeatherScore: 52,
+    currentVintageScore: 3,
     orders: [],
     log: [],
     marketHeat: 52,
@@ -1247,6 +1295,7 @@ function ensureEconomy(s) {
   if (typeof s.leaseCost !== "number") s.leaseCost = d.rent;
   if (typeof s.debt !== "number") s.debt = d.debt;
   if (!s.wineryName) s.wineryName = "Unnamed Estate";
+  ensureVintages(s);
   ensureDebtLots(s);
 }
 
@@ -1424,7 +1473,7 @@ function repayDebt(amount) {
 }
 
 function netWorth(s) {
-  return s.cash - s.debt + s.inventory.cases * s.price * 12 + s.inventory.bulkWine * 12 + s.inventory.grapes * 7;
+  return s.cash - s.debt + s.inventory.cases * s.price * 12 + totalBulkWine(s) * 12 + totalGrapes(s) * 7;
 }
 
 function ensureHistory(s) {
@@ -1472,7 +1521,8 @@ function directSales(s) {
   const salesCeiling = 35 + s.buildings.room * 50 + staffBonus(s, "sales") * 20 + staffBonus(s, "brand") * 15;
   const cases = Math.min(availableCases(s), rawCases, salesCeiling);
   const premium = 1 + Math.max(0, s.prestige - 45) / 210 + staffBonus(s, "brand") * 0.06;
-  const revenue = Math.round(cases * s.price * 12 * premium);
+  const vintageMod = vintageScoreMultiplier(s.currentVintageScore || 3);
+  const revenue = Math.round(cases * s.price * 12 * premium * vintageMod);
   return { cases, revenue };
 }
 
@@ -1482,6 +1532,60 @@ function reservedCases(s) {
 
 function availableCases(s) {
   return Math.max(0, s.inventory.cases - reservedCases(s));
+}
+
+function totalGrapes(s) {
+  return (s.vintages || []).reduce((sum, v) => sum + (v.grapes || 0), 0);
+}
+
+function totalBulkWine(s) {
+  return (s.vintages || []).reduce((sum, v) => sum + (v.bulkWine || 0), 0);
+}
+
+function readyVintages(s) {
+  return (s.vintages || []).filter(v => v.bulkWine > 0 && v.agingMonths >= v.agingTarget);
+}
+
+function totalReadyBulk(s) {
+  return readyVintages(s).reduce((sum, v) => sum + v.bulkWine, 0);
+}
+
+function agingTarget(s) {
+  return (AGING_TARGETS[s.varietal] || 5) + (REGION_AGING_BONUS[s.region] || 0);
+}
+
+function vintageScoreMultiplier(score) {
+  return ({ 1: 0.82, 2: 0.91, 3: 1.0, 4: 1.13, 5: 1.28 })[clamp(score, 1, 5)] || 1;
+}
+
+function vintageScoreLabel(score) {
+  return ({ 1: "Poor", 2: "Below Average", 3: "Average", 4: "Good", 5: "Exceptional" })[clamp(score, 1, 5)] || "Unknown";
+}
+
+function vintageScoreStars(score) {
+  const s = clamp(score, 1, 5);
+  return "★".repeat(s) + "☆".repeat(5 - s);
+}
+
+function computeVintageScore(weatherScore, rowHealth) {
+  const healthFactor = clamp((rowHealth - 40) / 55, -1, 1);
+  const combined = (weatherScore || 50) + healthFactor * 15;
+  return combined >= 72 ? 5 : combined >= 58 ? 4 : combined >= 42 ? 3 : combined >= 26 ? 2 : 1;
+}
+
+function ensureVintages(s) {
+  if (!Array.isArray(s.vintages)) {
+    s.vintages = [];
+    const yr = START_YEAR + Math.floor((START_MONTH_INDEX + (s.month || 1) - 1) / 12);
+    const gr = s.inventory ? (s.inventory.grapes || 0) : 0;
+    const bw = s.inventory ? (s.inventory.bulkWine || 0) : 0;
+    if (gr > 0 || bw > 0) {
+      s.vintages.push({ id: "legacy", year: yr - 1, score: 3, label: `${yr - 1} Opening Stock`, grapes: gr, bulkWine: bw, agingMonths: 999, agingTarget: 0, purchased: true });
+    }
+    if (s.inventory) { s.inventory.grapes = 0; s.inventory.bulkWine = 0; }
+  }
+  if (typeof s.vintageWeatherScore !== "number") s.vintageWeatherScore = 52;
+  if (typeof s.currentVintageScore !== "number") s.currentVintageScore = 3;
 }
 
 function ensureStaffProgress(s, id) {
@@ -1591,7 +1695,8 @@ function fulfillOrder(id) {
   const order = state.orders.find(o => o.id === id);
   if (!order || !order.accepted || state.inventory.cases < order.cases) return;
   const premium = 1 + Math.max(0, state.quality - 55) / 260;
-  const revenue = Math.round(order.cases * state.price * 12 * premium);
+  const vintageMod = vintageScoreMultiplier(state.currentVintageScore || 3);
+  const revenue = Math.round(order.cases * state.price * 12 * premium * vintageMod);
   state.inventory.cases -= order.cases;
   state.cash += revenue;
   state.prestige += order.type === "club" || order.type === "restaurant" ? 3 : 1;
@@ -1773,6 +1878,7 @@ function monthlyTick(s) {
   applyRegionEffects(s);
   applyWeather(s);
   decayAndOrders(s);
+  (s.vintages || []).forEach(v => { if (v.bulkWine > 0) v.agingMonths = (v.agingMonths || 0) + 1; });
 
   const harvestResult = isHarvestMonth(s.month) ? harvest(s) : null;
 
@@ -1929,6 +2035,12 @@ function applyWeather(s) {
   } else {
     s.quality -= Math.max(0, Math.floor((averageThreat(s) - 4) / 2));
   }
+  const calMonth = calendarMonthNumber(s.month);
+  const isGrowingSeason = [3, 4, 5, 6, 7, 8, 9, 10].includes(calMonth);
+  if (isGrowingSeason) {
+    const weatherDelta = picked.key === "clear" ? 4 : picked.key === "heat" ? -3 : picked.key === "frost" ? -6 : picked.key === "rain" ? -2 : picked.key === "drought" ? -3 : 0;
+    s.vintageWeatherScore = clamp((s.vintageWeatherScore || 52) + weatherDelta, 10, 90);
+  }
 }
 
 function harvest(s) {
@@ -1955,7 +2067,21 @@ function harvest(s) {
   const qualityGain = Math.round((health - 58) / 8 + s.buildings.barrel * 0.7 + (s.marketMods.harvestCrew ? 2 : 0));
   const laborRate = s.marketMods.harvestCrew ? 3600 : 2800;
   const laborCost = Math.round(productive.length * laborRate * r.costMod * difficulty().costMod * staffCostMod(s));
-  s.inventory.grapes += grapes;
+  const year = START_YEAR + Math.floor((s.month - 1) / 12);
+  const vintageScore = computeVintageScore(s.vintageWeatherScore, health);
+  s.vintages.push({
+    id: `harvest-${s.month}`,
+    year,
+    score: vintageScore,
+    label: `${year} ${v.name}`,
+    grapes,
+    bulkWine: 0,
+    agingMonths: 0,
+    agingTarget: 0,
+    bottled: 0,
+    purchased: false
+  });
+  s.vintageWeatherScore = 52;
   s.cash -= laborCost;
   s.quality += qualityGain;
   s.prestige += qualityGain > 3 ? 2 : 0;
@@ -1969,9 +2095,10 @@ function harvest(s) {
     laborCost,
     productiveRows: productive.length,
     qualityGain,
+    vintageScore,
     note: s.marketMods.harvestCrew ? "Selective picking raised yield and quality, but the crew cost more." : "Standard seasonal labor was charged with the harvest."
   };
-  log(s, `Harvest brought in ${grapes} grape CE from ${productive.length} blocks. Seasonal labor cost ${money(laborCost)}; vintage quality ${qualityGain >= 0 ? "rose" : "fell"}.`);
+  log(s, `Harvest brought in ${grapes} grape CE from ${productive.length} blocks — ${vintageScoreLabel(vintageScore)} vintage (${vintageScoreStars(vintageScore)}). Seasonal labor cost ${money(laborCost)}.`);
   return s.harvestReport;
 }
 
@@ -2218,7 +2345,7 @@ function tabPanel() {
     return `${artBanner("commercial", "Tasting room, buyers, and distribution")}${marketPanel()}${analyticsPanel()}${ordersPanel()}`;
   }
   if (activeTab === "estate") {
-    return `${artBanner("cellar", "Cellar, bottling line, tanks, and barrels")}${buildingsPanel()}${marketPanel()}`;
+    return `${artBanner("cellar", "Cellar, bottling line, tanks, and barrels")}${buildingsPanel()}${vintageCellarPanel()}${marketPanel()}`;
   }
   if (activeTab === "people") {
     return `${staffPanel()}`;
@@ -2267,8 +2394,8 @@ function topbar() {
           ${kpi("Demand", `${state.demand}/130`, "Commercial pull for your wine. Higher demand improves direct sales and buyer interest.")}
           ${kpi("Quality", `${state.quality}/120`, "Current house quality. Vineyard health, weather, cellar work, and barrels move this. Decays faster above 85.")}
           ${kpi("Morale", `${state.morale}/100`, "Staff and crew confidence. Below 20 loses an action/month and triggers labor events; 0 ends the game.", state.morale < 20 ? "danger" : state.morale < 40 ? "warn" : "")}
-          ${kpi("Grape CE", state.inventory.grapes, "Case-equivalent grapes available to ferment. Harvest adds these; cellar work converts them to bulk wine.")}
-          ${kpi("Bulk CE", state.inventory.bulkWine, "Case-equivalent bulk wine in tank/barrel. Bottling converts this into finished cases.")}
+          ${kpi("Grape CE", totalGrapes(state), "Case-equivalent grapes across all vintage lots. Harvest adds these; cellar work converts them to bulk wine.")}
+          ${kpi("Bulk CE", totalBulkWine(state), "Case-equivalent bulk wine aging across all vintage lots. Bottling converts this into finished cases.")}
           ${kpi("Cases", state.inventory.cases, "Finished cases ready to sell or reserve for contracts. Passive direct sales can reduce this at month close.")}
         </div>
         <div class="top-actions">
@@ -2323,6 +2450,7 @@ function harvestReportPanel() {
         <div class="stat-box"><span>Mature blocks</span><strong>${report.productiveRows}</strong></div>
         <div class="stat-box"><span>Seasonal labor</span><strong>${money(report.laborCost)}</strong></div>
         <div class="stat-box"><span>Quality change</span><strong style="color:${qualityColor}">${report.qualityGain >= 0 ? "+" : ""}${report.qualityGain}</strong></div>
+        ${report.vintageScore ? `<div class="stat-box"><span>Vintage score</span><strong style="color:var(--gold)">${vintageScoreStars(report.vintageScore)} ${vintageScoreLabel(report.vintageScore)}</strong></div>` : ""}
       </div>
     </section>
   `;
@@ -2386,7 +2514,7 @@ function tutorialPanel() {
 function overviewPanel() {
   const worth = netWorth(state);
   return `
-    ${estateMap()}
+    ${estateDashboard()}
     <section class="panel overview-panel">
       <div class="panel-head">
         <h2>Operating Brief</h2>
@@ -2418,76 +2546,51 @@ function overviewPanel() {
   `;
 }
 
-function estateMap() {
+function estateDashboard() {
   const blockDef = BUILDINGS.find(building => building.id === "block");
   const openParcels = Math.max(0, blockDef.max - (state.buildings.block || 0));
-  const rowTiles = Array.from({ length: 7 }, (_, index) => {
-    const row = state.rows[index];
-    if (row) {
-      return {
-        kind: "vine-tile",
-        sprite: row.health < 55 || row.threat >= 5 ? "tile-vineyard-unhealthy.png" : "tile-vineyard.png",
-        title: row.name,
-        value: (row.matureMonth || 1) > state.month ? `Young • crops ${monthDateLabel(row.matureMonth)}` : `H${row.health} / T${row.threat}`,
-        tab: "vineyard",
-        tip: `${row.name}: health ${row.health}, threat ${row.threat}${(row.matureMonth || 1) > state.month ? `, first meaningful crop around ${monthDateLabel(row.matureMonth)}` : ""}. Open vineyard rows.`
-      };
-    }
-    return {
-      kind: openParcels > index - state.rows.length ? "open" : "rough",
-      sprite: "tile-open-parcel.png",
-      title: openParcels > index - state.rows.length ? "Open Parcel" : "Leased Hillside",
-      value: openParcels > index - state.rows.length ? "Build vineyard" : "No capacity",
-      tab: "estate",
-      tip: "Open estate upgrades and add vineyard blocks when cash and actions allow."
-    };
+  const rowLines = state.rows.map(row => {
+    const young = (row.matureMonth || 1) > state.month;
+    const tone = young ? "muted" : row.threat >= 6 ? "danger" : row.health < 50 ? "warn" : "";
+    const status = young
+      ? `young · crops ${monthDateLabel(row.matureMonth)}`
+      : `health ${row.health} · threat ${row.threat}`;
+    return `<div class="dash-row ${tone}"><span>${escapeHtml(row.name)}</span><em>${status}</em></div>`;
   });
-  const tiles = [
-    rowTiles[0],
-    rowTiles[1],
-    { kind: "road", sprite: "tile-crush-pad.png", title: "Crush Pad", value: `${state.inventory.grapes} grapes`, tab: "estate", tip: "Grapes enter the production flow here." },
-    { kind: "cellar", sprite: "tile-tank-hall.png", title: "Tank Hall", value: `${state.buildings.tank} tanks`, tab: "estate", tip: "Open cellar and estate upgrades." },
-    { kind: "office", sprite: "tile-staff-office.png", title: "Office", value: `${state.staff.length} staff`, tab: "people", tip: "Open personnel and staff advancement." },
-    rowTiles[2],
-    rowTiles[3],
-    { kind: "water", sprite: "tile-reservoir.png", title: "Reservoir", value: `Lab ${state.buildings.lab}`, tab: "estate", tip: "Weather lab and resilience upgrades live in Estate." },
-    { kind: "cellar", sprite: "tile-barrel-room.png", title: "Barrel Room", value: `Level ${state.buildings.barrel}`, tab: "estate", tip: "Barrels raise quality and prestige." },
-    { kind: "bottle", sprite: "tile-bottling.png", title: "Bottling", value: `Line ${state.buildings.line}`, tab: "estate", tip: "Bottling turns bulk wine into sellable cases." },
-    rowTiles[4],
-    rowTiles[5],
-    { kind: "yard", sprite: "tile-service-yard.png", title: "Service Yard", value: `${state.inventory.glass} glass`, tab: "commercial", tip: "Glass and cases constrain sales." },
-    { kind: "sales", sprite: "tile-tasting-room.png", title: "Tasting Room", value: `Level ${state.buildings.room}`, tab: "commercial", tip: "Open pricing, buyers, revenue, and hospitality." },
-    { kind: "sales", sprite: "tile-sales-office.png", title: "Sales Office", value: `${state.orders.length} buyers`, tab: "commercial", tip: "Open buyer queue and commercial analytics." },
-    rowTiles[6],
-    { kind: "open", sprite: "tile-open-parcel.png", title: "Expansion", value: `${openParcels} parcels`, tab: "estate", tip: "Available vineyard expansion capacity." },
-    { kind: "warehouse", sprite: "tile-case-goods.png", title: "Case Goods", value: `${state.inventory.cases} cases`, tab: "commercial", tip: "Finished cases can be reserved for contracts or sold direct." }
-  ];
+  if (openParcels > 0) {
+    rowLines.push(`<div class="dash-row muted"><span>${openParcels} open parcel${openParcels > 1 ? "s" : ""}</span><em>build to expand</em></div>`);
+  }
+
+  const readyLots = readyVintages(state);
+  const agingLots = (state.vintages || []).filter(v => v.bulkWine > 0 && v.agingMonths < v.agingTarget);
+
   return `
-    <section class="estate-map tile-map" aria-label="Estate map">
-      <div class="map-head">
-        <div>
-          <strong>${region().name} Estate</strong>
-          <span>${currentDateLabel(state)} • ${state.season} • ${difficulty().name}</span>
-        </div>
-        <span>${openParcels} open parcels</span>
-      </div>
-      <div class="map-grid">
-        ${tiles.map(estateTile).join("")}
+    <section class="panel estate-dash" aria-label="Estate status">
+      <div class="dash-grid">
+        <button class="dash-col" onclick="setTab('vineyard')" ${tip("View vineyard rows, weather, and disease pressure.")}>
+          <div class="dash-col-head">Vineyard</div>
+          ${rowLines.join("")}
+          <div class="dash-row muted"><span>Season</span><em>${state.season} · ${state.lastWeather}</em></div>
+        </button>
+        <button class="dash-col" onclick="setTab('estate')" ${tip("Upgrade cellar infrastructure and view vintage aging pipeline.")}>
+          <div class="dash-col-head">Cellar &amp; Production</div>
+          <div class="dash-row"><span>Grapes on hand</span><em>${totalGrapes(state)} CE</em></div>
+          <div class="dash-row"><span>Bulk wine aging</span><em>${totalBulkWine(state)} CE${agingLots.length ? ` · ${agingLots.length} not ready` : ""}${readyLots.length ? ` · ${readyLots.length} ready` : ""}</em></div>
+          <div class="dash-row"><span>Tanks</span><em>level ${state.buildings.tank}</em></div>
+          <div class="dash-row"><span>Barrels</span><em>level ${state.buildings.barrel}</em></div>
+          <div class="dash-row"><span>Bottling line</span><em>level ${state.buildings.line}</em></div>
+          <div class="dash-row"><span>Weather lab</span><em>level ${state.buildings.lab}</em></div>
+        </button>
+        <button class="dash-col" onclick="setTab('commercial')" ${tip("Review pricing, buyer orders, and commercial analytics.")}>
+          <div class="dash-col-head">Commercial</div>
+          <div class="dash-row"><span>Cases ready</span><em>${state.inventory.cases}</em></div>
+          <div class="dash-row"><span>Glass supply</span><em>${state.inventory.glass}</em></div>
+          <div class="dash-row"><span>Tasting room</span><em>level ${state.buildings.room}</em></div>
+          <div class="dash-row"><span>Open buyer orders</span><em>${state.orders.length}</em></div>
+          <div class="dash-row"><span>Staff</span><em>${state.staff.length} hired · <a onclick="event.stopPropagation();setTab('people')" style="color:inherit;text-decoration:underline;cursor:pointer">manage</a></em></div>
+        </button>
       </div>
     </section>
-  `;
-}
-
-function estateTile(tile) {
-  const labelClass = tile.kind === "vine-tile" ? "tile-label tile-badge" : "tile-label";
-  return `
-    <button class="estate-tile ${tile.kind}" onclick="setTab('${tile.tab}')" ${tip(tile.tip)}>
-      ${tile.sprite ? `<img class="tile-art" src="assets/${tile.sprite}" alt="">` : ""}
-      <span class="${labelClass}">
-        <span class="tile-title">${tile.title}</span>
-        <strong>${tile.value}</strong>
-      </span>
-    </button>
   `;
 }
 
@@ -2742,8 +2845,15 @@ function vineStress(row, index) {
 }
 
 function actionInventoryNote(action, s) {
-  if (action.id === "bottle" && s.inventory.bulkWine === 0) return { text: "No bulk wine to bottle", hard: true };
-  if (action.id === "cellar" && s.inventory.grapes === 0) return { text: "No grapes — cellar quality work only", hard: false };
+  if (action.id === "bottle") {
+    const ready = readyVintages(s);
+    if (!ready.length && totalBulkWine(s) === 0) return { text: "No bulk wine to bottle", hard: true };
+    if (!ready.length) {
+      const oldest = (s.vintages || []).filter(v => v.bulkWine > 0).sort((a, b) => a.agingMonths - b.agingMonths)[0];
+      if (oldest) return { text: `${oldest.label} needs ${oldest.agingTarget - oldest.agingMonths}mo more aging`, hard: true };
+    }
+  }
+  if (action.id === "cellar" && totalGrapes(s) === 0) return { text: "No grapes — cellar quality work only", hard: false };
   if ((action.id === "sales" || action.id === "hospitality") && availableCases(s) === 0) return { text: "No free cases — generates demand only", hard: false };
   return null;
 }
@@ -2800,8 +2910,8 @@ function marketPanel() {
       <div class="two-col" style="margin-top: 10px;">
         <div class="stat-box"><span>Forecast direct sales</span><strong>${forecast.cases} cases</strong></div>
         <div class="stat-box"><span>Forecast revenue</span><strong>${money(forecast.revenue)}</strong></div>
-        <div class="stat-box"><span>Grape CE</span><strong>${state.inventory.grapes}</strong></div>
-        <div class="stat-box"><span>Bulk CE</span><strong>${state.inventory.bulkWine}</strong></div>
+        <div class="stat-box"><span>Grape CE</span><strong>${totalGrapes(state)}</strong></div>
+        <div class="stat-box"><span>Bulk CE</span><strong>${totalBulkWine(state)}</strong></div>
         <div class="stat-box"><span>Glass</span><strong>${state.inventory.glass}</strong></div>
         <div class="stat-box"><span>Debt</span><strong>${money(state.debt)}</strong></div>
       </div>
@@ -2829,13 +2939,13 @@ function flowPanel() {
       <div class="flow-step">
         <span>Ferment</span>
         <strong>${fermentCap}/action</strong>
-        <em>${state.inventory.grapes} grapes held</em>
+        <em>${totalGrapes(state)} grapes held</em>
       </div>
       <div class="flow-arrow">→</div>
       <div class="flow-step">
         <span>Bottle</span>
         <strong>${bottleCap}/action</strong>
-        <em>${state.inventory.bulkWine} bulk • ${state.inventory.glass} glass</em>
+        <em>${totalBulkWine(state)} bulk • ${state.inventory.glass} glass</em>
       </div>
       <div class="flow-arrow">→</div>
       <div class="flow-step">
@@ -2844,6 +2954,109 @@ function flowPanel() {
         <em>${reservedCases(state)} reserved</em>
       </div>
     </div>
+  `;
+}
+
+function grapePurchasePrice(s) {
+  const v = varietal();
+  const r = region();
+  return Math.round(180 * (v.quality || 1) * (r.costMod || 1) * (v.difficulty || 1) * 0.85);
+}
+
+function buyGrapes() {
+  if (!state || state.actionsLeft <= 0 || state.event || state.gameOver) return;
+  const lotSize = 200;
+  const costPer = grapePurchasePrice(state);
+  const total = lotSize * costPer;
+  if (state.cash < total) { log(state, `Insufficient cash to buy ${lotSize} CE of grapes (${money(total)} required).`); render(); return; }
+  const year = START_YEAR + Math.floor((state.month - 1) / 12);
+  const v = varietal();
+  const existing = state.vintages.find(vt => vt.year === year && vt.purchased);
+  if (existing) {
+    existing.grapes += lotSize;
+  } else {
+    state.vintages.push({ id: `bought-${state.month}`, year, score: 3, label: `${year} ${v.name} (Purchased)`, grapes: lotSize, bulkWine: 0, agingMonths: 0, agingTarget: 0, bottled: 0, purchased: true });
+  }
+  state.cash -= total;
+  state.actionsLeft -= 1;
+  log(state, `Purchased ${lotSize} CE of ${v.name} grapes for ${money(total)}.`);
+  normalizeState(state);
+  render();
+}
+
+function vintageCellarPanel() {
+  const lots = (state.vintages || []).filter(v => v.grapes > 0 || v.bulkWine > 0);
+  const gpPrice = grapePurchasePrice(state);
+  const maxTarget = Math.max(1, ...lots.map(v => v.agingTarget || 0), agingTarget(state));
+
+  const lotRows = lots.map(lot => {
+    const hasGrapes = lot.grapes > 0;
+    const hasBulk = lot.bulkWine > 0;
+    const target = lot.agingTarget || 0;
+    const aged = Math.min(lot.agingMonths || 0, target);
+    const isReady = hasBulk && lot.agingMonths >= target && target > 0;
+    const isPreagedStock = hasBulk && target === 0;
+    const monthsLeft = target > 0 ? Math.max(0, target - (lot.agingMonths || 0)) : 0;
+
+    let barHtml = "";
+    if (isPreagedStock) {
+      barHtml = `<div class="gantt-bar gantt-ready" style="width:100%" title="Opening stock — ready to bottle"></div>`;
+    } else if (hasGrapes && !hasBulk) {
+      barHtml = `<div class="gantt-bar gantt-grapes" style="width:${Math.round((1 / (maxTarget + 1)) * 100)}%" title="Grapes awaiting fermentation"></div>`;
+    } else if (hasBulk && target > 0) {
+      const agedPct = Math.round((aged / maxTarget) * 100);
+      const remainPct = Math.round((monthsLeft / maxTarget) * 100);
+      barHtml = `
+        <div class="gantt-bar gantt-aged" style="width:${agedPct}%" title="${aged} months aged"></div>
+        ${!isReady ? `<div class="gantt-bar gantt-remain" style="width:${remainPct}%" title="${monthsLeft} months remaining"></div>` : ""}
+      `;
+    }
+
+    const bottled = lot.bottled || 0;
+    const statusText = isPreagedStock
+      ? `${lot.bulkWine} CE ready${bottled ? ` · ${bottled} bottled` : ""}`
+      : hasGrapes && !hasBulk
+      ? `${lot.grapes} CE · ferment first`
+      : isReady
+      ? `${lot.bulkWine} CE ready${bottled ? ` · ${bottled} bottled` : ""}`
+      : hasBulk
+      ? `${monthsLeft}mo left (${aged}/${target})`
+      : "";
+
+    return `
+      <div class="gantt-row">
+        <div class="gantt-meta">
+          <span class="gantt-label">${escapeHtml(lot.label)}</span>
+          <span class="gantt-score">${vintageScoreStars(lot.score)}</span>
+        </div>
+        <div class="gantt-track">
+          ${barHtml}
+        </div>
+        <div class="gantt-status ${isReady || isPreagedStock ? "ready" : ""}">${statusText}</div>
+      </div>
+    `;
+  });
+
+  return `
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Vintage Cellar ${helpIcon("Each harvest creates a lot. Cellar work ferments grapes to bulk wine; aging time must pass before bottling is allowed.")}</h2>
+        <span class="small">${vintageScoreLabel(state.currentVintageScore)} vintage on shelves ${vintageScoreStars(state.currentVintageScore)}</span>
+      </div>
+      ${lots.length ? `
+        <div class="gantt-legend">
+          <span class="gantt-swatch gantt-grapes"></span>Grapes
+          <span class="gantt-swatch gantt-aged"></span>Aged
+          <span class="gantt-swatch gantt-remain"></span>Remaining
+          <span class="gantt-swatch gantt-ready"></span>Ready
+        </div>
+        <div class="gantt-list">${lotRows.join("")}</div>
+      ` : `<p class="small muted">No active lots. Harvest or purchase grapes to begin.</p>`}
+      <div class="vintage-buy-row">
+        <span class="small">Buy 200 CE ${varietal().name}: <strong>${money(gpPrice * 200)}</strong></span>
+        <button onclick="buyGrapes()" ${state.actionsLeft <= 0 || state.cash < gpPrice * 200 || state.event || state.gameOver ? "disabled" : ""}>Buy grapes</button>
+      </div>
+    </section>
   `;
 }
 
@@ -3113,5 +3326,6 @@ window.fireStaff = fireStaff;
 window.unlockAdvancement = unlockAdvancement;
 window.resolveEvent = resolveEvent;
 window.dismissHarvestReport = dismissHarvestReport;
+window.buyGrapes = buyGrapes;
 
 render();
