@@ -90,6 +90,9 @@ const VARIETALS = {
     demand: 1.06,
     difficulty: 0.88,
     barrelNeed: 1.0,
+    diseaseRisk: 0.7,
+    droughtSensitivity: 0.5,
+    optimalWater: 35,
     blurb: "Heat-tolerant, generous, and popular with export brokers. Strong cellar conversion."
   },
   cabernet: {
@@ -100,6 +103,9 @@ const VARIETALS = {
     demand: 1.08,
     difficulty: 1.1,
     barrelNeed: 1.2,
+    diseaseRisk: 0.8,
+    droughtSensitivity: 0.6,
+    optimalWater: 38,
     blurb: "High price ceiling, slower to charm buyers, strong in warm regions."
   },
   chardonnay: {
@@ -110,6 +116,9 @@ const VARIETALS = {
     demand: 1.03,
     difficulty: 0.85,
     barrelNeed: 0.7,
+    diseaseRisk: 1.1,
+    droughtSensitivity: 1.0,
+    optimalWater: 52,
     blurb: "Forgiving grape with broad demand and modest prestige upside."
   },
   pinot: {
@@ -120,6 +129,9 @@ const VARIETALS = {
     demand: 1.1,
     difficulty: 1.35,
     barrelNeed: 0.9,
+    diseaseRisk: 1.4,
+    droughtSensitivity: 1.2,
+    optimalWater: 55,
     blurb: "Temperamental, fragile, and capable of a devoted following."
   },
   merlot: {
@@ -130,6 +142,9 @@ const VARIETALS = {
     demand: 0.98,
     difficulty: 0.9,
     barrelNeed: 0.9,
+    diseaseRisk: 1.0,
+    droughtSensitivity: 0.9,
+    optimalWater: 45,
     blurb: "A steady commercial grape that cushions bad seasons."
   },
   sauvignon: {
@@ -140,6 +155,9 @@ const VARIETALS = {
     demand: 1,
     difficulty: 0.8,
     barrelNeed: 0.35,
+    diseaseRisk: 1.2,
+    droughtSensitivity: 1.0,
+    optimalWater: 55,
     blurb: "Fast bottle turns and low barrel dependence."
   },
   riesling: {
@@ -150,6 +168,9 @@ const VARIETALS = {
     demand: 0.96,
     difficulty: 1.2,
     barrelNeed: 0.25,
+    diseaseRisk: 1.3,
+    droughtSensitivity: 1.3,
+    optimalWater: 60,
     blurb: "Low oak needs and high quality, but storms can wreck the story."
   },
   malbec: {
@@ -160,6 +181,9 @@ const VARIETALS = {
     demand: 1.04,
     difficulty: 0.92,
     barrelNeed: 0.85,
+    diseaseRisk: 0.85,
+    droughtSensitivity: 0.55,
+    optimalWater: 38,
     blurb: "Generous yield and strong supermarket appeal."
   },
   gamay: {
@@ -170,6 +194,9 @@ const VARIETALS = {
     demand: 1.02,
     difficulty: 0.82,
     barrelNeed: 0.3,
+    diseaseRisk: 0.9,
+    droughtSensitivity: 0.85,
+    optimalWater: 50,
     blurb: "Light, fruity, and quick to market. Low oak needs and reliable yield, but little prestige upside."
   }
 };
@@ -378,6 +405,52 @@ const STAFF_POOL = [
     traits: ["Line optimizer", "Blunt"],
     text: "Boosts bottling capacity and building value, but strains morale.",
     effects: { bottling: 2, buildDiscount: 0.9, morale: -3 }
+  },
+  {
+    id: "priya",
+    name: "Priya Nair",
+    role: "Social Media",
+    salary: 5100,
+    traits: ["Viral reach", "Democratizes the brand"],
+    text: "Drives strong demand from digital audiences. If prestige climbs above 72, her content pulls it back toward accessibility.",
+    effects: { demand: 11, brand: 1, prestigeDrain: 72 }
+  },
+  {
+    id: "felix",
+    name: "Felix Moreau",
+    role: "Tour Guide",
+    salary: 4600,
+    traits: ["Storyteller", "Local anchor"],
+    text: "Runs regular estate tours that generate passive cash each month, scaled to your tasting room level.",
+    effects: { tourIncome: 1, morale: 2, demand: 2 }
+  },
+  {
+    id: "dr_chen",
+    name: "Dr. Lin Chen",
+    role: "Agronomist",
+    salary: 6200,
+    portrait: "lin",
+    traits: ["Disease diagnostics", "Patient"],
+    text: "Passively reduces disease pressure every month and narrows how far water stress drifts, protecting yield and quality.",
+    effects: { diseaseControl: 1, morale: 1 }
+  },
+  {
+    id: "margot",
+    name: "Margot Bellamy",
+    role: "Club Manager",
+    salary: 5800,
+    traits: ["Subscriber cultivator", "Retention focus"],
+    text: "Builds a wine club that pays a modest fixed monthly income regardless of case inventory or market conditions.",
+    effects: { clubIncome: 1, demand: 3, prestige: 1, profileDrift: 1 }
+  },
+  {
+    id: "oscar",
+    name: "Oscar Blanc",
+    role: "Natural Winemaker",
+    salary: 7200,
+    traits: ["Low intervention", "Cult following"],
+    text: "Slowly shifts the estate toward natural, artisan winemaking. Adds a monthly cellar quality tick and draws occasional attention from cult press.",
+    effects: { cellar: 1, quality: 2, profileDrift: 2 }
   }
 ];
 
@@ -587,53 +660,242 @@ const STAFF_ADVANCEMENTS = {
       effects: { buildDiscount: 0.94 },
       immediate: { morale: 3 }
     }
+  ],
+  priya: [
+    {
+      id: "viral-harvest",
+      branch: "Content",
+      title: "Harvest Reel",
+      cost: 3,
+      text: "Seasonal harvest content drives a reliable demand spike each autumn.",
+      effects: { demand: 4 }
+    },
+    {
+      id: "community-table",
+      branch: "Community",
+      title: "Community Table",
+      cost: 6,
+      requires: "viral-harvest",
+      text: "Builds an engaged audience that protects demand during slow months.",
+      effects: { demand: 3, marketShield: 0.85 }
+    },
+    {
+      id: "prestige-edit",
+      branch: "Positioning",
+      title: "Prestige Edit",
+      cost: 6,
+      requires: "viral-harvest",
+      text: "Curated high-end content shifts the audience upmarket, easing the prestige drain.",
+      effects: { brand: 1, prestigeDrainRelief: 10 }
+    }
+  ],
+  felix: [
+    {
+      id: "tour-script",
+      branch: "Experience",
+      title: "Tour Script",
+      cost: 3,
+      text: "Structured tours convert visitors more reliably into repeat buyers.",
+      effects: { tourIncome: 1, demand: 1 }
+    },
+    {
+      id: "private-tasting",
+      branch: "Premium",
+      title: "Private Tasting",
+      cost: 6,
+      requires: "tour-script",
+      text: "Adds an exclusive tasting tier that earns more per visitor and lifts prestige.",
+      effects: { tourIncome: 1, prestige: 2 }
+    },
+    {
+      id: "harvest-event",
+      branch: "Events",
+      title: "Harvest Event",
+      cost: 6,
+      requires: "tour-script",
+      text: "Annual harvest dinner sells out fast and generates a cash spike each October.",
+      effects: { tourIncome: 1 },
+      immediate: { morale: 4 }
+    }
+  ],
+  dr_chen: [
+    {
+      id: "ipm-protocol",
+      branch: "Prevention",
+      title: "IPM Protocol",
+      cost: 3,
+      text: "Integrated pest management catches outbreaks earlier and reduces chemical use.",
+      effects: { diseaseControl: 1 }
+    },
+    {
+      id: "moisture-sensors",
+      branch: "Irrigation",
+      title: "Moisture Sensors",
+      cost: 6,
+      requires: "ipm-protocol",
+      text: "Fine-grained irrigation data keeps water stress closer to the varietal optimum.",
+      effects: { waterControl: 1 }
+    },
+    {
+      id: "soil-microbiome",
+      branch: "Soil",
+      title: "Soil Microbiome",
+      cost: 6,
+      requires: "ipm-protocol",
+      text: "Boosts vine resilience so disease and heat damage health less over time.",
+      effects: { diseaseControl: 1 },
+      immediate: { sustainability: 8 }
+    }
+  ],
+  margot: [
+    {
+      id: "founding-members",
+      branch: "Club",
+      title: "Founding Members",
+      cost: 3,
+      text: "Locks in a core subscriber base that pays whether or not cases are available.",
+      effects: { clubIncome: 1 }
+    },
+    {
+      id: "vertical-release",
+      branch: "Cellar",
+      title: "Vertical Release",
+      cost: 6,
+      requires: "founding-members",
+      text: "Annual vertical tastings command premium member dues and lift prestige.",
+      effects: { clubIncome: 1, prestige: 2 }
+    },
+    {
+      id: "referral-network",
+      branch: "Growth",
+      title: "Referral Network",
+      cost: 6,
+      requires: "founding-members",
+      text: "Word-of-mouth referrals grow the club and lift general demand.",
+      effects: { clubIncome: 1, demand: 4 }
+    }
+  ],
+  oscar: [
+    {
+      id: "minimal-sulfites",
+      branch: "Cellar",
+      title: "Minimal Sulfites",
+      cost: 3,
+      text: "Committing fully to low-intervention elevates the house style and attracts devoted natural-wine buyers.",
+      effects: { cellar: 1, profileDrift: 1 },
+      immediate: { profile: 5 }
+    },
+    {
+      id: "biodynamic-rotation",
+      branch: "Field",
+      title: "Biodynamic Rotation",
+      cost: 6,
+      requires: "minimal-sulfites",
+      text: "Seasonal biodynamic passes keep the vineyard healthier with less chemical input.",
+      effects: { vineyard: 1 },
+      immediate: { sustainability: 12, quality: 3 }
+    },
+    {
+      id: "cult-press-intro",
+      branch: "Reputation",
+      title: "Cult Press Intro",
+      cost: 6,
+      requires: "minimal-sulfites",
+      text: "A relationship with a natural-wine writer unlocks collector-level attention when prestige is strong.",
+      effects: { brand: 1 },
+      immediate: { prestige: 8, profile: 8 }
+    }
   ]
 };
 
+// Legacy array used for max lookups — mechanical source of truth is CAPEX_TIERS
 const BUILDINGS = [
-  {
-    id: "block",
-    name: "New Vineyard Block",
-    baseCost: 32000,
-    text: "Adds a productive row and raises long-run grape output.",
-    max: 4
-  },
-  {
-    id: "tank",
-    name: "Stainless Tanks",
-    baseCost: 22000,
-    text: "More fermentation capacity. Converts grapes into wine faster.",
-    max: 5
-  },
-  {
-    id: "barrel",
-    name: "Barrel Program",
-    baseCost: 26000,
-    text: "Raises quality and prestige, especially for oak-friendly varietals.",
-    max: 5
-  },
-  {
-    id: "line",
-    name: "Bottling Line",
-    baseCost: 30000,
-    text: "Raises monthly bottling throughput and lowers per-case cost.",
-    max: 4
-  },
-  {
-    id: "room",
-    name: "Tasting Room",
-    baseCost: 24000,
-    text: "Direct sales, demand growth, and staff morale.",
-    max: 4
-  },
-  {
-    id: "lab",
-    name: "Weather Lab",
-    baseCost: 18000,
-    text: "Reduces surprise damage and unlocks steadier harvests.",
-    max: 3
-  }
+  { id: "block", max: 4 }, { id: "tank", max: 5 }, { id: "barrel", max: 5 },
+  { id: "line", max: 4 }, { id: "room", max: 4 }, { id: "lab", max: 3 }
 ];
+
+const CAPEX_TIERS = {
+  block: {
+    label: "Vineyard Blocks",
+    tiers: [
+      { name: "Hillside Parcel", cost: 32000, tags: ["Yield", "18-month lead"],
+        text: "A steeply pitched block with natural air drainage. Good balance of yield and quality ceiling." },
+      { name: "Valley Floor Block", cost: 44000, tags: ["High yield", "Disease risk +"],
+        text: "Rich alluvial soil means generous harvests, but moisture retention demands more active disease management." },
+      { name: "River Terrace", cost: 58000, tags: ["Drought resistant", "Reliable yield"],
+        text: "Gravel over clay drains fast and keeps roots searching deep. Naturally drought-tolerant and steady in hot years." },
+      { name: "North Slope Reserve", cost: 74000, tags: ["Quality ceiling +5", "Longer hang time"],
+        text: "A cooler microclimate extends ripening by weeks. Lower yield than the others, but measurably higher quality ceiling at harvest." }
+    ]
+  },
+  tank: {
+    label: "Fermentation Cellar",
+    tiers: [
+      { name: "Open-Top Fermenters", cost: 22000, tags: ["Capacity +120 CE/action", "Foundation"],
+        text: "The baseline cellar upgrade. Increases throughput so large harvests don't stack up waiting for tank space." },
+      { name: "Temperature-Controlled Tanks", cost: 34000, tags: ["Quality +1/cellar action", "Disease buffer"],
+        text: "Precise temperature during fermentation reduces spoilage risk and adds a reliable quality tick to every cellar action." },
+      { name: "Concrete Egg Tanks", cost: 52000, tags: ["Prestige +1/month", "Natural & Classic synergy"],
+        text: "Gravitational micro-oxygenation coaxes texture critics notice. Adds a passive prestige tick every month regardless of what you do." },
+      { name: "Gravity-Flow Conversion", cost: 82000, tags: ["Capacity +120 CE/action", "Quality ceiling +10"],
+        text: "No pumps means no oxidation or mechanical stress at any transfer. Raises the quality ceiling and adds another fermentation step." },
+      { name: "Extended Maceration Suite", cost: 115000, tags: ["Vintage score +1 effective", "Red focus"],
+        text: "Cold soaks, punch-down control, and extended skin contact. Adds the equivalent of a full point to vintage score on every lot you bottle." }
+    ]
+  },
+  barrel: {
+    label: "Barrel Program",
+    tiers: [
+      { name: "Entry Oak Program", cost: 26000, tags: ["Quality + per cellar action", "Prestige + per cellar"],
+        text: "A modest rotation that starts building house oak character. Every cellar action now moves both quality and prestige." },
+      { name: "French Oak Rotation", cost: 38000, tags: ["Aging target +1 month", "Quality ceiling +"],
+        text: "Higher-grade cooperage and a proper rotation schedule. Adds a month to the optimal aging window and raises quality ceiling." },
+      { name: "Extended Maturation Reserve", cost: 58000, tags: ["Vintage score floor +", "Appellation standing"],
+        text: "Committing to longer barrel time. Wine held here earns a better vintage score floor and contributes to regional appellation standing." },
+      { name: "Grand Cru Barrel Library", cost: 88000, tags: ["Prestige +2/month", "Quality ceiling ++"],
+        text: "A serious library of first- and second-fill barrels across multiple coopers. Passive prestige every month and a significant quality ceiling jump." },
+      { name: "Domaine First-Fill Program", cost: 128000, tags: ["Export price premium", "Top quality ceiling"],
+        text: "100% first-fill barrels on a strict rotation. The most expensive oak program possible — it unlocks the top quality ceiling and an export price premium." }
+    ]
+  },
+  line: {
+    label: "Bottling Line",
+    tiers: [
+      { name: "Semi-Auto Bottling Line", cost: 30000, tags: ["Capacity +170 CE/action", "Cost −$0.28/case"],
+        text: "A proper line cuts per-case cost and dramatically raises monthly throughput — essential once harvests scale up." },
+      { name: "Inert Gas System", cost: 46000, tags: ["Vintage score ×1.05 at bottling", "Oxidation protection"],
+        text: "Nitrogen flushing protects wine during transfer. Every bottle preserves more of what was in the barrel." },
+      { name: "High-Speed Line", cost: 65000, tags: ["Capacity +170 CE/action", "Volume focus"],
+        text: "A second high-speed station. Primarily a throughput play for estates running serious commercial volumes." },
+      { name: "Artisan Hand-Finish Station", cost: 96000, tags: ["Prestige +2 on build", "Price ceiling +$8/bottle"],
+        text: "Hand-labelling, wax dipping, tissue paper. Buyers notice. Lifts the effective price ceiling and adds build-time prestige." }
+    ]
+  },
+  room: {
+    label: "Tasting Room",
+    tiers: [
+      { name: "Cellar Door Counter", cost: 24000, tags: ["Demand +4", "Tour income unlocked"],
+        text: "A proper welcoming space for walk-in visitors. Unlocks tour income and gives the hospitality action more to work with." },
+      { name: "Tasting Room Buildout", cost: 40000, tags: ["Demand +4", "Hospitality action stronger"],
+        text: "A dedicated space with a curated flight menu. The hospitality action earns more and word-of-mouth demand grows." },
+      { name: "Events Venue", cost: 62000, tags: ["Demand +4", "Tour income ×2", "Morale +3"],
+        text: "Convertible space for dinners, releases, and harvest festivals. Tour income scales significantly; staff morale gets a standing lift." },
+      { name: "Destination Winery", cost: 95000, tags: ["Demand +4", "Prestige +8", "Collector draw"],
+        text: "A landmark experience that draws press, collectors, and allocation-list buyers. Major prestige at build plus sustained top-tier demand." }
+    ]
+  },
+  lab: {
+    label: "Viticulture Lab",
+    tiers: [
+      { name: "Weather Station", cost: 18000, tags: ["Weather damage −12%", "Forecast tightened"],
+        text: "Real-time monitoring reduces surprise damage from frost, heat, and rain. Harvest forecast uncertainty narrows." },
+      { name: "Vineyard Sensor Network", cost: 38000, tags: ["Disease −5/month", "Water control active"],
+        text: "Soil moisture and canopy humidity sensors feed an irrigation controller. Passively reduces disease and nudges water toward varietal optimum." },
+      { name: "Precision Viticulture Suite", cost: 66000, tags: ["Disease −8/month", "Harvest forecast exact", "Vintage score +"],
+        text: "Machine learning over sensor data. Disease drops hard monthly, the harvest forecast becomes a single exact number, and vintage scores improve." }
+    ]
+  }
+};
 
 const EVENT_DECK = [
   {
@@ -800,6 +1062,54 @@ const EVENT_DECK = [
         effect: s => { s.morale -= 10; s.quality -= 4; s.prestige -= 3; log(s, "The crew's frustration is now showing in the vintage. More trouble ahead."); }
       }
     ]
+  },
+  {
+    id: "natural-wine-fair",
+    title: "Natural Wine Fair Invitation",
+    body: "A respected natural wine fair has reached out — word about your house style has circulated in the right circles. The audience is passionate, small, and influential.",
+    condition: s => (s.profile ?? 50) >= 70 && s.prestige >= 30,
+    minMonth: 8,
+    choices: [
+      {
+        label: "Pour at the fair",
+        cost: 3500,
+        effect: s => {
+          s.prestige += 7;
+          s.profile = clamp((s.profile ?? 50) + 5, 0, 100);
+          s.demand += 4;
+          addOrder(s, "collector");
+          log(s, "The fair drew devoted buyers. Prestige up, house style reinforced, a collector reached out.");
+        }
+      },
+      {
+        label: "Decline — preserve allocation",
+        effect: s => { s.prestige += 1; log(s, "Politely declined. The invitation alone confirmed the estate's reputation."); }
+      }
+    ]
+  },
+  {
+    id: "supermarket-pitch",
+    title: "Supermarket Listing Offer",
+    body: "A national grocery chain wants to list your wine across 200 stores. The volume would be transformative, but mass distribution pulls the brand toward the middle.",
+    condition: s => (s.profile ?? 50) <= 40,
+    minMonth: 6,
+    choices: [
+      {
+        label: "Sign the listing",
+        effect: s => {
+          s.cash += 18000;
+          s.profile = clamp((s.profile ?? 50) - 8, 0, 100);
+          s.demand += 10;
+          s.prestige -= 3;
+          addOrder(s, "supermarket");
+          log(s, "Listing signed. Volume and cash up, but the brand moved decisively commercial.");
+        }
+      },
+      {
+        label: "Decline — stay selective",
+        effect: s => { s.prestige += 2; s.profile = clamp((s.profile ?? 50) + 3, 0, 100); log(s, "Declining the listing protected the brand's positioning."); }
+      }
+    ]
   }
 ];
 
@@ -831,6 +1141,22 @@ const ORDER_TYPES = {
     price: [15, 31],
     due: [4, 7],
     prestige: 14
+  },
+  supermarket: {
+    name: "Supermarket Chain",
+    cases: [350, 900],
+    price: [10, 20],
+    due: [3, 6],
+    prestige: 4,
+    maxProfile: 35   // only appears when estate is commercial-leaning
+  },
+  collector: {
+    name: "Private Collector",
+    cases: [18, 55],
+    price: [58, 110],
+    due: [2, 5],
+    prestige: 55,
+    minProfile: 65   // only appears when estate is artisan-leaning
   }
 };
 
@@ -838,15 +1164,25 @@ const ACTIONS = [
   {
     id: "vineyard",
     name: "Work Vineyard",
-    detail: "Canopy, irrigation, disease, and harvest-readiness work.",
+    detail: "Canopy management, irrigation checks, and disease scouting.",
     seasons: ["Budbreak", "Flowering", "Veraison", "Harvest"],
-    consequence: "Threat -2 all rows, quality and morale rise.",
+    consequence: s => {
+      const avgD = Math.round(averageDisease(s));
+      const avgW = Math.round(averageWater(s));
+      return `Disease ${avgD} → ~${Math.max(0, avgD - 18)}. Water ${avgW}. Health +2.`;
+    },
     cost: 2600,
     apply: s => {
-      adjustRows(s, -2);
-      s.morale += staffBonus(s, "vineyard") + 1;
-      s.quality += 1 + staffBonus(s, "vineyard");
-      log(s, "The vineyard crew thinned shoots, cleaned canopies, and lowered disease pressure.");
+      const vBonus = staffBonus(s, "vineyard");
+      s.rows.forEach(row => {
+        ensureRowFields(row);
+        row.disease = clamp(row.disease - (16 + vBonus * 5) + randint(-3, 3), 0, 100);
+        row.health  = clamp(row.health + 2 + vBonus, 8, 100);
+        row.threat  = Math.round(row.disease / 11);
+      });
+      s.morale  += vBonus + 1;
+      s.quality += 1 + vBonus;
+      log(s, `Vineyard crew cleaned canopies and scouted disease. Average disease now ${Math.round(averageDisease(s))}.`);
     }
   },
   {
@@ -896,8 +1232,15 @@ const ACTIONS = [
       s.inventory.glass -= cases;
       s.inventory.cases += cases;
       s.cash -= Math.round(cases * bottlingCost(s));
-      s.currentVintageScore = lot.score;
-      log(s, `Bottled ${cases} cases from ${lot.label} — ${lot.bulkWine} CE remaining. ${vintageScoreLabel(lot.score)} vintage (${vintageScoreStars(lot.score)}).`);
+      // Inert gas (line tier 2) bumps effective vintage score at bottling
+      const inertGasBonus = (s.buildings.line || 0) >= 2 ? 0.05 : 0;
+      // Extended maceration suite (tank tier 5) gives +1 effective vintage score
+      const macerationBonus = (s.buildings.tank || 0) >= 5 ? 1 : 0;
+      const effectiveScore = clamp(lot.score + macerationBonus, 1, 5);
+      s.currentVintageScore = inertGasBonus > 0
+        ? Math.min(5, effectiveScore + (rand() < inertGasBonus * 10 ? 1 : 0))
+        : effectiveScore;
+      log(s, `Bottled ${cases} cases from ${lot.label} — ${lot.bulkWine} CE remaining. ${vintageScoreLabel(effectiveScore)} vintage (${vintageScoreStars(effectiveScore)}).`);
     }
   },
   {
@@ -972,29 +1315,55 @@ const ACTIONS = [
     consequence: s => seasonalAction(s).consequence,
     apply: s => {
       if (s.season === "Budbreak") {
+        // Spray program: deep disease knockdown + frost protection
         s.marketMods.frostReady = 3;
-        adjustRows(s, -1, "frost watch");
+        s.rows.forEach(row => {
+          ensureRowFields(row);
+          row.disease = clamp(row.disease - (28 + randint(0, 8)), 0, 100);
+          row.threat  = Math.round(row.disease / 11);
+          row.pressure = "sprayed";
+        });
         s.quality += 1;
-        log(s, "Frost fans, candles, and early-season scouting are ready.");
+        log(s, `Spray program knocked disease pressure down to ${Math.round(averageDisease(s))} avg. Frost protection ready.`);
       } else if (s.season === "Flowering") {
-        adjustRows(s, -1, "flowering set");
+        // Canopy thinning: disease down, water normalised slightly, quality up
+        s.rows.forEach(row => {
+          ensureRowFields(row);
+          row.disease = clamp(row.disease - (20 + randint(0, 6)), 0, 100);
+          row.water   = clamp(row.water + (row.water < 45 ? 6 : -4), 0, 100);
+          row.threat  = Math.round(row.disease / 11);
+          row.pressure = "canopy thinned";
+        });
         s.quality += 2;
-        log(s, "Flowering passes improved fruit set and lowered canopy pressure.");
+        log(s, `Canopy thinning opened the fruit zone. Disease ${Math.round(averageDisease(s))}, water ${Math.round(averageWater(s))}.`);
       } else if (s.season === "Veraison") {
-        adjustRows(s, -1, "ripening");
-        s.quality += 3;
-        s.demand += 1;
-        log(s, "Veraison sampling sharpened the picking plan.");
+        // Green harvest: sacrifice ~20% yield in exchange for quality + disease cleanup
+        s.marketMods.greenHarvest = 1;
+        s.rows.forEach(row => {
+          ensureRowFields(row);
+          row.disease = clamp(row.disease - 12, 0, 100);
+          row.health  = clamp(row.health + 4, 8, 100);
+          row.threat  = Math.round(row.disease / 11);
+          row.pressure = "green harvested";
+        });
+        s.quality += 4;
+        s.demand  += 1;
+        s.profile = (s.profile ?? 50) + 3;
+        log(s, "Green harvest dropped 20% of the crop to concentrate the remaining fruit. Quality up sharply.");
       } else if (s.season === "Harvest") {
         if (isHarvestMonth(s.month)) {
           s.marketMods.harvestCrew = 2;
           s.quality += 3;
-          s.morale -= 1;
+          s.morale  -= 1;
           log(s, "Selective picking crews are booked for harvest.");
         } else {
-          adjustRows(s, -1, "post-harvest");
+          s.rows.forEach(row => {
+            ensureRowFields(row);
+            row.disease = clamp(row.disease - 10, 0, 100);
+            row.threat  = Math.round(row.disease / 11);
+          });
           s.quality += 1;
-          log(s, "Post-harvest vineyard walk and first fermentation batches started.");
+          log(s, "Post-harvest vineyard walk — disease pressure eased.");
         }
       } else if (s.season === "Cellar") {
         const ready = readyVintages(s);
@@ -1002,6 +1371,7 @@ const ACTIONS = [
         const cases = lot ? Math.min(lot.bulkWine, 90 + staffBonus(s, "cellar") * 25) : 0;
         if (lot && cases > 0) {
           lot.bulkWine -= cases;
+          lot.bottled = (lot.bottled || 0) + cases;
           s.inventory.cases += Math.round(cases * 0.95);
           log(s, `Cellar topping and racking finished ${cases} cases from ${lot.label}.`);
         } else {
@@ -1009,11 +1379,33 @@ const ACTIONS = [
         }
         s.quality += 1;
       } else {
-        s.rows.forEach(row => { row.health = clamp(row.health + 5, 20, 100); });
+        // Dormant — winter pruning recovers health and resets water toward neutral
+        s.rows.forEach(row => {
+          ensureRowFields(row);
+          row.health  = clamp(row.health + 6, 20, 100);
+          row.water   = clamp(row.water + (row.water < 50 ? 8 : -4), 20, 80);
+          row.disease = clamp(row.disease - 8, 0, 100);
+          row.threat  = Math.round(row.disease / 11);
+          row.pressure = "pruned";
+        });
         s.quality += 1;
-        s.morale += 2;
-        log(s, "Winter pruning set the next vintage up cleanly.");
+        s.morale  += 2;
+        log(s, "Winter pruning recovered vine health and reset soil moisture toward neutral.");
       }
+    }
+  },
+  {
+    id: "natural-cellar",
+    name: "Natural Cellar Pass",
+    detail: "Skip fining and filtration. Lower-intervention handling shifts the house style toward artisan and rewards wines that can stand on their own.",
+    cost: 1800,
+    seasons: ["Cellar", "Dormant"],
+    consequence: "Profile +6 toward artisan. Quality +2. Best paired with concrete-egg tanks or Grand Cru barrels.",
+    apply: s => {
+      s.profile = clamp((s.profile ?? 50) + 6, 0, 100);
+      s.quality += 2;
+      s.prestige += (s.buildings.tank || 0) >= 3 || (s.buildings.barrel || 0) >= 4 ? 2 : 0;
+      log(s, `Natural cellar pass complete. House style shifted to ${profileLabel(s.profile)} (${s.profile}).`);
     }
   }
 ];
@@ -1051,34 +1443,34 @@ const ACTION_XP = {
 
 const SEASONAL_ACTIONS = {
   Budbreak: {
-    name: "Frost Prep",
-    detail: "Stage frost fans, candles, and early scouting before cold nights hit.",
-    consequence: "Prepare frost defenses, reduce early pressure, and protect quality."
+    name: "Spray Program",
+    detail: "Full spray pass to knock back early fungal pressure before the season accelerates. Sets up frost protection too.",
+    consequence: "Disease −28 all rows, frost defenses ready, quality +1."
   },
   Flowering: {
-    name: "Flowering Pass",
-    detail: "Walk blocks during fruit set and correct canopy problems early.",
-    consequence: "Improve fruit set, reduce canopy pressure, and raise quality."
+    name: "Canopy Thinning",
+    detail: "Open the fruit zone to air and light, reducing fungal risk during the sensitive fruit-set window.",
+    consequence: "Disease −20 all rows, water normalised, quality +2."
   },
   Veraison: {
-    name: "Ripeness Sampling",
-    detail: "Sample berries, adjust irrigation, and plan the picking window.",
-    consequence: "Sharpen picking decisions, reduce pressure, and raise quality."
+    name: "Green Harvest",
+    detail: "Drop ~20% of the crop to concentrate sugars and flavour in the remaining fruit.",
+    consequence: "Yield −20%, disease down, quality +4, demand +1."
   },
   Harvest: {
     name: "Selective Picking",
     detail: "Book crews and pick the best fruit before weather or overripeness bites.",
-    consequence: "Book harvest crews, improve crop capture, and raise quality."
+    consequence: "Book harvest crews, improve crop capture, quality +3."
   },
   Cellar: {
     name: "Rack and Top",
     detail: "Top barrels, rack lots, and move wine toward finished cases.",
-    consequence: "Move bulk wine toward cases and tighten cellar quality."
+    consequence: "Move ready bulk wine toward cases, quality +1."
   },
   Dormant: {
     name: "Winter Pruning",
-    detail: "Prune vines, repair trellises, and set next year's crop load.",
-    consequence: "Restore row health and prepare next year's vintage."
+    detail: "Prune vines, repair trellises, and reset water toward neutral before the next season.",
+    consequence: "Health +6, disease −8, water normalised, morale +2."
   }
 };
 
@@ -1169,12 +1561,18 @@ function selectedDifficulty() {
   return DIFFICULTIES.find(d => d.id === setup.difficulty) || DIFFICULTIES[1];
 }
 
+const PHILOSOPHY_PROFILE = { natural: 20, industrial: -20, classic: 0 };
+const VARIETAL_PROFILE   = { gamay: 10, pinot: 8, riesling: 8, malbec: -2,
+                             sauvignon: -2, chardonnay: -4, merlot: 0,
+                             cabernet: 0, shiraz: -6 };
+
 function createState() {
   const r = selectedRegion();
   const v = selectedVarietal();
   const p = selectedPhilosophy();
   const d = selectedDifficulty();
   const inventoryMod = d.inventoryMod;
+  const startProfile = clamp(50 + (PHILOSOPHY_PROFILE[p.id] || 0) + (VARIETAL_PROFILE[setup.varietal] || 0), 0, 100);
   return {
     month: 1,
     maxMonths: 60,
@@ -1236,6 +1634,7 @@ function createState() {
     totalRevenue: 0,
     fulfilled: 0,
     missed: 0,
+    profile: startProfile,
     gameOver: null
   };
 }
@@ -1246,8 +1645,9 @@ function makeRows(count, options = {}) {
     id: i + 1,
     name: names[i],
     health: 82 + randint(-4, 6),
-    threat: randint(0, 2),
-    threatName: "weeds",
+    disease: randint(5, 18),
+    water: 52 + randint(-8, 8),
+    pressure: "weeds",
     plantedMonth: options.plantedMonth || -96,
     matureMonth: options.matureMonth || 1
   }));
@@ -1295,6 +1695,7 @@ function ensureEconomy(s) {
   if (typeof s.leaseCost !== "number") s.leaseCost = d.rent;
   if (typeof s.debt !== "number") s.debt = d.debt;
   if (!s.wineryName) s.wineryName = "Unnamed Estate";
+  if (typeof s.profile !== "number") s.profile = 50;
   ensureVintages(s);
   ensureDebtLots(s);
 }
@@ -1473,7 +1874,7 @@ function repayDebt(amount) {
 }
 
 function netWorth(s) {
-  return s.cash - s.debt + s.inventory.cases * s.price * 12 + totalBulkWine(s) * 12 + totalGrapes(s) * 7;
+  return s.cash - s.debt + s.inventory.cases * s.price * 12 + totalBulkWine(s) * 12 + totalGrapes(s) * 7 + buildingEquity(s);
 }
 
 function ensureHistory(s) {
@@ -1514,7 +1915,8 @@ function recordHistory(s, fixedCost) {
 }
 
 function directSales(s) {
-  const desirability = (s.demand * 0.9 + s.prestige * 0.8 + s.quality * 0.7 + s.marketHeat * 0.6) / 4;
+  const demandMod = profileDemandMod(s);
+  const desirability = (s.demand * demandMod * 0.9 + s.prestige * 0.8 + s.quality * 0.7 + s.marketHeat * 0.6) / 4;
   const priceResistance = Math.pow(s.price / 28, 1.55);
   const capacity = 70 + s.buildings.room * 80 + staffBonus(s, "sales") * 45 + staffBonus(s, "brand") * 55;
   const rawCases = Math.max(0, Math.floor((capacity * desirability) / (65 * priceResistance)));
@@ -1628,6 +2030,73 @@ function grantActionXp(s, actionId) {
   grantStaffXp(s, ACTION_XP[actionId] || [], 1);
 }
 
+function applyPassiveBuildingEffects(s) {
+  if ((s.buildings.tank || 0) >= 3) { s.prestige += 1; s.profile = (s.profile ?? 50) + 0.4; }  // Concrete eggs
+  if ((s.buildings.barrel || 0) >= 4) { s.prestige += 2; s.profile = (s.profile ?? 50) + 0.4; } // Grand Cru Barrel Library
+}
+
+function applyPassiveStaffEffects(s) {
+  // Tour income: base 1800/room level per tourIncome point
+  const tourPoints = staffBonus(s, "tourIncome");
+  if (tourPoints > 0) {
+    const roomLevel = Math.max(1, s.buildings.room);
+    const income = tourPoints * roomLevel * 1800;
+    s.cash += income;
+    if (s.month % 3 === 0) log(s, `Estate tours brought in ${money(income)} this month.`);
+  }
+
+  // Club income: flat monthly per clubIncome point, grows with prestige
+  const clubPoints = staffBonus(s, "clubIncome");
+  if (clubPoints > 0) {
+    const income = clubPoints * (2200 + Math.max(0, s.prestige - 30) * 40);
+    s.cash += income;
+    if (s.month % 3 === 0) log(s, `Wine club subscribers paid ${money(income)} in dues.`);
+  }
+
+  // Disease control: passive disease reduction each month
+  const diseasePoints = staffBonus(s, "diseaseControl");
+  if (diseasePoints > 0) {
+    s.rows.forEach(row => {
+      ensureRowFields(row);
+      row.disease = clamp(row.disease - diseasePoints * 5, 0, 100);
+      row.threat  = Math.round(row.disease / 11);
+    });
+  }
+
+  // Water control: nudge water toward varietal optimum each month
+  const waterPoints = staffBonus(s, "waterControl");
+  if (waterPoints > 0) {
+    const optimal = varietal().optimalWater || 50;
+    s.rows.forEach(row => {
+      ensureRowFields(row);
+      const nudge = Math.sign(optimal - row.water) * waterPoints * 4;
+      row.water = clamp(row.water + nudge, 0, 100);
+    });
+  }
+
+  // Profile drift from staff
+  const profileDrift = staffBonus(s, "profileDrift");
+  if (profileDrift !== 0) s.profile = (s.profile ?? 50) + profileDrift;
+
+  // Priya pulls profile toward commercial
+  if (s.staff.includes("priya")) s.profile = (s.profile ?? 50) - 1;
+
+  // Social media prestige drain: if prestige above threshold, pull it back
+  s.staff.forEach(id => {
+    const person = STAFF_POOL.find(p => p.id === id);
+    if (!person?.effects.prestigeDrain) return;
+    let threshold = person.effects.prestigeDrain;
+    // perk relief raises the threshold
+    const relief = (STAFF_ADVANCEMENTS[id] || [])
+      .filter(perk => (s.staffProgress?.[id]?.perks || []).includes(perk.id))
+      .reduce((sum, perk) => sum + (perk.effects?.prestigeDrainRelief || 0), 0);
+    threshold += relief;
+    if (s.prestige > threshold) {
+      s.prestige = Math.max(threshold, s.prestige - 1);
+    }
+  });
+}
+
 function grantMonthlyStaffXp(s) {
   if (s.month % 3 === 0) grantStaffXp(s, s.staff, 1);
 }
@@ -1655,8 +2124,16 @@ function applyImmediatePerk(s, perk) {
 
 function addOrder(s, forcedType) {
   if (s.orders.length >= 6) return;
-  const available = Object.keys(ORDER_TYPES).filter(id => !forcedType || id === forcedType);
-  const typeId = forcedType || available[randint(0, available.length - 1)];
+  const profile = s.profile ?? 50;
+  const eligible = Object.keys(ORDER_TYPES).filter(id => {
+    if (forcedType) return id === forcedType;
+    const t = ORDER_TYPES[id];
+    if (t.maxProfile != null && profile > t.maxProfile) return false;
+    if (t.minProfile != null && profile < t.minProfile) return false;
+    return true;
+  });
+  if (!eligible.length) return;
+  const typeId = forcedType || eligible[randint(0, eligible.length - 1)];
   const type = ORDER_TYPES[typeId];
   const prestigeFit = s.prestige + randint(-8, 16);
   if (!forcedType && prestigeFit < type.prestige) return;
@@ -1699,7 +2176,7 @@ function fulfillOrder(id) {
   const revenue = Math.round(order.cases * state.price * 12 * premium * vintageMod);
   state.inventory.cases -= order.cases;
   state.cash += revenue;
-  state.prestige += order.type === "club" || order.type === "restaurant" ? 3 : 1;
+  state.prestige += order.type === "collector" ? 5 : order.type === "club" || order.type === "restaurant" ? 3 : 1;
   state.demand += 2;
   state.fulfilled += 1;
   state.totalSold += order.cases;
@@ -1720,33 +2197,115 @@ function rejectOrder(id) {
   render();
 }
 
-function adjustRows(s, delta, specificThreat) {
+function ensureRowFields(row) {
+  if (typeof row.disease !== "number") row.disease = row.threat != null ? row.threat * 11 : 10;
+  if (typeof row.water !== "number") row.water = 52;
+  if (!row.pressure) row.pressure = row.threatName || "normal";
+  // keep legacy fields in sync for any old code that still reads them
+  row.threat = Math.round((row.disease || 0) / 11);
+  row.threatName = row.pressure;
+}
+
+function adjustRows(s, diseaseDelta, label) {
   s.rows.forEach(row => {
-    row.threat = clamp(row.threat + delta, 0, 9);
-    if (specificThreat) row.threatName = specificThreat;
-    row.health = clamp(row.health - Math.max(0, delta) * 3 + Math.max(0, -delta) * 2, 12, 100);
+    ensureRowFields(row);
+    row.disease = clamp(row.disease + diseaseDelta * 11, 0, 100);
+    if (label) row.pressure = label;
+    if (diseaseDelta < 0) row.health = clamp(row.health + Math.abs(diseaseDelta) * 2, 8, 100);
+    row.threat = Math.round(row.disease / 11);
+    row.threatName = row.pressure;
   });
 }
 
-function buyBuilding(id) {
-  const b = BUILDINGS.find(item => item.id === id);
-  const owned = state.buildings[id] || 0;
-  if (!b || owned >= b.max || state.actionsLeft <= 0 || state.event || state.gameOver) return;
-  const discount = buildDiscountMod(state);
-  const cost = Math.round(b.baseCost * Math.pow(1.28, owned) * region().costMod * discount);
-  if (state.cash < cost) return;
-  state.cash -= cost;
-  state.buildings[id] = owned + 1;
+function averageDisease(s) {
+  const rows = s.rows;
+  return rows.length ? rows.reduce((sum, r) => sum + (r.disease || 0), 0) / rows.length : 0;
+}
+
+function averageWater(s) {
+  const rows = s.rows;
+  return rows.length ? rows.reduce((sum, r) => sum + (r.water || 50), 0) / rows.length : 50;
+}
+
+function capexTier(id, level) {
+  return (CAPEX_TIERS[id]?.tiers || [])[level] || null;
+}
+
+function capexCost(id, level) {
+  const tier = capexTier(id, level);
+  if (!tier) return 0;
+  return Math.round(tier.cost * (region().costMod || 1) * buildDiscountMod(state));
+}
+
+function buildingEquity(s) {
+  let equity = 0;
+  Object.keys(CAPEX_TIERS).forEach(id => {
+    const owned = s.buildings[id] || 0;
+    for (let i = 0; i < owned; i++) {
+      const tier = capexTier(id, i);
+      if (tier) equity += Math.round(tier.cost * 0.55);
+    }
+  });
+  return equity;
+}
+
+function applyBuildEffect(s, id, tier) {
   if (id === "block") {
-    const row = makeRows(1, { plantedMonth: state.month, matureMonth: state.month + 18 })[0];
-    row.name = `Young Block ${state.rows.length + 1}`;
-    state.rows.push(row);
-    state.rows[state.rows.length - 1].id = state.rows.length;
+    const row = makeRows(1, { plantedMonth: s.month, matureMonth: s.month + 18 })[0];
+    row.name = `Young Block ${s.rows.length + 1}`;
+    s.rows.push(row);
+    s.rows[s.rows.length - 1].id = s.rows.length;
   }
-  if (id === "room") state.demand += 4;
-  if (id === "barrel") state.quality += Math.round(varietal().barrelNeed * 2);
-  state.actionsLeft -= 1;
-  log(state, `Built ${b.name}.`);
+  if (id === "room") { s.demand += 4; if (s.buildings.room === 3) s.morale += 3; if (s.buildings.room === 4) s.prestige += 8; }
+  if (id === "barrel") s.quality += Math.round(varietal().barrelNeed * 2);
+  if (id === "line" && s.buildings.line === 4) s.prestige += 2;
+}
+
+function buyBuilding(id) {
+  const bDef = BUILDINGS.find(item => item.id === id);
+  const owned = state.buildings[id] || 0;
+  if (!bDef || owned >= bDef.max || state.actionsLeft <= 0 || state.event || state.gameOver) return;
+  const cost = capexCost(id, owned);
+  if (state.cash < cost) return;
+  _doBuild(state, id, cost);
+}
+
+function financeBuild(id) {
+  const bDef = BUILDINGS.find(item => item.id === id);
+  const owned = state.buildings[id] || 0;
+  if (!bDef || owned >= bDef.max || state.actionsLeft <= 0 || state.event || state.gameOver) return;
+  const cost = capexCost(id, owned);
+  if (availableCredit(state) < cost) return;
+  addDebt(state, cost, `${capexTier(id, owned)?.name || id} financing`);
+  _doBuild(state, id, 0);
+}
+
+function _doBuild(s, id, cashCost) {
+  const owned = s.buildings[id] || 0;
+  const tier = capexTier(id, owned);
+  s.cash -= cashCost;
+  s.buildings[id] = owned + 1;
+  applyBuildEffect(s, id, tier);
+  s.actionsLeft -= 1;
+  log(s, `Built: ${tier?.name || id}${cashCost === 0 ? " (financed)" : ""}.`);
+  normalizeState(s);
+  render();
+}
+
+function sellBuilding(id) {
+  const owned = state.buildings[id] || 0;
+  if (owned <= 0 || state.event || state.gameOver) return;
+  const tier = capexTier(id, owned - 1);
+  const refund = Math.round((tier?.cost || 0) * 0.55);
+  state.buildings[id] = owned - 1;
+  if (id === "block" && state.rows.length > 0) {
+    const removed = state.rows.pop();
+    log(state, `Sold ${tier?.name || id} — removed ${removed.name}. Recovered ${money(refund)}.`);
+  } else {
+    log(state, `Sold ${tier?.name || id}. Recovered ${money(refund)}.`);
+  }
+  state.cash += refund;
+  normalizeState(state);
   render();
 }
 
@@ -1852,6 +2411,25 @@ function normalizeState(s) {
   s.quality = clamp(Math.round(s.quality), 0, 120);
   s.sustainability = clamp(Math.round(s.sustainability), 0, 100);
   s.influence = clamp(Math.round(s.influence), 0, 100);
+  s.profile = clamp(Math.round(s.profile ?? 50), 0, 100);
+}
+
+function profilePriceCeil(s) {
+  const base = Math.round(80 + (s.profile ?? 50) * 0.8);
+  const artisanBonus = (s.buildings.line || 0) >= 4 ? 8 : 0;
+  return base + artisanBonus;
+}
+
+function profileDemandMod(s) {
+  return 1 + (50 - (s.profile ?? 50)) * 0.005;
+}
+
+function profileLabel(p) {
+  if (p <= 20) return "Scaled Commercial";
+  if (p <= 40) return "Commercial";
+  if (p <= 60) return "Classic Estate";
+  if (p <= 80) return "Artisan";
+  return "Natural / Cult";
 }
 
 function advanceMonth() {
@@ -1877,6 +2455,8 @@ function monthlyTick(s) {
 
   applyRegionEffects(s);
   applyWeather(s);
+  applyPassiveStaffEffects(s);
+  applyPassiveBuildingEffects(s);
   decayAndOrders(s);
   (s.vintages || []).forEach(v => { if (v.bulkWine > 0) v.agingMonths = (v.agingMonths || 0) + 1; });
 
@@ -1998,6 +2578,7 @@ function isHarvestMonth(month) {
 
 function applyWeather(s) {
   const r = region();
+  const v = varietal();
   const lab = 1 - s.buildings.lab * 0.12;
   const month = calendarMonthNumber(s.month);
   s.lastTemp = regionalTempRange(r.id, month);
@@ -2009,36 +2590,69 @@ function applyWeather(s) {
   const tempFrost = s.lastTemp.low <= 33 ? 1.8 : s.lastTemp.low <= 38 ? 1.2 : 0.45;
   const humidity = REGION_CLIMATE[r.id]?.humidity || 0.55;
   const options = [
-    { name: "Heat spike", key: "heat", weight: 0.18 * r.weather.heat * summerHeat * tempHeat, delta: 2 },
-    { name: "Frost pocket", key: "frost", weight: 0.12 * r.weather.frost * springFrost * tempFrost, delta: 2 },
-    { name: "Wet canopy", key: "rain", weight: 0.17 * r.weather.rain * rainSeason * (0.65 + humidity), delta: 2 },
-    { name: "Drought stress", key: "drought", weight: 0.14 * r.weather.drought * droughtSeason * (1.35 - humidity), delta: 2 },
-    { name: "Clear skies", key: "clear", weight: 0.39, delta: -1 }
+    { name: "Heat spike",    key: "heat",    weight: 0.18 * r.weather.heat    * summerHeat  * tempHeat },
+    { name: "Frost pocket",  key: "frost",   weight: 0.12 * r.weather.frost   * springFrost * tempFrost },
+    { name: "Wet canopy",    key: "rain",    weight: 0.17 * r.weather.rain    * rainSeason  * (0.65 + humidity) },
+    { name: "Drought stress",key: "drought", weight: 0.14 * r.weather.drought * droughtSeason * (1.35 - humidity) },
+    { name: "Clear skies",   key: "clear",   weight: 0.39 }
   ];
   const total = options.reduce((sum, o) => sum + o.weight, 0);
   let roll = rand() * total;
-  const picked = options.find(o => {
-    roll -= o.weight;
-    return roll <= 0;
-  }) || options[options.length - 1];
+  const picked = options.find(o => { roll -= o.weight; return roll <= 0; }) || options[options.length - 1];
   s.lastWeather = picked.name;
+
   const shield = staffBonus(s, "finance") ? 0.82 : 1;
+  const diseaseRisk = v.diseaseRisk || 1.0;
+  const droughtSens = v.droughtSensitivity || 1.0;
+
   s.rows.forEach(row => {
-    const pressure = picked.key === "clear" ? -1 : Math.ceil(picked.delta * philosophy().risk * lab * shield * varietal().difficulty);
-    const ready = picked.key === "frost" && s.marketMods.frostReady ? 1 : 0;
-    row.threat = clamp(row.threat + pressure + randint(-1, 1) - ready, 0, 9);
-    if (picked.key !== "clear") row.threatName = picked.key;
-    row.health = clamp(row.health - Math.max(0, row.threat - 4), 8, 100);
+    ensureRowFields(row);
+    const frostReady = picked.key === "frost" && s.marketMods.frostReady ? 0.4 : 1;
+
+    switch (picked.key) {
+      case "rain":
+        row.disease = clamp(row.disease + Math.round((8 + randint(0, 6)) * diseaseRisk * philosophy().risk * lab * shield), 0, 100);
+        row.water   = clamp(row.water   + randint(8, 16), 0, 100);
+        row.pressure = "wet canopy";
+        break;
+      case "drought":
+        row.disease = clamp(row.disease - randint(2, 6), 0, 100);
+        row.water   = clamp(row.water   - Math.round((10 + randint(0, 8)) * droughtSens), 0, 100);
+        if (row.water < 25) row.health = clamp(row.health - Math.round(2 * droughtSens), 8, 100);
+        row.pressure = "drought";
+        break;
+      case "heat":
+        row.water = clamp(row.water - randint(4, 10), 0, 100);
+        if (row.water < 30) row.health = clamp(row.health - Math.round(3 * droughtSens * lab), 8, 100);
+        row.disease = clamp(row.disease - randint(1, 3), 0, 100);
+        row.pressure = "heat";
+        break;
+      case "frost":
+        row.health  = clamp(row.health - Math.round((8 + randint(0, 8)) * philosophy().risk * lab * frostReady), 8, 100);
+        row.disease = clamp(row.disease - randint(2, 5), 0, 100);
+        row.pressure = "frost";
+        break;
+      case "clear":
+        row.disease = clamp(row.disease - randint(2, 5), 0, 100);
+        row.water   = clamp(row.water   + randint(-2, 3), 0, 100);
+        row.health  = clamp(row.health  + 1, 8, 100);
+        break;
+    }
+
+    // High disease bleeds health over time
+    if (row.disease > 60) row.health = clamp(row.health - Math.floor((row.disease - 60) / 18), 8, 100);
   });
+
   if (picked.key === "clear") {
     s.quality += 1;
   } else {
-    s.quality -= Math.max(0, Math.floor((averageThreat(s) - 4) / 2));
+    const avgDisease = averageDisease(s);
+    s.quality -= Math.max(0, Math.floor((avgDisease - 45) / 22));
   }
-  const calMonth = calendarMonthNumber(s.month);
-  const isGrowingSeason = [3, 4, 5, 6, 7, 8, 9, 10].includes(calMonth);
+
+  const isGrowingSeason = [3, 4, 5, 6, 7, 8, 9, 10].includes(month);
   if (isGrowingSeason) {
-    const weatherDelta = picked.key === "clear" ? 4 : picked.key === "heat" ? -3 : picked.key === "frost" ? -6 : picked.key === "rain" ? -2 : picked.key === "drought" ? -3 : 0;
+    const weatherDelta = picked.key === "clear" ? 4 : picked.key === "frost" ? -6 : picked.key === "rain" ? -2 : picked.key === "drought" ? -3 : picked.key === "heat" ? -2 : 0;
     s.vintageWeatherScore = clamp((s.vintageWeatherScore || 52) + weatherDelta, 10, 90);
   }
 }
@@ -2060,15 +2674,36 @@ function harvest(s) {
     log(s, "Harvest arrived, but no vineyard blocks were mature enough to crop.");
     return s.harvestReport;
   }
-  const health = productive.reduce((sum, row) => sum + row.health - row.threat * 5, 0) / productive.length;
+  productive.forEach(r => ensureRowFields(r));
+  const avgHealth  = productive.reduce((sum, row) => sum + row.health, 0) / productive.length;
+  const avgDisease = productive.reduce((sum, row) => sum + (row.disease || 0), 0) / productive.length;
+  const avgWater   = productive.reduce((sum, row) => sum + (row.water || 50), 0) / productive.length;
+
+  // Water stress: mild deficit is good for reds (< optimalWater), bad for whites (> optimalWater)
+  const optimalWater = v.optimalWater || 50;
+  const waterDev = avgWater - optimalWater;
+  const waterYieldMod  = clamp(1 - Math.abs(waterDev) / 120, 0.7, 1.05);
+  const waterQualityMod = waterDev < 0
+    ? clamp(1 + Math.abs(waterDev) / 80, 1.0, 1.15)   // mild deficit → concentration bonus
+    : clamp(1 - waterDev / 90, 0.85, 1.0);             // excess water → dilution
+
+  // Disease penalty on yield and quality
+  const diseaseYieldMod   = clamp(1 - avgDisease / 160, 0.65, 1.0);
+  const diseaseQualityMod = clamp(1 - avgDisease / 100, 0.62, 1.0);
+
   const base = productive.length * 260;
   const crew = s.marketMods.harvestCrew ? 1.12 : 1;
-  const grapes = Math.max(80, Math.round(base * (health / 82) * v.yield * p.yield * (r.yieldMod || 1) * crew));
-  const qualityGain = Math.round((health - 58) / 8 + s.buildings.barrel * 0.7 + (s.marketMods.harvestCrew ? 2 : 0));
+  const greenHarvestMod = s.marketMods.greenHarvest ? 0.80 : 1.0;
+  const grapes = Math.max(60, Math.round(
+    base * (avgHealth / 82) * v.yield * p.yield * (r.yieldMod || 1) * crew * waterYieldMod * diseaseYieldMod * greenHarvestMod
+  ));
+  const rawQualityGain = Math.round((avgHealth - 58) / 8 + s.buildings.barrel * 0.7 + (s.marketMods.harvestCrew ? 2 : 0));
+  const qualityGain = Math.round(rawQualityGain * waterQualityMod * diseaseQualityMod);
+
   const laborRate = s.marketMods.harvestCrew ? 3600 : 2800;
   const laborCost = Math.round(productive.length * laborRate * r.costMod * difficulty().costMod * staffCostMod(s));
   const year = START_YEAR + Math.floor((s.month - 1) / 12);
-  const vintageScore = computeVintageScore(s.vintageWeatherScore, health);
+  const vintageScore = computeVintageScore(s.vintageWeatherScore, avgHealth);
   s.vintages.push({
     id: `harvest-${s.month}`,
     year,
@@ -2086,9 +2721,12 @@ function harvest(s) {
   s.quality += qualityGain;
   s.prestige += qualityGain > 3 ? 2 : 0;
   productive.forEach(row => {
-    row.threat = Math.max(0, row.threat - 3);
-    row.health = clamp(row.health + 12, 20, 100);
+    row.disease = clamp((row.disease || 0) - 20, 0, 100);
+    row.health  = clamp(row.health + 12, 20, 100);
+    row.threat  = Math.round(row.disease / 11);
   });
+  const diseaseNote = avgDisease > 55 ? ` Disease pressure (${Math.round(avgDisease)}) cut yield and quality.` : avgDisease < 20 ? " Clean blocks." : "";
+  const waterNote   = Math.abs(waterDev) > 18 ? (waterDev < 0 ? " Mild water stress concentrated the fruit." : " Excess water diluted the vintage.") : "";
   s.harvestReport = {
     date: monthDateLabel(s.month),
     grapes,
@@ -2096,9 +2734,11 @@ function harvest(s) {
     productiveRows: productive.length,
     qualityGain,
     vintageScore,
-    note: s.marketMods.harvestCrew ? "Selective picking raised yield and quality, but the crew cost more." : "Standard seasonal labor was charged with the harvest."
+    avgDisease: Math.round(avgDisease),
+    avgWater: Math.round(avgWater),
+    note: (s.marketMods.harvestCrew ? "Selective picking raised yield and quality." : "Standard seasonal labor.") + diseaseNote + waterNote
   };
-  log(s, `Harvest brought in ${grapes} grape CE from ${productive.length} blocks — ${vintageScoreLabel(vintageScore)} vintage (${vintageScoreStars(vintageScore)}). Seasonal labor cost ${money(laborCost)}.`);
+  log(s, `Harvest: ${grapes} CE from ${productive.length} blocks. Disease ${Math.round(avgDisease)}, water ${Math.round(avgWater)}. ${vintageScoreLabel(vintageScore)} vintage. Labor ${money(laborCost)}.`);
   return s.harvestReport;
 }
 
@@ -2107,7 +2747,7 @@ function productiveRows(s) {
 }
 
 function averageThreat(s) {
-  return s.rows.reduce((sum, row) => sum + row.threat, 0) / s.rows.length;
+  return averageDisease(s) / 11;
 }
 
 function decayAndOrders(s) {
@@ -2345,7 +2985,7 @@ function tabPanel() {
     return `${artBanner("commercial", "Tasting room, buyers, and distribution")}${marketPanel()}${analyticsPanel()}${ordersPanel()}`;
   }
   if (activeTab === "estate") {
-    return `${artBanner("cellar", "Cellar, bottling line, tanks, and barrels")}${buildingsPanel()}${vintageCellarPanel()}${marketPanel()}`;
+    return `${artBanner("cellar", "Cellar, bottling line, tanks, and barrels")}${buildingsPanel()}${vintageCellarPanel()}`;
   }
   if (activeTab === "people") {
     return `${staffPanel()}`;
@@ -2397,6 +3037,7 @@ function topbar() {
           ${kpi("Grape CE", totalGrapes(state), "Case-equivalent grapes across all vintage lots. Harvest adds these; cellar work converts them to bulk wine.")}
           ${kpi("Bulk CE", totalBulkWine(state), "Case-equivalent bulk wine aging across all vintage lots. Bottling converts this into finished cases.")}
           ${kpi("Cases", state.inventory.cases, "Finished cases ready to sell or reserve for contracts. Passive direct sales can reduce this at month close.")}
+          ${kpi("House Style", `${state.profile ?? 50} · ${profileLabel(state.profile ?? 50)}`, `Profile ${state.profile ?? 50}/100. Commercial end: higher demand, lower price ceiling. Artisan end: lower demand, higher price ceiling and prestige.`)}
         </div>
         <div class="top-actions">
           <button onclick="saveGame()">Save</button>
@@ -2523,7 +3164,7 @@ function overviewPanel() {
       <div class="brief-grid">
         <button class="brief-card" onclick="setTab('vineyard')" ${tip("Watch row health and threat. High pressure lowers harvest yield and quality.")}>
           <span>Vineyard Risk</span>
-          <strong>${Math.round(averageThreat(state) * 11)}/100</strong>
+          <strong>${Math.round(averageDisease(state))}/100</strong>
           <em>${state.season} • ${state.lastWeather}</em>
         </button>
         <button class="brief-card" onclick="setTab('commercial')" ${tip("Review price, direct sales forecast, and buyer commitments.")}>
@@ -2551,10 +3192,11 @@ function estateDashboard() {
   const openParcels = Math.max(0, blockDef.max - (state.buildings.block || 0));
   const rowLines = state.rows.map(row => {
     const young = (row.matureMonth || 1) > state.month;
-    const tone = young ? "muted" : row.threat >= 6 ? "danger" : row.health < 50 ? "warn" : "";
+    ensureRowFields(row);
+    const tone = young ? "muted" : row.disease > 60 ? "danger" : row.disease > 38 || row.health < 50 ? "warn" : "";
     const status = young
       ? `young · crops ${monthDateLabel(row.matureMonth)}`
-      : `health ${row.health} · threat ${row.threat}`;
+      : `health ${row.health} · disease ${row.disease}`;
     return `<div class="dash-row ${tone}"><span>${escapeHtml(row.name)}</span><em>${status}</em></div>`;
   });
   if (openParcels > 0) {
@@ -2588,6 +3230,15 @@ function estateDashboard() {
           <div class="dash-row"><span>Tasting room</span><em>level ${state.buildings.room}</em></div>
           <div class="dash-row"><span>Open buyer orders</span><em>${state.orders.length}</em></div>
           <div class="dash-row"><span>Staff</span><em>${state.staff.length} hired · <a onclick="event.stopPropagation();setTab('people')" style="color:inherit;text-decoration:underline;cursor:pointer">manage</a></em></div>
+          <div class="dash-row profile-row">
+            <span>House Style</span>
+            <div class="profile-meter-wrap">
+              <div class="profile-meter-track" style="--profile-pct:${state.profile ?? 50}%">
+                <div class="profile-meter-center"></div>
+              </div>
+              <em>${profileLabel(state.profile ?? 50)}</em>
+            </div>
+          </div>
         </button>
       </div>
     </section>
@@ -2812,36 +3463,59 @@ function artBanner(kind, label) {
 }
 
 function vineyardPanel() {
+  const v = varietal();
+  const optimalWater = v.optimalWater || 50;
   return `
     <section class="panel">
       <div class="panel-head">
-        <h2>Vineyard ${helpIcon("Rows with high threat lose health and hurt harvest yield. Work Vineyard is the main defensive action.")}</h2>
-        <span class="small">${state.season} • ${state.lastWeather} • ${state.lastTemp.low}-${state.lastTemp.high}F</span>
+        <h2>Vineyard ${helpIcon("Disease pressure hurts yield and quality at harvest. Water stress can concentrate reds but harms sensitive varietals. Work Vineyard and seasonal actions manage both.")}</h2>
+        <span class="small">${state.season} • ${state.lastWeather} • ${state.lastTemp.low}–${state.lastTemp.high}°F</span>
       </div>
       <div class="vineyard">
-        ${state.rows.map(row => `
-          <div class="row-card">
-            <div>
-              <div class="row-name">${row.name}</div>
-              <div class="row-meta">Health ${row.health} • ${row.threatName}${(row.matureMonth || 1) > state.month ? ` • young vines crop ${monthDateLabel(row.matureMonth)}` : ""}</div>
+        ${state.rows.map(row => {
+          ensureRowFields(row);
+          const young = (row.matureMonth || 1) > state.month;
+          const diseaseTone = row.disease > 65 ? "danger" : row.disease > 40 ? "warn" : "ok";
+          const waterDev = row.water - optimalWater;
+          const waterTone = Math.abs(waterDev) > 25 ? (waterDev < -35 ? "danger" : "warn") : "ok";
+          const waterLabel = waterDev < -30 ? "drought stress" : waterDev < -15 ? "mild deficit" : waterDev > 25 ? "excess water" : "balanced";
+          return `
+            <div class="row-card">
+              <div class="row-info">
+                <div class="row-name">${row.name}${young ? ` <em class="row-badge">young · crops ${monthDateLabel(row.matureMonth)}</em>` : ""}</div>
+                <div class="row-pressure">${row.pressure || "normal"}</div>
+              </div>
+              <div class="row-meters">
+                <div class="row-meter-group">
+                  <span class="row-meter-label">Health</span>
+                  <div class="row-meter-track"><div class="row-meter-fill health" style="width:${row.health}%"></div></div>
+                  <span class="row-meter-val">${row.health}</span>
+                </div>
+                <div class="row-meter-group">
+                  <span class="row-meter-label">Disease</span>
+                  <div class="row-meter-track"><div class="row-meter-fill disease-${diseaseTone}" style="width:${row.disease}%"></div></div>
+                  <span class="row-meter-val ${diseaseTone === "danger" ? "text-danger" : diseaseTone === "warn" ? "text-warn" : ""}">${row.disease}</span>
+                </div>
+                <div class="row-meter-group">
+                  <span class="row-meter-label">Water</span>
+                  <div class="row-meter-track water-track">
+                    <div class="row-meter-fill water-${waterTone}" style="width:${row.water}%"></div>
+                    <div class="water-optimal-marker" style="left:${optimalWater}%"></div>
+                  </div>
+                  <span class="row-meter-val ${waterTone === "danger" ? "text-danger" : waterTone === "warn" ? "text-warn" : ""}">${waterLabel}</span>
+                </div>
+              </div>
             </div>
-            <div class="vines" aria-label="${row.name} vines">
-              ${Array.from({ length: 10 }, (_, i) => `<span class="vine stress${vineStress(row, i)}"></span>`).join("")}
-            </div>
-            <div class="threat">Threat ${row.threat}</div>
-          </div>
-        `).join("")}
+          `;
+        }).join("")}
+      </div>
+      <div class="vineyard-summary">
+        <span>Avg disease <strong class="${averageDisease(state) > 55 ? "text-danger" : averageDisease(state) > 35 ? "text-warn" : ""}">${Math.round(averageDisease(state))}</strong></span>
+        <span>Avg water <strong>${Math.round(averageWater(state))}</strong> (${v.name} optimal ~${optimalWater})</span>
+        <span>Avg health <strong>${Math.round(state.rows.reduce((s, r) => s + r.health, 0) / state.rows.length)}</strong></span>
       </div>
     </section>
   `;
-}
-
-function vineStress(row, index) {
-  const threshold = row.threat + (100 - row.health) / 18;
-  if (index < threshold - 5) return 3;
-  if (index < threshold - 2) return 2;
-  if (index < threshold) return 1;
-  return 0;
 }
 
 function actionInventoryNote(action, s) {
@@ -2903,7 +3577,7 @@ function marketPanel() {
       <div class="market-line">
         <label>
           <span class="small">List price per bottle</span>
-          <input type="range" min="14" max="120" value="${state.price}" oninput="setPrice(this.value)">
+          <input type="range" min="14" max="${profilePriceCeil(state)}" value="${state.price}" oninput="setPrice(this.value)">
         </label>
         <strong>${money(state.price)}</strong>
       </div>
@@ -2932,8 +3606,8 @@ function flowPanel() {
     <div class="flow-panel">
       <div class="flow-step">
         <span>Next Harvest</span>
-        <strong>${forecast.low}-${forecast.high} CE</strong>
-        <em>${forecast.monthLabel} • ${forecast.matureRows} mature blocks</em>
+        <strong>${(state.buildings.lab || 0) >= 3 ? `${forecast.grapes} CE` : `${forecast.low}–${forecast.high} CE`}</strong>
+        <em>${forecast.monthLabel} • ${forecast.matureRows} mature blocks${(state.buildings.lab || 0) >= 3 ? " · exact forecast" : ""}</em>
       </div>
       <div class="flow-arrow">→</div>
       <div class="flow-step">
@@ -2979,6 +3653,7 @@ function buyGrapes() {
   }
   state.cash -= total;
   state.actionsLeft -= 1;
+  state.profile = clamp((state.profile ?? 50) - 4, 0, 100);
   log(state, `Purchased ${lotSize} CE of ${v.name} grapes for ${money(total)}.`);
   normalizeState(state);
   render();
@@ -3065,7 +3740,7 @@ function harvestForecast(s) {
   const harvestMonth = s.month + monthsUntilHarvest;
   const matureAtHarvest = s.rows.filter(row => (row.matureMonth || 1) <= harvestMonth);
   const health = matureAtHarvest.length
-    ? matureAtHarvest.reduce((sum, row) => sum + row.health - row.threat * 5, 0) / matureAtHarvest.length
+    ? matureAtHarvest.reduce((sum, row) => sum + row.health - (row.disease || 0) * 0.45, 0) / matureAtHarvest.length
     : 0;
   const base = matureAtHarvest.length * 260;
   const midpoint = Math.max(0, Math.round(base * (health / 82) * varietal().yield * philosophy().yield * (region().yieldMod || 1)));
@@ -3100,7 +3775,7 @@ function debtPanel() {
 }
 
 function setPrice(value) {
-  state.price = clamp(Number(value), 14, 120);
+  state.price = clamp(Number(value), 14, profilePriceCeil(state));
   render();
 }
 
@@ -3147,26 +3822,61 @@ function orderView(order) {
 }
 
 function buildingsPanel() {
+  const blocked = state.actionsLeft <= 0 || !!state.event || state.gameOver;
+  const equity = buildingEquity(state);
   return `
     <section class="panel">
       <div class="panel-head">
-        <h2>Estate Engine ${helpIcon("Construction costs cash and one monthly action. Upgrades compound, but overbuilding can starve operations.")}</h2>
-        <span class="small">Compounding upgrades</span>
+        <h2>Capital Investments ${helpIcon("Each tier is a named upgrade — buy with cash or finance with debt. Sell the most recent tier to recover 55% of cost.")}</h2>
+        <span class="small">Asset value ${money(equity)}</span>
       </div>
-      <div class="buildings">
-        ${BUILDINGS.map(building => {
-          const owned = state.buildings[building.id] || 0;
-          const discount = buildDiscountMod(state);
-          const cost = Math.round(building.baseCost * Math.pow(1.28, owned) * region().costMod * discount);
+      <div class="capex-grid">
+        ${Object.entries(CAPEX_TIERS).map(([id, cat]) => {
+          const owned = state.buildings[id] || 0;
+          const max = cat.tiers.length;
           return `
-            <div class="building">
-              <div class="building-head">
-                <strong>${building.name} (${owned}/${building.max})</strong>
-                <span class="tag">${money(cost)}</span>
+            <div class="capex-cat">
+              <div class="capex-cat-head">
+                <strong>${cat.label}</strong>
+                <span class="small muted">${owned}/${max} tiers</span>
               </div>
-              <p>${building.text}</p>
-              <div class="building-actions">
-                <button onclick="buyBuilding('${building.id}')" ${owned >= building.max || state.cash < cost || state.actionsLeft <= 0 || state.event ? "disabled" : ""}>Build</button>
+              <div class="capex-track">
+                ${cat.tiers.map((tier, i) => {
+                  const isPast    = i < owned - 1;
+                  const isCurrent = i === owned - 1;
+                  const isNext    = i === owned && owned < max;
+                  const isFuture  = i > owned;
+                  const cost      = capexCost(id, i);
+                  const canBuy    = !blocked && state.cash >= cost;
+                  const canFin    = !blocked && availableCredit(state) >= cost;
+                  let cls = "capex-tier";
+                  if (isPast)    cls += " capex-past";
+                  if (isCurrent) cls += " capex-current";
+                  if (isNext)    cls += " capex-next";
+                  if (isFuture)  cls += " capex-locked";
+                  return `
+                    <div class="${cls}">
+                      <div class="capex-tier-head">
+                        ${isPast || isCurrent ? `<span class="capex-check">✓</span>` : `<span class="capex-num">${i + 1}</span>`}
+                        <strong>${tier.name}</strong>
+                      </div>
+                      <div class="capex-tags">
+                        ${tier.tags.map(t => `<span class="tag">${t}</span>`).join("")}
+                      </div>
+                      <p>${tier.text}</p>
+                      <div class="capex-cost">${money(cost)}</div>
+                      ${isCurrent ? `
+                        <div class="capex-actions">
+                          <button class="ghost" onclick="sellBuilding('${id}')" ${!!state.event || state.gameOver ? "disabled" : ""}>Sell ${money(Math.round(tier.cost * 0.55))}</button>
+                        </div>` : ""}
+                      ${isNext ? `
+                        <div class="capex-actions">
+                          <button onclick="buyBuilding('${id}')" ${!canBuy ? "disabled" : ""} title="${!blocked && state.cash < cost ? "Not enough cash" : ""}">Buy</button>
+                          <button class="ghost" onclick="financeBuild('${id}')" ${!canFin ? "disabled" : ""} title="${!blocked && availableCredit(state) < cost ? "Credit limit reached" : ""}">Finance</button>
+                        </div>` : ""}
+                    </div>
+                  `;
+                }).join("")}
               </div>
             </div>
           `;
@@ -3203,7 +3913,7 @@ function staffView(person, employed) {
     <div class="staff">
       <div class="staff-head">
         <div class="staff-id">
-          <img src="assets/${person.id}.png" alt="${person.name}" onerror="this.style.display='none'">
+          <img src="assets/${person.portrait || person.id}.png" alt="${person.name}" onerror="this.style.display='none'">
           <strong>${person.name}</strong>
         </div>
         <span class="tag">${person.role}</span>
@@ -3321,6 +4031,8 @@ window.acceptOrder = acceptOrder;
 window.fulfillOrder = fulfillOrder;
 window.rejectOrder = rejectOrder;
 window.buyBuilding = buyBuilding;
+window.financeBuild = financeBuild;
+window.sellBuilding = sellBuilding;
 window.hireStaff = hireStaff;
 window.fireStaff = fireStaff;
 window.unlockAdvancement = unlockAdvancement;
