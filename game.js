@@ -52,10 +52,46 @@ const REGIONS = [
     qualityMod: 1.14,
     weather: { heat: 0.65, frost: 1.45, rain: 1.05, drought: 0.65 },
     varietals: ["riesling", "pinot", "chardonnay"]
+  },
+  {
+    id: "burgundy",
+    name: "Burgundy",
+    blurb: "The prestige ceiling is exceptional, but land is expensive, appellation rules demand barrel aging, and buyers want patience.",
+    tags: ["Prestige ceiling", "Barrel required", "High cost"],
+    cash: 95000,
+    prestige: 32,
+    demand: 38,
+    costMod: 1.28,
+    qualityMod: 1.22,
+    weather: { heat: 0.7, frost: 1.3, rain: 1.15, drought: 0.55 },
+    varietals: ["pinot", "chardonnay"]
+  },
+  {
+    id: "barossa",
+    name: "Barossa Valley",
+    blurb: "Rich shiraz country with heat, drought cycles, export appetite, and a direct path to volume-based revenue.",
+    tags: ["High yield", "Export demand", "Drought risk"],
+    cash: 108000,
+    prestige: 14,
+    demand: 64,
+    costMod: 0.86,
+    yieldMod: 1.22,
+    weather: { heat: 1.45, frost: 0.25, rain: 0.5, drought: 1.55 },
+    varietals: ["shiraz", "cabernet", "chardonnay"]
   }
 ];
 
 const VARIETALS = {
+  shiraz: {
+    name: "Shiraz",
+    tags: ["Heat tolerant", "Export appeal"],
+    yield: 1.15,
+    quality: 1.02,
+    demand: 1.06,
+    difficulty: 0.88,
+    barrelNeed: 1.0,
+    blurb: "Heat-tolerant, generous, and popular with export brokers. Strong cellar conversion."
+  },
   cabernet: {
     name: "Cabernet Sauvignon",
     tags: ["Ages well", "Premium red"],
@@ -254,6 +290,18 @@ const REGION_CLIMATE = {
     avgLow: [31, 32, 37, 42, 50, 56, 59, 58, 52, 45, 38, 33],
     volatility: 7,
     humidity: 0.72
+  },
+  burgundy: {
+    avgHigh: [41, 45, 53, 60, 68, 75, 80, 79, 71, 61, 48, 42],
+    avgLow: [30, 32, 38, 44, 51, 57, 61, 60, 53, 46, 37, 31],
+    volatility: 7,
+    humidity: 0.73
+  },
+  barossa: {
+    avgHigh: [91, 88, 82, 73, 63, 57, 56, 62, 68, 77, 83, 89],
+    avgLow: [65, 63, 58, 51, 44, 39, 38, 40, 45, 52, 58, 63],
+    volatility: 13,
+    humidity: 0.3
   }
 };
 
@@ -673,10 +721,10 @@ const EVENT_DECK = [
   {
     id: "investor",
     title: "A Growth Investor Circles the Estate",
-    body: "A polished investor offers capital, distribution access, and quarterly targets. It could fund the next leap, but the estate will answer to someone impatient.",
+    body: "A polished investor is circling. The pitch is capital, distribution access, and quarterly targets — either to fund the next leap or bail out a tight balance sheet. Either way, the estate will answer to someone impatient.",
     image: "assets/investor.png",
-    minMonth: 10,
-    condition: s => !s.investor && (s.prestige >= 38 || s.debt >= 45000 || s.month >= 16),
+    minMonth: 6,
+    condition: s => !s.investor && (s.prestige >= 38 || s.debt >= 45000 || s.month >= 16 || s.cash < -15000),
     choices: [
       {
         label: "Take the term sheet",
@@ -695,6 +743,51 @@ const EVENT_DECK = [
           s.morale += 5;
           s.influence -= 1;
         }
+      }
+    ]
+  },
+  {
+    id: "competition",
+    title: "Regional Wine Competition",
+    body: "Your reputation has earned an invitation to a prestigious blind tasting. Judges are collecting entries from the region's best producers.",
+    condition: s => s.quality >= 85 && s.prestige >= 48 && !s.competitionEntered,
+    minMonth: 10,
+    choices: [
+      {
+        label: "Submit your best bottles",
+        cost: 4500,
+        effect: s => {
+          s.competitionEntered = true;
+          const score = rand() + (s.quality - 80) / 100 + (s.prestige - 40) / 140;
+          if (score > 1.5) {
+            s.prestige += 16;
+            s.demand += 14;
+            s.morale += 8;
+            log(s, "Gold medal at the regional competition. Allocation requests are flooding in.");
+          } else {
+            s.prestige += 6;
+            s.demand += 6;
+            log(s, "Solid placement at the competition. The wine is on reviewers' radar.");
+          }
+        }
+      },
+      { label: "Decline this year", effect: s => { s.demand += 2; } }
+    ]
+  },
+  {
+    id: "labor-unrest",
+    title: "Labor Unrest",
+    body: "Morale has eroded far enough that the crew is doing the minimum. A representative is at the door asking for a meeting before walkout becomes a real option.",
+    condition: s => s.morale < 20,
+    choices: [
+      {
+        label: "Emergency crew meeting and bonus",
+        cost: 6000,
+        effect: s => { s.morale += 22; s.quality += 1; log(s, "A direct show of investment calmed the team and prevented a walkout."); }
+      },
+      {
+        label: "Hold the line",
+        effect: s => { s.morale -= 10; s.quality -= 4; s.prestige -= 3; log(s, "The crew's frustration is now showing in the vintage. More trouble ahead."); }
       }
     ]
   }
@@ -869,10 +962,16 @@ const ACTIONS = [
         s.demand += 1;
         log(s, "Veraison sampling sharpened the picking plan.");
       } else if (s.season === "Harvest") {
-        s.marketMods.harvestCrew = 2;
-        s.quality += 3;
-        s.morale -= 1;
-        log(s, "Selective picking crews are booked for harvest.");
+        if (isHarvestMonth(s.month)) {
+          s.marketMods.harvestCrew = 2;
+          s.quality += 3;
+          s.morale -= 1;
+          log(s, "Selective picking crews are booked for harvest.");
+        } else {
+          adjustRows(s, -1, "post-harvest");
+          s.quality += 1;
+          log(s, "Post-harvest vineyard walk and first fermentation batches started.");
+        }
       } else if (s.season === "Cellar") {
         const cases = Math.min(s.inventory.bulkWine, 90 + staffBonus(s, "cellar") * 25);
         s.inventory.bulkWine -= cases;
@@ -891,7 +990,7 @@ const ACTIONS = [
 
 const app = document.getElementById("app");
 let state = null;
-let setup = { region: "napa", varietal: "cabernet", philosophy: "classic", difficulty: "estate" };
+let setup = { region: "napa", varietal: "cabernet", philosophy: "classic", difficulty: "estate", wineryName: "" };
 let setupStep = 0;
 let activeTab = "overview";
 let helpOpen = true;
@@ -955,6 +1054,13 @@ const SEASONAL_ACTIONS = {
 
 function rand() {
   return Math.random();
+}
+
+function wineryInitials(name) {
+  if (!name) return "CB";
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return words.slice(0, 2).map(w => w[0].toUpperCase()).join("");
 }
 
 function randint(min, max) {
@@ -1041,6 +1147,7 @@ function createState() {
     region: r.id,
     varietal: setup.varietal,
     philosophy: p.id,
+    wineryName: setup.wineryName.trim() || "Unnamed Estate",
     cash: Math.round(r.cash * d.cashMod),
     debt: d.debt,
     debtLots: d.debt ? [{ principal: d.debt, rate: baseDebtRate(d), label: "Opening debt" }] : [],
@@ -1110,7 +1217,7 @@ function startGame() {
   helpOpen = true;
   addOrder(state, "distributor");
   addOrder(state, "restaurant");
-  log(state, `${region().name} estate founded around ${varietal().name}.`);
+  log(state, `${state.wineryName} founded in ${region().name} around ${varietal().name}.`);
   recordHistory(state, 0);
   render();
 }
@@ -1139,6 +1246,7 @@ function ensureEconomy(s) {
   if (typeof s.creditLine !== "number") s.creditLine = d.creditLine;
   if (typeof s.leaseCost !== "number") s.leaseCost = d.rent;
   if (typeof s.debt !== "number") s.debt = d.debt;
+  if (!s.wineryName) s.wineryName = "Unnamed Estate";
   ensureDebtLots(s);
 }
 
@@ -1360,7 +1468,9 @@ function directSales(s) {
   const desirability = (s.demand * 0.9 + s.prestige * 0.8 + s.quality * 0.7 + s.marketHeat * 0.6) / 4;
   const priceResistance = Math.pow(s.price / 28, 1.55);
   const capacity = 70 + s.buildings.room * 80 + staffBonus(s, "sales") * 45 + staffBonus(s, "brand") * 55;
-  const cases = Math.min(availableCases(s), Math.max(0, Math.floor((capacity * desirability) / (65 * priceResistance))));
+  const rawCases = Math.max(0, Math.floor((capacity * desirability) / (65 * priceResistance)));
+  const salesCeiling = 35 + s.buildings.room * 50 + staffBonus(s, "sales") * 20 + staffBonus(s, "brand") * 15;
+  const cases = Math.min(availableCases(s), rawCases, salesCeiling);
   const premium = 1 + Math.max(0, s.prestige - 45) / 210 + staffBonus(s, "brand") * 0.06;
   const revenue = Math.round(cases * s.price * 12 * premium);
   return { cases, revenue };
@@ -1615,6 +1725,13 @@ function actionDetail(action, s) {
 }
 
 function seasonalAction(s) {
+  if (s.season === "Harvest" && !isHarvestMonth(s.month)) {
+    return {
+      name: "Post-Harvest Walk",
+      detail: "Walk blocks after picking, move first batches to tank, and start row recovery.",
+      consequence: "Reduce vine stress and begin cellar hand-off."
+    };
+  }
   return SEASONAL_ACTIONS[s.season] || SEASONAL_ACTIONS.Cellar;
 }
 
@@ -1653,6 +1770,7 @@ function monthlyTick(s) {
   grantMonthlyStaffXp(s);
   applyInvestorPressure(s, costs.total);
 
+  applyRegionEffects(s);
   applyWeather(s);
   decayAndOrders(s);
 
@@ -1664,7 +1782,8 @@ function monthlyTick(s) {
 
   s.marketHeat = clamp(s.marketHeat + randint(-6, 8) + Math.floor((s.demand - 55) / 16), 10, 100);
   s.demand = clamp(s.demand + Math.floor((s.marketHeat - 50) / 18) - Math.max(0, Math.floor((s.price - 34) / 9)), 0, 130);
-  s.quality = clamp(s.quality - 1 + Math.floor(s.morale / 55), 0, 120);
+  const qualityPressure = s.quality > 100 ? 2 : s.quality > 85 ? 1 : 0;
+  s.quality = clamp(s.quality - 1 + Math.floor(s.morale / 55) - qualityPressure, 0, 120);
   s.morale = clamp(s.morale - 2 + Math.floor(s.cash / 160000), 0, 100);
 
   Object.keys(s.marketMods).forEach(key => {
@@ -1706,9 +1825,33 @@ function monthlyTick(s) {
   };
   recordHistory(s, closeCosts);
   s.month += 1;
-  s.actionsLeft = 3 + (s.morale > 78 ? 1 : 0);
+  s.actionsLeft = 3 + (s.morale > 78 ? 1 : 0) - (s.morale < 20 ? 1 : 0);
   s.season = seasonName(s.month);
   log(s, `Month closed: direct channels sold ${sales.cases} cases for ${money(sales.revenue)}; costs ${money(totalCloseCost)} including ${money(costs.interest)} interest${harvestResult?.laborCost ? ` and ${money(harvestResult.laborCost)} harvest labor` : ""}.`);
+}
+
+function applyRegionEffects(s) {
+  if (s.region === "bordeaux") {
+    if (s.buildings.barrel < 2) {
+      s.prestige -= 1;
+      if (s.month % 4 === 0) log(s, "Appellation standards penalize estates without a developed barrel program. Prestige fell.");
+    }
+  }
+  if (s.region === "burgundy") {
+    if (s.buildings.barrel >= 3 && s.quality >= 72) {
+      s.prestige += 1;
+    } else if (s.buildings.barrel < 2) {
+      s.quality -= 1;
+      if (s.month % 4 === 0) log(s, "Burgundy terroir rewards patient barrel aging. Without it, the vintage character erodes.");
+    }
+  }
+  if (s.region === "barossa") {
+    const exportOrders = s.orders.filter(o => o.type === "export").length;
+    if (exportOrders < 2 && s.month % 3 === 0 && rand() < 0.55) {
+      addOrder(s, "export");
+      log(s, "An export broker reached out — Barossa Shiraz is moving well overseas.");
+    }
+  }
 }
 
 function applyInvestorPressure(s, costs) {
@@ -1926,14 +2069,20 @@ function setupView() {
     <main class="setup">
       <div class="setup-inner">
         <section class="hero-copy">
-          <div class="hero-title">
-            <h1>Cellar Baron</h1>
-          </div>
+          <div class="hero-title" role="img" aria-label="Cellar Baron"></div>
           <div class="hero-blurb">
             <p>Build a wine estate through five volatile years of vineyard pressure, staff politics, cellar bets, fickle buyers, and pricing decisions.</p>
           </div>
         </section>
         <section class="setup-panel">
+          <div class="winery-name-row">
+            <label class="winery-name-label">
+              <span>Winery name</span>
+              <input type="text" class="winery-name-input" placeholder="Your estate name..." maxlength="40"
+                value="${escapeHtml(setup.wineryName)}"
+                oninput="setup.wineryName = this.value;">
+            </label>
+          </div>
           <div class="setup-progress">
             ${SETUP_STEPS.map((item, index) => `
               <button class="${index === setupStep ? "active" : ""} ${index < setupStep ? "done" : ""}" onclick="setSetupStep(${index})">
@@ -2010,18 +2159,11 @@ function choiceButton(kind, id, name, blurb, tags) {
   const selected = setup[kind] === id ? " selected" : "";
   return `
     <button class="choice${selected}" onclick="selectSetup('${kind}', '${id}')">
-      <strong>${iconFor(kind)} ${name}</strong>
+      <strong>${name}</strong>
       <p>${blurb}</p>
       <span class="tags">${tags.map(tag => `<span class="tag">${tag}</span>`).join("")}</span>
     </button>
   `;
-}
-
-function iconFor(kind) {
-  if (kind === "region") return "◎";
-  if (kind === "varietal") return "●";
-  if (kind === "difficulty") return "▲";
-  return "◆";
 }
 
 function selectSetup(kind, id) {
@@ -2037,6 +2179,7 @@ function gameView() {
     ${topbar()}
     <main class="shell">
       ${tabs()}
+      ${negativeCashBanner()}
       ${eventPanel()}
       ${harvestReportPanel()}
       ${helpOpen ? tutorialPanel() : ""}
@@ -2111,19 +2254,19 @@ function topbar() {
     <header class="topbar">
       <div class="topbar-inner">
         <div class="brand">
-          <div class="mark">CB</div>
+          <div class="mark">${wineryInitials(state.wineryName)}</div>
           <div>
-            <h1>Cellar Baron</h1>
+            <h1>${escapeHtml(state.wineryName || "Unnamed Estate")}</h1>
             <p>${region().name} • ${varietal().name} • ${philosophy().name} • ${difficulty().name}</p>
           </div>
         </div>
         <div class="kpis">
           ${kpi("Date", currentDateLabel(state), "Current month. Most operations, weather, contracts, and costs advance monthly.")}
-          ${kpi("Cash", money(state.cash), "Available cash after operating costs, sales, debt draws, and repayments. Running out forces credit-line use.")}
-          ${kpi("Prestige", state.prestige, "Reputation with critics, buyers, and collectors. High prestige unlocks better demand and win paths.")}
-          ${kpi("Demand", state.demand, "Commercial pull for your wine. Higher demand improves direct sales and buyer interest.")}
-          ${kpi("Quality", state.quality, "Current house quality. Vineyard health, weather, cellar work, and barrels move this.")}
-          ${kpi("Morale", state.morale, "Staff and crew confidence. Low morale hurts operations and can trigger failure.")}
+          ${kpi("Cash", money(state.cash), "Available cash after operating costs, sales, debt draws, and repayments. Running out forces credit-line use.", state.cash < 0 ? "danger" : "")}
+          ${kpi("Prestige", `${state.prestige}/120`, "Reputation with critics, buyers, and collectors. Win requires 82+ prestige.")}
+          ${kpi("Demand", `${state.demand}/130`, "Commercial pull for your wine. Higher demand improves direct sales and buyer interest.")}
+          ${kpi("Quality", `${state.quality}/120`, "Current house quality. Vineyard health, weather, cellar work, and barrels move this. Decays faster above 85.")}
+          ${kpi("Morale", `${state.morale}/100`, "Staff and crew confidence. Below 20 loses an action/month and triggers labor events; 0 ends the game.", state.morale < 20 ? "danger" : state.morale < 40 ? "warn" : "")}
           ${kpi("Grape CE", state.inventory.grapes, "Case-equivalent grapes available to ferment. Harvest adds these; cellar work converts them to bulk wine.")}
           ${kpi("Bulk CE", state.inventory.bulkWine, "Case-equivalent bulk wine in tank/barrel. Bottling converts this into finished cases.")}
           ${kpi("Cases", state.inventory.cases, "Finished cases ready to sell or reserve for contracts. Passive direct sales can reduce this at month close.")}
@@ -2137,8 +2280,9 @@ function topbar() {
   `;
 }
 
-function kpi(label, value, tooltip) {
-  return `<div class="kpi" ${tooltip ? tip(tooltip) : ""}><span>${label}</span><strong>${value}</strong></div>`;
+function kpi(label, value, tooltip, tone) {
+  const cls = tone ? ` kpi-${tone}` : "";
+  return `<div class="kpi${cls}" ${tooltip ? tip(tooltip) : ""}><span>${label}</span><strong>${value}</strong></div>`;
 }
 
 function eventPanel() {
@@ -2164,15 +2308,40 @@ function eventPanel() {
 function harvestReportPanel() {
   const report = state.harvestReport;
   if (!report) return "";
+  const qualityColor = report.qualityGain > 0 ? "var(--ok)" : report.qualityGain < 0 ? "var(--danger)" : "var(--muted)";
   return `
     <section class="panel harvest-report">
-      <div>
-        <strong>${report.date} Harvest</strong>
-        <div class="small">${report.grapes} grape CE from ${report.productiveRows} mature blocks • seasonal labor ${money(report.laborCost)} • quality ${report.qualityGain >= 0 ? "+" : ""}${report.qualityGain}</div>
-        <p>${report.note}</p>
+      <div class="harvest-head">
+        <div>
+          <strong class="harvest-title">${report.date} Harvest</strong>
+          <p class="harvest-note">${report.note}</p>
+        </div>
+        <button class="ghost compact" onclick="dismissHarvestReport()">Dismiss</button>
       </div>
-      <button class="ghost compact" onclick="dismissHarvestReport()">Dismiss</button>
+      <div class="harvest-stats">
+        <div class="stat-box"><span>Grapes brought in</span><strong>${report.grapes} CE</strong></div>
+        <div class="stat-box"><span>Mature blocks</span><strong>${report.productiveRows}</strong></div>
+        <div class="stat-box"><span>Seasonal labor</span><strong>${money(report.laborCost)}</strong></div>
+        <div class="stat-box"><span>Quality change</span><strong style="color:${qualityColor}">${report.qualityGain >= 0 ? "+" : ""}${report.qualityGain}</strong></div>
+      </div>
     </section>
+  `;
+}
+
+function negativeCashBanner() {
+  if (!state || state.cash >= 0) return "";
+  const canDraw = availableCredit(state) > 0;
+  return `
+    <div class="alert-banner">
+      <div class="alert-body">
+        <strong>Cash overdrawn ${money(state.cash)}</strong>
+        <span>Draw from the credit line to cover operations — uncovered overdraft accrues at a penalty rate and drains morale.</span>
+      </div>
+      <div class="alert-actions">
+        <button onclick="drawDebt(25000)" ${!canDraw ? "disabled" : ""}>Draw ${money(25000)}</button>
+        <button onclick="drawDebt(75000)" ${availableCredit(state) < 75000 ? "disabled" : ""}>Draw ${money(75000)}</button>
+      </div>
+    </div>
   `;
 }
 
@@ -2572,6 +2741,13 @@ function vineStress(row, index) {
   return 0;
 }
 
+function actionInventoryNote(action, s) {
+  if (action.id === "bottle" && s.inventory.bulkWine === 0) return { text: "No bulk wine to bottle", hard: true };
+  if (action.id === "cellar" && s.inventory.grapes === 0) return { text: "No grapes — cellar quality work only", hard: false };
+  if ((action.id === "sales" || action.id === "hospitality") && availableCases(s) === 0) return { text: "No free cases — generates demand only", hard: false };
+  return null;
+}
+
 function actionsPanel() {
   const sorted = [...ACTIONS].sort((a, b) => Number(isActionAvailable(b, state)) - Number(isActionAvailable(a, state)));
   return `
@@ -2584,14 +2760,18 @@ function actionsPanel() {
         ${sorted.map(action => {
           const cost = actionCost(action, state);
           const available = isActionAvailable(action, state);
+          const invNote = actionInventoryNote(action, state);
           const disabled = action.navigateTab
             ? state.event || state.gameOver
-            : !available || state.actionsLeft <= 0 || state.cash < cost || state.event || state.gameOver;
+            : !available || state.actionsLeft <= 0 || state.cash < cost || state.event || state.gameOver || (invNote && invNote.hard);
+          const effectText = invNote
+            ? invNote.text
+            : available ? actionConsequence(action, state) : `Off-season: available ${seasonListLabel(action.seasons)}`;
           return `
             <button class="action-card ${available ? "" : "offseason"}" onclick="useAction('${action.id}')" ${disabled ? "disabled" : ""}>
               <b>${actionName(action, state)}</b>
               <span>${actionDetail(action, state)}</span>
-              <span class="effect">${available ? actionConsequence(action, state) : `Off-season: available ${seasonListLabel(action.seasons)}`}</span>
+              <span class="effect">${effectText}</span>
               <em>${action.navigateTab ? "Open Estate" : money(cost)}</em>
             </button>
           `;
