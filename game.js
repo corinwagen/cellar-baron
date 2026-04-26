@@ -230,6 +230,33 @@ const SEASON_WINDOWS = {
   Cellar: "Nov-Feb"
 };
 
+const REGION_CLIMATE = {
+  napa: {
+    avgHigh: [56, 61, 65, 70, 76, 83, 87, 87, 84, 76, 64, 56],
+    avgLow: [39, 42, 44, 47, 51, 55, 57, 57, 55, 50, 43, 38],
+    volatility: 8,
+    humidity: 0.55
+  },
+  bordeaux: {
+    avgHigh: [49, 52, 58, 63, 70, 76, 81, 81, 75, 66, 56, 50],
+    avgLow: [38, 39, 43, 47, 54, 59, 63, 62, 57, 51, 44, 40],
+    volatility: 6,
+    humidity: 0.8
+  },
+  mendoza: {
+    avgHigh: [89, 86, 79, 71, 63, 57, 57, 63, 69, 77, 84, 88],
+    avgLow: [64, 62, 56, 49, 42, 36, 35, 39, 45, 52, 58, 63],
+    volatility: 11,
+    humidity: 0.32
+  },
+  mosel: {
+    avgHigh: [39, 42, 50, 58, 66, 72, 76, 75, 67, 57, 46, 40],
+    avgLow: [31, 32, 37, 42, 50, 56, 59, 58, 52, 45, 38, 33],
+    volatility: 7,
+    humidity: 0.72
+  }
+};
+
 const STAFF_POOL = [
   {
     id: "ines",
@@ -810,13 +837,22 @@ const ACTIONS = [
       log(s, `Finance found ${money(gain)} in grants, rebates, and better terms.`);
     }
   },
-    {
-      id: "seasonal",
-      name: s => seasonalAction(s).name,
-      detail: "Do the work that only matters right now.",
+  {
+    id: "upgrade",
+    name: "Upgrade Estate",
+    detail: "Open the Estate pane to add blocks, tanks, barrels, labs, bottling, or hospitality.",
+    seasons: ["Budbreak", "Flowering", "Veraison", "Harvest", "Cellar", "Dormant"],
+    consequence: "Building an upgrade spends cash and one monthly placement.",
+    cost: 0,
+    navigateTab: "estate"
+  },
+  {
+    id: "seasonal",
+    name: s => seasonalAction(s).name,
+    detail: "Do the work that only matters right now.",
     cost: 2200,
     seasons: ["Budbreak", "Flowering", "Veraison", "Harvest", "Cellar", "Dormant"],
-      consequence: s => seasonalAction(s).consequence,
+    consequence: s => seasonalAction(s).consequence,
     apply: s => {
       if (s.season === "Budbreak") {
         s.marketMods.frostReady = 3;
@@ -856,8 +892,16 @@ const ACTIONS = [
 const app = document.getElementById("app");
 let state = null;
 let setup = { region: "napa", varietal: "cabernet", philosophy: "classic", difficulty: "estate" };
+let setupStep = 0;
 let activeTab = "overview";
 let helpOpen = true;
+
+const SETUP_STEPS = [
+  { key: "region", title: "Choose Region", kicker: "Where the estate lives shapes weather, prestige, land cost, and grape options." },
+  { key: "varietal", title: "Choose Grape", kicker: "Your flagship grape determines yield, demand, cellar needs, and fragility." },
+  { key: "philosophy", title: "Choose Style", kicker: "The house philosophy changes yield, quality, risk, sustainability, and costs." },
+  { key: "difficulty", title: "Choose Difficulty", kicker: "Difficulty sets starting debt, lease pressure, credit line, inventory, and margin for error." }
+];
 
 const TABS = [
   { id: "overview", name: "Overview", tip: "A short operating brief and the highest-level estate signals." },
@@ -879,26 +923,32 @@ const ACTION_XP = {
 const SEASONAL_ACTIONS = {
   Budbreak: {
     name: "Frost Prep",
+    detail: "Stage frost fans, candles, and early scouting before cold nights hit.",
     consequence: "Prepare frost defenses, reduce early pressure, and protect quality."
   },
   Flowering: {
     name: "Flowering Pass",
+    detail: "Walk blocks during fruit set and correct canopy problems early.",
     consequence: "Improve fruit set, reduce canopy pressure, and raise quality."
   },
   Veraison: {
     name: "Ripeness Sampling",
+    detail: "Sample berries, adjust irrigation, and plan the picking window.",
     consequence: "Sharpen picking decisions, reduce pressure, and raise quality."
   },
   Harvest: {
     name: "Selective Picking",
+    detail: "Book crews and pick the best fruit before weather or overripeness bites.",
     consequence: "Book harvest crews, improve crop capture, and raise quality."
   },
   Cellar: {
     name: "Rack and Top",
+    detail: "Top barrels, rack lots, and move wine toward finished cases.",
     consequence: "Move bulk wine toward cases and tighten cellar quality."
   },
   Dormant: {
     name: "Winter Pruning",
+    detail: "Prune vines, repair trellises, and set next year's crop load.",
     consequence: "Restore row health and prepare next year's vintage."
   }
 };
@@ -921,13 +971,28 @@ function money(value) {
 }
 
 function currentDateLabel(s = state) {
-  const index = START_MONTH_INDEX + s.month - 1;
+  return monthDateLabel(s.month, false);
+}
+
+function monthDateLabel(month, short = true) {
+  const index = START_MONTH_INDEX + month - 1;
   const year = START_YEAR + Math.floor(index / 12);
-  return `${MONTH_NAMES[index % 12]} ${year}`;
+  const name = MONTH_NAMES[index % 12];
+  return `${short ? name.slice(0, 3) : name} ${year}`;
 }
 
 function calendarMonthNumber(month) {
   return ((START_MONTH_INDEX + month - 1) % 12) + 1;
+}
+
+function regionalTempRange(regionId, calendarMonth) {
+  const climate = REGION_CLIMATE[regionId] || REGION_CLIMATE.napa;
+  const index = calendarMonth - 1;
+  const swing = Math.round((rand() - 0.5) * climate.volatility * 2);
+  const spread = Math.max(9, climate.avgHigh[index] - climate.avgLow[index] + randint(-2, 3));
+  const high = Math.round(climate.avgHigh[index] + swing);
+  const low = Math.round(high - spread);
+  return { low, high };
 }
 
 function region() {
@@ -978,6 +1043,7 @@ function createState() {
     philosophy: p.id,
     cash: Math.round(r.cash * d.cashMod),
     debt: d.debt,
+    debtLots: d.debt ? [{ principal: d.debt, rate: baseDebtRate(d), label: "Opening debt" }] : [],
     creditLine: d.creditLine,
     leaseCost: d.rent,
     prestige: r.prestige,
@@ -1006,6 +1072,9 @@ function createState() {
     investor: null,
     event: null,
     lastWeather: "Clear",
+    lastTemp: regionalTempRange(r.id, 3),
+    lastClose: null,
+    harvestReport: null,
     tutorialSeen: false,
     history: [],
     totalSold: 0,
@@ -1016,14 +1085,16 @@ function createState() {
   };
 }
 
-function makeRows(count) {
+function makeRows(count, options = {}) {
   const names = ["North Slope", "River Bench", "Old Block", "Stone Terrace", "Hill Parcel", "Windbreak", "Village Edge", "Reservoir Row"];
   return Array.from({ length: count }, (_, i) => ({
     id: i + 1,
     name: names[i],
     health: 82 + randint(-4, 6),
     threat: randint(0, 2),
-    threatName: "weeds"
+    threatName: "weeds",
+    plantedMonth: options.plantedMonth || -96,
+    matureMonth: options.matureMonth || 1
   }));
 }
 
@@ -1034,6 +1105,7 @@ function log(s, text) {
 
 function startGame() {
   state = createState();
+  setupStep = 0;
   activeTab = "overview";
   helpOpen = true;
   addOrder(state, "distributor");
@@ -1067,11 +1139,13 @@ function ensureEconomy(s) {
   if (typeof s.creditLine !== "number") s.creditLine = d.creditLine;
   if (typeof s.leaseCost !== "number") s.leaseCost = d.rent;
   if (typeof s.debt !== "number") s.debt = d.debt;
+  ensureDebtLots(s);
 }
 
 function resetGame() {
   localStorage.removeItem("cellar-baron-save");
   state = null;
+  setupStep = 0;
   activeTab = "overview";
   helpOpen = true;
   render();
@@ -1136,16 +1210,65 @@ function bottlingCost(s) {
 }
 
 function fixedCosts(s) {
+  return fixedCostBreakdown(s).total;
+}
+
+function fixedCostBreakdown(s) {
+  ensureDebtLots(s);
   const salaries = s.staff.reduce((sum, id) => sum + (STAFF_POOL.find(p => p.id === id)?.salary || 0), 0);
-  const base = 6200 + s.rows.length * 1050 + s.buildings.tank * 520 + s.buildings.barrel * 620 + s.buildings.room * 720;
+  const operating = 6200 + s.rows.length * 1050 + s.buildings.tank * 520 + s.buildings.barrel * 620 + s.buildings.room * 720;
   const investorOverhead = s.investor?.pressureMonths > 0 ? 4500 : 0;
-  const interest = Math.round(s.debt * debtRate(s));
-  return Math.round((base + salaries + investorOverhead + s.leaseCost + interest) * region().costMod * philosophy().cost * difficulty().costMod * staffCostMod(s));
+  const interest = monthlyInterest(s);
+  const subtotal = operating + salaries + investorOverhead + s.leaseCost + interest;
+  const multiplier = region().costMod * philosophy().cost * difficulty().costMod * staffCostMod(s);
+  const total = Math.round(subtotal * multiplier);
+  return {
+    operating,
+    salaries,
+    lease: s.leaseCost,
+    interest,
+    investor: investorOverhead,
+    subtotal,
+    multiplier,
+    total
+  };
 }
 
 function debtRate(s) {
+  ensureDebtLots(s);
+  if (!s.debt) return baseDebtRate(DIFFICULTIES.find(item => item.id === s.difficulty) || DIFFICULTIES[1]);
+  return s.debtLots.reduce((sum, lot) => sum + lot.principal * lot.rate, 0) / s.debt;
+}
+
+function baseDebtRate(difficultyDef) {
+  return difficultyDef.id === "grand" ? 0.018 : difficultyDef.id === "village" ? 0.01 : 0.014;
+}
+
+function newDebtRate(s) {
   const d = DIFFICULTIES.find(item => item.id === s.difficulty) || DIFFICULTIES[1];
-  return d.id === "grand" ? 0.014 : d.id === "village" ? 0.008 : 0.011;
+  const utilization = s.creditLine ? s.debt / s.creditLine : 1;
+  const cashStress = s.cash < 0 ? 0.012 : s.cash < 25000 ? 0.007 : s.cash < 60000 ? 0.003 : 0;
+  const reputationStress = s.prestige < 25 ? 0.006 : s.prestige < 45 ? 0.002 : -0.001;
+  const utilizationStress = utilization > 0.9 ? 0.012 : utilization > 0.7 ? 0.007 : utilization > 0.45 ? 0.003 : 0;
+  return clamp(baseDebtRate(d) + cashStress + reputationStress + utilizationStress, 0.008, 0.045);
+}
+
+function ensureDebtLots(s) {
+  if (!Array.isArray(s.debtLots)) {
+    const d = DIFFICULTIES.find(item => item.id === s.difficulty) || DIFFICULTIES[1];
+    s.debtLots = s.debt > 0 ? [{ principal: s.debt, rate: baseDebtRate(d), label: "Legacy debt" }] : [];
+  }
+  s.debtLots = s.debtLots.filter(lot => lot.principal > 0);
+  const sum = s.debtLots.reduce((total, lot) => total + lot.principal, 0);
+  if (Math.abs(sum - s.debt) > 1 && s.debt > sum) {
+    s.debtLots.push({ principal: s.debt - sum, rate: newDebtRate(s), label: "Untracked draw" });
+  }
+  s.debt = Math.round(s.debtLots.reduce((total, lot) => total + lot.principal, 0));
+}
+
+function monthlyInterest(s) {
+  ensureDebtLots(s);
+  return Math.round(s.debtLots.reduce((sum, lot) => sum + lot.principal * lot.rate, 0));
 }
 
 function availableCredit(s) {
@@ -1156,19 +1279,35 @@ function drawDebt(amount) {
   if (!state || state.gameOver) return;
   const draw = Math.min(amount, availableCredit(state));
   if (draw <= 0) return;
-  state.debt += draw;
+  const rate = addDebt(state, draw, "Credit-line draw");
   state.cash += draw;
   state.morale -= amount >= 50000 ? 2 : 0;
-  log(state, `Drew ${money(draw)} from the winery credit line.`);
+  log(state, `Drew ${money(draw)} from the winery credit line at ${(rate * 100).toFixed(1)}% monthly for new money.`);
   normalizeState(state);
   render();
+}
+
+function addDebt(s, amount, label) {
+  ensureDebtLots(s);
+  const rate = newDebtRate(s);
+  s.debtLots.push({ principal: amount, rate, label });
+  s.debt = Math.round(s.debtLots.reduce((total, lot) => total + lot.principal, 0));
+  return rate;
 }
 
 function repayDebt(amount) {
   if (!state || state.gameOver) return;
   const payment = Math.min(amount, state.debt, Math.max(0, state.cash - 15000));
   if (payment <= 0) return;
-  state.debt -= payment;
+  ensureDebtLots(state);
+  let remaining = payment;
+  state.debtLots.sort((a, b) => b.rate - a.rate);
+  state.debtLots.forEach(lot => {
+    const paid = Math.min(lot.principal, remaining);
+    lot.principal -= paid;
+    remaining -= paid;
+  });
+  ensureDebtLots(state);
   state.cash -= payment;
   state.influence += payment >= 50000 ? 2 : 1;
   log(state, `Repaid ${money(payment)} of winery debt.`);
@@ -1188,14 +1327,23 @@ function ensureHistory(s) {
 
 function recordHistory(s, fixedCost) {
   ensureHistory(s);
+  const breakdown = typeof fixedCost === "object" ? fixedCost : { total: fixedCost };
   const last = s.history.length ? s.history[s.history.length - 1] : null;
   const previousRevenue = last ? last.totalRevenue : 0;
   const previousSold = last ? last.totalSold : 0;
+  const revenue = Math.max(0, s.totalRevenue - previousRevenue);
   s.history.push({
     month: s.month,
-    revenue: Math.max(0, s.totalRevenue - previousRevenue),
+    revenue,
     casesSold: Math.max(0, s.totalSold - previousSold),
-    fixedCost,
+    fixedCost: breakdown.total || 0,
+    operatingCost: breakdown.operating || 0,
+    payrollCost: breakdown.salaries || 0,
+    leaseCost: breakdown.lease || 0,
+    interestCost: breakdown.interest || 0,
+    harvestLaborCost: breakdown.harvestLabor || 0,
+    investorCost: breakdown.investor || 0,
+    pnl: revenue - (breakdown.total || 0),
     cash: s.cash,
     netWorth: netWorth(s),
     demand: s.demand,
@@ -1263,11 +1411,11 @@ function grantStaffXp(s, ids, amount) {
 }
 
 function grantActionXp(s, actionId) {
-  grantStaffXp(s, ACTION_XP[actionId] || [], 2);
+  grantStaffXp(s, ACTION_XP[actionId] || [], 1);
 }
 
 function grantMonthlyStaffXp(s) {
-  grantStaffXp(s, s.staff, 1);
+  if (s.month % 3 === 0) grantStaffXp(s, s.staff, 1);
 }
 
 function unlockAdvancement(staffId, perkId) {
@@ -1309,6 +1457,7 @@ function addOrder(s, forcedType) {
     cases,
     maxPrice,
     due,
+    expires: s.month + 2,
     accepted: false,
     penalty: Math.round(cases * maxPrice * 12 * 0.18)
   });
@@ -1318,13 +1467,13 @@ function acceptOrder(id) {
   const order = state.orders.find(o => o.id === id);
   if (!order) return;
   if (state.price > order.maxPrice) {
-    log(state, `${order.buyer} passed. Your list price was above their ceiling.`);
-    state.orders = state.orders.filter(o => o.id !== id);
-  } else {
-    order.accepted = true;
-    state.demand += 1;
-    log(state, `${order.buyer} signed for ${order.cases} cases at ${money(state.price)} per bottle.`);
+    log(state, `${order.buyer} would not sign at ${money(state.price)} per bottle; their ceiling is ${money(order.maxPrice)}.`);
+    render();
+    return;
   }
+  order.accepted = true;
+  state.demand += 1;
+  log(state, `${order.buyer} signed for ${order.cases} cases at ${money(state.price)} per bottle.`);
   render();
 }
 
@@ -1374,7 +1523,9 @@ function buyBuilding(id) {
   state.cash -= cost;
   state.buildings[id] = owned + 1;
   if (id === "block") {
-    state.rows.push(makeRows(1)[0]);
+    const row = makeRows(1, { plantedMonth: state.month, matureMonth: state.month + 18 })[0];
+    row.name = `Young Block ${state.rows.length + 1}`;
+    state.rows.push(row);
     state.rows[state.rows.length - 1].id = state.rows.length;
   }
   if (id === "room") state.demand += 4;
@@ -1422,9 +1573,14 @@ function applyStaffPassive(s, person) {
 }
 
 function useAction(id) {
-  if (state.actionsLeft <= 0 || state.event || state.gameOver) return;
   const action = ACTIONS.find(a => a.id === id);
-  if (!action) return;
+  if (!action || state.event || state.gameOver) return;
+  if (action.navigateTab) {
+    activeTab = action.navigateTab;
+    render();
+    return;
+  }
+  if (state.actionsLeft <= 0) return;
   if (!isActionAvailable(action, state)) return;
   const cost = actionCost(action, state);
   if (state.cash < cost) return;
@@ -1453,6 +1609,11 @@ function actionConsequence(action, s) {
   return typeof action.consequence === "function" ? action.consequence(s) : action.consequence;
 }
 
+function actionDetail(action, s) {
+  if (action.id === "seasonal") return seasonalAction(s).detail;
+  return action.detail;
+}
+
 function seasonalAction(s) {
   return SEASONAL_ACTIONS[s.season] || SEASONAL_ACTIONS.Cellar;
 }
@@ -1479,22 +1640,23 @@ function advanceMonth() {
 }
 
 function monthlyTick(s) {
+  const startingCases = s.inventory.cases;
   const sales = directSales(s);
   s.inventory.cases -= sales.cases;
   s.cash += sales.revenue;
   s.totalSold += sales.cases;
   s.totalRevenue += sales.revenue;
 
-  const costs = fixedCosts(s);
-  s.cash -= costs;
+  const costs = fixedCostBreakdown(s);
+  s.cash -= costs.total;
   s.inventory.glass += 120 + s.buildings.line * 70;
   grantMonthlyStaffXp(s);
-  applyInvestorPressure(s, costs);
+  applyInvestorPressure(s, costs.total);
 
   applyWeather(s);
   decayAndOrders(s);
 
-  if (isHarvestMonth(s.month)) harvest(s);
+  const harvestResult = isHarvestMonth(s.month) ? harvest(s) : null;
 
   if (rand() < 0.36 * eventRiskMod(s) * difficulty().eventMod) {
     s.event = drawEvent(s);
@@ -1513,19 +1675,40 @@ function monthlyTick(s) {
   if (s.cash < -25000) {
     const overdraft = Math.abs(s.cash);
     const credit = Math.min(overdraft, availableCredit(s));
-    s.debt += credit;
+    const rate = credit > 0 ? addDebt(s, credit, "Overdraft coverage") : 0;
     s.cash = credit >= overdraft ? 0 : -(overdraft - credit);
     s.prestige -= 3;
     s.morale -= 5;
-    log(s, credit >= overdraft ? "The bank covered an overdraft. Debt rose and confidence fell." : "The credit line is tapped out. Uncovered bills are damaging the estate.");
+    log(s, credit >= overdraft ? `The bank covered an overdraft at ${(rate * 100).toFixed(1)}% monthly. Debt rose and confidence fell.` : "The credit line is tapped out. Uncovered bills are damaging the estate.");
   }
 
   normalizeState(s);
-  recordHistory(s, costs);
+  const totalCloseCost = costs.total + (harvestResult?.laborCost || 0);
+  const closeCosts = {
+    ...costs,
+    total: totalCloseCost,
+    harvestLabor: harvestResult?.laborCost || 0
+  };
+  s.lastClose = {
+    month: s.month,
+    date: monthDateLabel(s.month),
+    startingCases,
+    directCases: sales.cases,
+    directRevenue: sales.revenue,
+    endingCases: s.inventory.cases,
+    fixedCost: totalCloseCost,
+    interestCost: costs.interest,
+    leaseCost: costs.lease,
+    payrollCost: costs.salaries,
+    operatingCost: costs.operating,
+    harvestLaborCost: harvestResult?.laborCost || 0,
+    pnl: sales.revenue - totalCloseCost
+  };
+  recordHistory(s, closeCosts);
   s.month += 1;
   s.actionsLeft = 3 + (s.morale > 78 ? 1 : 0);
   s.season = seasonName(s.month);
-  log(s, `Month closed: direct sales ${money(sales.revenue)}, fixed costs ${money(costs)}.`);
+  log(s, `Month closed: direct channels sold ${sales.cases} cases for ${money(sales.revenue)}; costs ${money(totalCloseCost)} including ${money(costs.interest)} interest${harvestResult?.laborCost ? ` and ${money(harvestResult.laborCost)} harvest labor` : ""}.`);
 }
 
 function applyInvestorPressure(s, costs) {
@@ -1567,11 +1750,20 @@ function isHarvestMonth(month) {
 function applyWeather(s) {
   const r = region();
   const lab = 1 - s.buildings.lab * 0.12;
+  const month = calendarMonthNumber(s.month);
+  s.lastTemp = regionalTempRange(r.id, month);
+  const springFrost = [3, 4].includes(month) ? 1 : [2, 5, 10, 11].includes(month) ? 0.35 : 0.03;
+  const summerHeat = [6, 7, 8, 9].includes(month) ? 1 : [5, 10].includes(month) ? 0.4 : 0.08;
+  const rainSeason = [3, 4, 5, 10, 11].includes(month) ? 1 : [6, 9, 12, 1, 2].includes(month) ? 0.55 : 0.25;
+  const droughtSeason = [6, 7, 8, 9].includes(month) ? 1 : [5, 10].includes(month) ? 0.45 : 0.12;
+  const tempHeat = s.lastTemp.high >= 95 ? 1.7 : s.lastTemp.high >= 88 ? 1.25 : 0.8;
+  const tempFrost = s.lastTemp.low <= 33 ? 1.8 : s.lastTemp.low <= 38 ? 1.2 : 0.45;
+  const humidity = REGION_CLIMATE[r.id]?.humidity || 0.55;
   const options = [
-    { name: "Heat spike", key: "heat", weight: 0.18 * r.weather.heat, delta: 2 },
-    { name: "Frost pocket", key: "frost", weight: 0.12 * r.weather.frost, delta: 2 },
-    { name: "Wet canopy", key: "rain", weight: 0.17 * r.weather.rain, delta: 2 },
-    { name: "Drought stress", key: "drought", weight: 0.14 * r.weather.drought, delta: 2 },
+    { name: "Heat spike", key: "heat", weight: 0.18 * r.weather.heat * summerHeat * tempHeat, delta: 2 },
+    { name: "Frost pocket", key: "frost", weight: 0.12 * r.weather.frost * springFrost * tempFrost, delta: 2 },
+    { name: "Wet canopy", key: "rain", weight: 0.17 * r.weather.rain * rainSeason * (0.65 + humidity), delta: 2 },
+    { name: "Drought stress", key: "drought", weight: 0.14 * r.weather.drought * droughtSeason * (1.35 - humidity), delta: 2 },
     { name: "Clear skies", key: "clear", weight: 0.39, delta: -1 }
   ];
   const total = options.reduce((sum, o) => sum + o.weight, 0);
@@ -1600,19 +1792,48 @@ function harvest(s) {
   const r = region();
   const v = varietal();
   const p = philosophy();
-  const health = s.rows.reduce((sum, row) => sum + row.health - row.threat * 5, 0) / s.rows.length;
-  const base = s.rows.length * 260;
+  const productive = productiveRows(s);
+  if (!productive.length) {
+    s.harvestReport = {
+      date: monthDateLabel(s.month),
+      grapes: 0,
+      laborCost: 0,
+      productiveRows: 0,
+      qualityGain: 0,
+      note: "No mature vineyard blocks cropped this harvest."
+    };
+    log(s, "Harvest arrived, but no vineyard blocks were mature enough to crop.");
+    return s.harvestReport;
+  }
+  const health = productive.reduce((sum, row) => sum + row.health - row.threat * 5, 0) / productive.length;
+  const base = productive.length * 260;
   const crew = s.marketMods.harvestCrew ? 1.12 : 1;
   const grapes = Math.max(80, Math.round(base * (health / 82) * v.yield * p.yield * (r.yieldMod || 1) * crew));
   const qualityGain = Math.round((health - 58) / 8 + s.buildings.barrel * 0.7 + (s.marketMods.harvestCrew ? 2 : 0));
+  const laborRate = s.marketMods.harvestCrew ? 3600 : 2800;
+  const laborCost = Math.round(productive.length * laborRate * r.costMod * difficulty().costMod * staffCostMod(s));
   s.inventory.grapes += grapes;
+  s.cash -= laborCost;
   s.quality += qualityGain;
   s.prestige += qualityGain > 3 ? 2 : 0;
-  s.rows.forEach(row => {
+  productive.forEach(row => {
     row.threat = Math.max(0, row.threat - 3);
     row.health = clamp(row.health + 12, 20, 100);
   });
-  log(s, `Harvest brought in ${grapes} grape units. Vintage quality ${qualityGain >= 0 ? "rose" : "fell"}.`);
+  s.harvestReport = {
+    date: monthDateLabel(s.month),
+    grapes,
+    laborCost,
+    productiveRows: productive.length,
+    qualityGain,
+    note: s.marketMods.harvestCrew ? "Selective picking raised yield and quality, but the crew cost more." : "Standard seasonal labor was charged with the harvest."
+  };
+  log(s, `Harvest brought in ${grapes} grape CE from ${productive.length} blocks. Seasonal labor cost ${money(laborCost)}; vintage quality ${qualityGain >= 0 ? "rose" : "fell"}.`);
+  return s.harvestReport;
+}
+
+function productiveRows(s) {
+  return s.rows.filter(row => (row.matureMonth || 1) <= s.month);
 }
 
 function averageThreat(s) {
@@ -1621,6 +1842,10 @@ function averageThreat(s) {
 
 function decayAndOrders(s) {
   s.orders.forEach(order => {
+    if (!order.accepted && order.expires < s.month) {
+      s.demand -= 1;
+      log(s, `${order.buyer} let their offer lapse.`);
+    }
     if (order.accepted && order.due < s.month) {
       s.cash -= order.penalty;
       s.prestige -= 3;
@@ -1630,7 +1855,7 @@ function decayAndOrders(s) {
       log(s, `Missed ${order.buyer}. Penalty paid: ${money(order.penalty)}.`);
     }
   });
-  s.orders = s.orders.filter(order => !order.accepted || order.due >= s.month);
+  s.orders = s.orders.filter(order => order.accepted ? order.due >= s.month : order.expires >= s.month);
   if (s.month % 3 === 0 || s.orders.length < 2) addOrder(s);
 }
 
@@ -1679,7 +1904,7 @@ function checkGameOver() {
         ? "You did not dominate the trade, but the business can survive another generation."
         : "Cash, reputation, or operations never reached escape velocity before the five-year window closed."
     };
-  } else if (state.debt > state.creditLine + 65000 || state.prestige <= 0 || state.morale <= 0) {
+  } else if (state.debt > state.creditLine + 65000 || (state.cash < -50000 && availableCredit(state) <= 0) || state.prestige <= 0 || state.morale <= 0) {
     state.gameOver = {
       win: false,
       title: "The estate lost confidence.",
@@ -1693,6 +1918,7 @@ function setupView() {
   const v = selectedVarietal();
   const p = selectedPhilosophy();
   const d = selectedDifficulty();
+  const step = SETUP_STEPS[setupStep];
   const loadButton = localStorage.getItem("cellar-baron-save")
     ? `<button class="ghost" onclick="loadGame()">Load saved estate</button>`
     : "";
@@ -1700,52 +1926,84 @@ function setupView() {
     <main class="setup">
       <div class="setup-inner">
         <section class="hero-copy">
-          <h1>Cellar Baron</h1>
-          <p>Build a wine estate through five volatile years of vineyard pressure, staff politics, cellar bets, fickle buyers, and pricing decisions.</p>
+          <div class="hero-title">
+            <h1>Cellar Baron</h1>
+          </div>
+          <div class="hero-blurb">
+            <p>Build a wine estate through five volatile years of vineyard pressure, staff politics, cellar bets, fickle buyers, and pricing decisions.</p>
+          </div>
         </section>
         <section class="setup-panel">
-          <h2>Found Your Estate</h2>
-          <div class="setup-section">
-            <div class="section-title">Region</div>
-            <div class="setup-grid">
-              ${REGIONS.map(item => choiceButton("region", item.id, item.name, item.blurb, item.tags)).join("")}
-            </div>
+          <div class="setup-progress">
+            ${SETUP_STEPS.map((item, index) => `
+              <button class="${index === setupStep ? "active" : ""} ${index < setupStep ? "done" : ""}" onclick="setSetupStep(${index})">
+                <span>${index + 1}</span>${item.key}
+              </button>
+            `).join("")}
           </div>
+          <h2>${step.title}</h2>
+          <p class="setup-kicker">${step.kicker}</p>
+          ${setupStepContent(step.key)}
           <div class="setup-section">
-            <div class="section-title">Flagship Grape</div>
-            <div class="setup-grid">
-              ${r.varietals.map(id => {
-                const item = VARIETALS[id];
-                return choiceButton("varietal", id, item.name, item.blurb, item.tags);
-              }).join("")}
-            </div>
-          </div>
-          <div class="setup-section">
-            <div class="section-title">House Philosophy</div>
-            <div class="setup-grid">
-              ${PHILOSOPHIES.map(item => choiceButton("philosophy", item.id, item.name, item.blurb, item.tags)).join("")}
-            </div>
-          </div>
-          <div class="setup-section">
-            <div class="section-title">Difficulty</div>
-            <div class="setup-grid">
-              ${DIFFICULTIES.map(item => choiceButton("difficulty", item.id, item.name, item.blurb, item.tags)).join("")}
-            </div>
-          </div>
-          <div class="setup-section two-col">
-            <div class="stat-box"><span>Opening cash</span><strong>${money(r.cash * d.cashMod)}</strong></div>
-            <div class="stat-box"><span>Opening debt</span><strong>${money(d.debt)}</strong></div>
-            <div class="stat-box"><span>Lease / month</span><strong>${money(d.rent)}</strong></div>
-            <div class="stat-box"><span>Starting demand</span><strong>${Math.round(r.demand * v.demand * p.demand * d.demandMod)}</strong></div>
+            <div class="section-title">Estate Summary</div>
+            ${setupSummary(r, v, p, d)}
           </div>
           <div class="setup-section top-actions">
             ${loadButton}
-            <button class="primary" onclick="startGame()">Start vintage run</button>
+            <button onclick="prevSetupStep()" ${setupStep === 0 ? "disabled" : ""}>Back</button>
+            ${setupStep < SETUP_STEPS.length - 1
+              ? `<button class="primary" onclick="nextSetupStep()">Next</button>`
+              : `<button class="primary" onclick="startGame()">Start vintage run</button>`}
           </div>
         </section>
       </div>
     </main>
   `;
+}
+
+function setupStepContent(key) {
+  const r = selectedRegion();
+  if (key === "region") {
+    return `<div class="setup-section"><div class="setup-grid">${REGIONS.map(item => choiceButton("region", item.id, item.name, item.blurb, item.tags)).join("")}</div></div>`;
+  }
+  if (key === "varietal") {
+    return `<div class="setup-section"><div class="setup-grid">${r.varietals.map(id => {
+      const item = VARIETALS[id];
+      return choiceButton("varietal", id, item.name, item.blurb, item.tags);
+    }).join("")}</div></div>`;
+  }
+  if (key === "philosophy") {
+    return `<div class="setup-section"><div class="setup-grid">${PHILOSOPHIES.map(item => choiceButton("philosophy", item.id, item.name, item.blurb, item.tags)).join("")}</div></div>`;
+  }
+  return `<div class="setup-section"><div class="setup-grid">${DIFFICULTIES.map(item => choiceButton("difficulty", item.id, item.name, item.blurb, item.tags)).join("")}</div></div>`;
+}
+
+function setupSummary(r, v, p, d) {
+  return `
+    <div class="setup-summary">
+      <div><span>Region</span><strong>${r.name}</strong></div>
+      <div><span>Grape</span><strong>${v.name}</strong></div>
+      <div><span>Style</span><strong>${p.name}</strong></div>
+      <div><span>Difficulty</span><strong>${d.name}</strong></div>
+      <div><span>Opening cash</span><strong>${money(r.cash * d.cashMod)}</strong></div>
+      <div><span>Opening debt</span><strong>${money(d.debt)}</strong></div>
+      <div><span>Lease / month</span><strong>${money(d.rent)}</strong></div>
+      <div><span>Demand</span><strong>${Math.round(r.demand * v.demand * p.demand * d.demandMod)}</strong></div>
+    </div>
+  `;
+}
+
+function setSetupStep(index) {
+  setupStep = clamp(index, 0, SETUP_STEPS.length - 1);
+  render();
+}
+
+function nextSetupStep() {
+  setSetupStep(setupStep + 1);
+}
+
+function prevSetupStep() {
+  setSetupStep(setupStep - 1);
 }
 
 function choiceButton(kind, id, name, blurb, tags) {
@@ -1780,6 +2038,7 @@ function gameView() {
     <main class="shell">
       ${tabs()}
       ${eventPanel()}
+      ${harvestReportPanel()}
       ${helpOpen ? tutorialPanel() : ""}
       <div class="tab-layout">
         <div class="tab-main">
@@ -1859,14 +2118,15 @@ function topbar() {
           </div>
         </div>
         <div class="kpis">
-          ${kpi("Date", currentDateLabel(state))}
-          ${kpi("Cash", money(state.cash))}
-          ${kpi("Prestige", state.prestige)}
-          ${kpi("Demand", state.demand)}
-          ${kpi("Quality", state.quality)}
-          ${kpi("Morale", state.morale)}
-          ${kpi("Cases", state.inventory.cases)}
-          ${kpi("Actions", state.actionsLeft)}
+          ${kpi("Date", currentDateLabel(state), "Current month. Most operations, weather, contracts, and costs advance monthly.")}
+          ${kpi("Cash", money(state.cash), "Available cash after operating costs, sales, debt draws, and repayments. Running out forces credit-line use.")}
+          ${kpi("Prestige", state.prestige, "Reputation with critics, buyers, and collectors. High prestige unlocks better demand and win paths.")}
+          ${kpi("Demand", state.demand, "Commercial pull for your wine. Higher demand improves direct sales and buyer interest.")}
+          ${kpi("Quality", state.quality, "Current house quality. Vineyard health, weather, cellar work, and barrels move this.")}
+          ${kpi("Morale", state.morale, "Staff and crew confidence. Low morale hurts operations and can trigger failure.")}
+          ${kpi("Grape CE", state.inventory.grapes, "Case-equivalent grapes available to ferment. Harvest adds these; cellar work converts them to bulk wine.")}
+          ${kpi("Bulk CE", state.inventory.bulkWine, "Case-equivalent bulk wine in tank/barrel. Bottling converts this into finished cases.")}
+          ${kpi("Cases", state.inventory.cases, "Finished cases ready to sell or reserve for contracts. Passive direct sales can reduce this at month close.")}
         </div>
         <div class="top-actions">
           <button onclick="saveGame()">Save</button>
@@ -1877,8 +2137,8 @@ function topbar() {
   `;
 }
 
-function kpi(label, value) {
-  return `<div class="kpi"><span>${label}</span><strong>${value}</strong></div>`;
+function kpi(label, value, tooltip) {
+  return `<div class="kpi" ${tooltip ? tip(tooltip) : ""}><span>${label}</span><strong>${value}</strong></div>`;
 }
 
 function eventPanel() {
@@ -1899,6 +2159,27 @@ function eventPanel() {
       </div>
     </section>
   `;
+}
+
+function harvestReportPanel() {
+  const report = state.harvestReport;
+  if (!report) return "";
+  return `
+    <section class="panel harvest-report">
+      <div>
+        <strong>${report.date} Harvest</strong>
+        <div class="small">${report.grapes} grape CE from ${report.productiveRows} mature blocks • seasonal labor ${money(report.laborCost)} • quality ${report.qualityGain >= 0 ? "+" : ""}${report.qualityGain}</div>
+        <p>${report.note}</p>
+      </div>
+      <button class="ghost compact" onclick="dismissHarvestReport()">Dismiss</button>
+    </section>
+  `;
+}
+
+function dismissHarvestReport() {
+  if (!state) return;
+  state.harvestReport = null;
+  render();
 }
 
 function tutorialPanel() {
@@ -1978,9 +2259,9 @@ function estateMap() {
         kind: "vine-tile",
         sprite: row.health < 55 || row.threat >= 5 ? "tile-vineyard-unhealthy.png" : "tile-vineyard.png",
         title: row.name,
-        value: `H${row.health} / T${row.threat}`,
+        value: (row.matureMonth || 1) > state.month ? `Young • crops ${monthDateLabel(row.matureMonth)}` : `H${row.health} / T${row.threat}`,
         tab: "vineyard",
-        tip: `${row.name}: health ${row.health}, threat ${row.threat}. Open vineyard rows.`
+        tip: `${row.name}: health ${row.health}, threat ${row.threat}${(row.matureMonth || 1) > state.month ? `, first meaningful crop around ${monthDateLabel(row.matureMonth)}` : ""}. Open vineyard rows.`
       };
     }
     return {
@@ -2055,6 +2336,7 @@ function analyticsPanel() {
         <div class="stat-box"><span>Fixed burn</span><strong>${money(forecast.fixedCost)}</strong><em>next close</em></div>
         <div class="stat-box"><span>Projected cash move</span><strong>${money(forecast.netCash)}</strong><em>before new actions</em></div>
       </div>
+      ${pnlPanel(forecast)}
       <div class="chart-grid">
         ${barChart("Monthly Revenue", state.history, "revenue", "gold")}
         ${lineChart("Net Worth Trend", state.history, "netWorth", { format: money, tone: "blue" })}
@@ -2062,6 +2344,51 @@ function analyticsPanel() {
       ${metricTrends(state.history)}
     </section>
   `;
+}
+
+function pnlPanel(forecast) {
+  const last = state.history[state.history.length - 1];
+  const close = state.lastClose;
+  const costs = forecast.costBreakdown;
+  return `
+    <div class="pnl-panel">
+      <div class="pnl-block">
+        <div class="pnl-title">Next Month P&L Forecast</div>
+        ${pnlLine("Direct sales", forecast.directRevenue, true)}
+        ${pnlLine("Accepted contracts", forecast.contractRevenue, true)}
+        ${pnlLine("Operating / vineyard / cellar", -costs.operating)}
+        ${pnlLine("Payroll", -costs.salaries)}
+        ${pnlLine("Lease / rent", -costs.lease)}
+        ${pnlLine(`Interest (${Math.round(debtRate(state) * 1000) / 10}% monthly)`, -costs.interest)}
+        ${forecast.harvestLabor ? pnlLine("Harvest labor", -forecast.harvestLabor) : ""}
+        ${costs.investor ? pnlLine("Investor overhead", -costs.investor) : ""}
+        ${pnlLine("Cost multipliers", -(costs.total - costs.subtotal))}
+        <div class="pnl-note">Cost multipliers are regional labor/land cost, production style, difficulty, and staff efficiency applied to fixed burn.</div>
+        <div class="pnl-line total"><span>Forecast cash movement</span><strong>${money(forecast.netCash)}</strong></div>
+      </div>
+      <div class="pnl-block">
+        <div class="pnl-title">Last Closed Month</div>
+        ${last && close ? `
+          ${pnlLine("Revenue", last.revenue, true)}
+          ${pnlLine("Fixed burn", -(last.fixedCost - (last.harvestLaborCost || 0)))}
+          ${pnlLine("Interest paid", -last.interestCost)}
+          ${close.harvestLaborCost ? pnlLine("Harvest labor", -close.harvestLaborCost) : ""}
+          ${pnlLineValue("Direct channel cases", `${close.directCases} cases`)}
+          ${pnlLineValue("Case inventory", `${close.startingCases} → ${close.endingCases}`)}
+          <div class="pnl-line total"><span>Closed P&L</span><strong>${money(last.pnl)}</strong></div>
+        ` : `<div class="empty">Close a month to see actual P&L.</div>`}
+      </div>
+    </div>
+  `;
+}
+
+function pnlLine(label, value, positive = false) {
+  const cls = positive || value >= 0 ? "pos" : "neg";
+  return `<div class="pnl-line ${cls}"><span>${label}</span><strong>${money(value)}</strong></div>`;
+}
+
+function pnlLineValue(label, value) {
+  return `<div class="pnl-line"><span>${label}</span><strong>${value}</strong></div>`;
 }
 
 function commercialForecast(s) {
@@ -2079,14 +2406,18 @@ function commercialForecast(s) {
       contractCases += order.cases;
       available -= order.cases;
     });
-  const fixedCost = fixedCosts(s);
+  const costBreakdown = fixedCostBreakdown(s);
+  const fixedCost = costBreakdown.total;
+  const harvestLabor = isHarvestMonth(s.month) ? harvestLaborEstimate(s) : 0;
   return {
     directCases: direct.cases,
     directRevenue: direct.revenue,
     contractCases,
     contractRevenue,
     fixedCost,
-    netCash: direct.revenue + contractRevenue - fixedCost
+    costBreakdown,
+    harvestLabor,
+    netCash: direct.revenue + contractRevenue - fixedCost - harvestLabor
   };
 }
 
@@ -2213,14 +2544,14 @@ function vineyardPanel() {
     <section class="panel">
       <div class="panel-head">
         <h2>Vineyard ${helpIcon("Rows with high threat lose health and hurt harvest yield. Work Vineyard is the main defensive action.")}</h2>
-        <span class="small">${state.season} • ${state.lastWeather}</span>
+        <span class="small">${state.season} • ${state.lastWeather} • ${state.lastTemp.low}-${state.lastTemp.high}F</span>
       </div>
       <div class="vineyard">
         ${state.rows.map(row => `
           <div class="row-card">
             <div>
               <div class="row-name">${row.name}</div>
-              <div class="row-meta">Health ${row.health} • ${row.threatName}</div>
+              <div class="row-meta">Health ${row.health} • ${row.threatName}${(row.matureMonth || 1) > state.month ? ` • young vines crop ${monthDateLabel(row.matureMonth)}` : ""}</div>
             </div>
             <div class="vines" aria-label="${row.name} vines">
               ${Array.from({ length: 10 }, (_, i) => `<span class="vine stress${vineStress(row, i)}"></span>`).join("")}
@@ -2253,12 +2584,15 @@ function actionsPanel() {
         ${sorted.map(action => {
           const cost = actionCost(action, state);
           const available = isActionAvailable(action, state);
+          const disabled = action.navigateTab
+            ? state.event || state.gameOver
+            : !available || state.actionsLeft <= 0 || state.cash < cost || state.event || state.gameOver;
           return `
-            <button class="action-card ${available ? "" : "offseason"}" onclick="useAction('${action.id}')" ${!available || state.actionsLeft <= 0 || state.cash < cost || state.event ? "disabled" : ""}>
+            <button class="action-card ${available ? "" : "offseason"}" onclick="useAction('${action.id}')" ${disabled ? "disabled" : ""}>
               <b>${actionName(action, state)}</b>
-              <span>${action.detail}</span>
+              <span>${actionDetail(action, state)}</span>
               <span class="effect">${available ? actionConsequence(action, state) : `Off-season: available ${seasonListLabel(action.seasons)}`}</span>
-              <em>${money(cost)}</em>
+              <em>${action.navigateTab ? "Open Estate" : money(cost)}</em>
             </button>
           `;
         }).join("")}
@@ -2279,15 +2613,15 @@ function marketPanel() {
       <div class="market-line">
         <label>
           <span class="small">List price per bottle</span>
-          <input type="range" min="14" max="68" value="${state.price}" oninput="setPrice(this.value)">
+          <input type="range" min="14" max="120" value="${state.price}" oninput="setPrice(this.value)">
         </label>
         <strong>${money(state.price)}</strong>
       </div>
       <div class="two-col" style="margin-top: 10px;">
         <div class="stat-box"><span>Forecast direct sales</span><strong>${forecast.cases} cases</strong></div>
         <div class="stat-box"><span>Forecast revenue</span><strong>${money(forecast.revenue)}</strong></div>
-        <div class="stat-box"><span>Grapes</span><strong>${state.inventory.grapes}</strong></div>
-        <div class="stat-box"><span>Bulk wine</span><strong>${state.inventory.bulkWine}</strong></div>
+        <div class="stat-box"><span>Grape CE</span><strong>${state.inventory.grapes}</strong></div>
+        <div class="stat-box"><span>Bulk CE</span><strong>${state.inventory.bulkWine}</strong></div>
         <div class="stat-box"><span>Glass</span><strong>${state.inventory.glass}</strong></div>
         <div class="stat-box"><span>Debt</span><strong>${money(state.debt)}</strong></div>
       </div>
@@ -2308,8 +2642,8 @@ function flowPanel() {
     <div class="flow-panel">
       <div class="flow-step">
         <span>Next Harvest</span>
-        <strong>${forecast.grapes} grapes</strong>
-        <em>${forecast.monthLabel}</em>
+        <strong>${forecast.low}-${forecast.high} CE</strong>
+        <em>${forecast.monthLabel} • ${forecast.matureRows} mature blocks</em>
       </div>
       <div class="flow-arrow">→</div>
       <div class="flow-step">
@@ -2335,19 +2669,33 @@ function flowPanel() {
 
 function harvestForecast(s) {
   const monthsUntilHarvest = Array.from({ length: 12 }, (_, i) => i).find(offset => isHarvestMonth(s.month + offset)) || 0;
-  const health = s.rows.reduce((sum, row) => sum + row.health - row.threat * 5, 0) / s.rows.length;
-  const base = s.rows.length * 260;
-  const grapes = Math.max(80, Math.round(base * (health / 82) * varietal().yield * philosophy().yield * (region().yieldMod || 1)));
+  const harvestMonth = s.month + monthsUntilHarvest;
+  const matureAtHarvest = s.rows.filter(row => (row.matureMonth || 1) <= harvestMonth);
+  const health = matureAtHarvest.length
+    ? matureAtHarvest.reduce((sum, row) => sum + row.health - row.threat * 5, 0) / matureAtHarvest.length
+    : 0;
+  const base = matureAtHarvest.length * 260;
+  const midpoint = Math.max(0, Math.round(base * (health / 82) * varietal().yield * philosophy().yield * (region().yieldMod || 1)));
+  const uncertainty = Math.round(midpoint * (0.18 + averageThreat(s) * 0.025 + (s.buildings.lab ? -0.03 * s.buildings.lab : 0)));
+  const low = Math.max(0, midpoint - uncertainty);
+  const high = Math.max(low, midpoint + uncertainty);
   const index = START_MONTH_INDEX + s.month + monthsUntilHarvest - 1;
   const label = `${MONTH_NAMES[index % 12]} ${START_YEAR + Math.floor(index / 12)}`;
-  return { grapes, monthLabel: label };
+  return { grapes: midpoint, low, high, matureRows: matureAtHarvest.length, monthLabel: label };
+}
+
+function harvestLaborEstimate(s) {
+  const productive = productiveRows(s);
+  const laborRate = s.marketMods.harvestCrew ? 3600 : 2800;
+  return Math.round(productive.length * laborRate * region().costMod * difficulty().costMod * staffCostMod(s));
 }
 
 function debtPanel() {
+  const costs = fixedCostBreakdown(state);
   return `
     <div class="debt-panel">
       <div>
-        <span class="small">Credit line ${money(state.debt)} / ${money(state.creditLine)} • interest ${Math.round(debtRate(state) * 1000) / 10}% monthly • lease ${money(state.leaseCost)}/mo</span>
+        <span class="small">Credit line ${money(state.debt)} / ${money(state.creditLine)} • interest ${Math.round(debtRate(state) * 1000) / 10}% monthly (${money(costs.interest)}/mo) • lease ${money(state.leaseCost)}/mo</span>
       </div>
       <div class="debt-actions">
         <button onclick="drawDebt(25000)" ${availableCredit(state) <= 0 ? "disabled" : ""}>Draw ${money(25000)}</button>
@@ -2359,7 +2707,7 @@ function debtPanel() {
 }
 
 function setPrice(value) {
-  state.price = Number(value);
+  state.price = clamp(Number(value), 14, 120);
   render();
 }
 
@@ -2387,17 +2735,18 @@ function ordersPanel() {
 }
 
 function orderView(order) {
+  const aboveCeiling = !order.accepted && state.price > order.maxPrice;
   return `
     <div class="order">
       <div class="order-head">
         <strong>${order.buyer}</strong>
-        <span class="tag">Due ${order.due}</span>
+        <span class="tag">${order.accepted ? `Due ${monthDateLabel(order.due)}` : `Offer expires ${monthDateLabel(order.expires)}`}</span>
       </div>
-      <p>${order.cases} cases • ceiling ${money(order.maxPrice)}/bottle • penalty ${money(order.penalty)}</p>
+      <p>${order.cases} cases • ceiling ${money(order.maxPrice)}/bottle • ${order.accepted ? `penalty ${money(order.penalty)}` : aboveCeiling ? `current list ${money(state.price)} is too high` : `delivery due ${monthDateLabel(order.due)}`}</p>
       <div class="order-actions">
         ${order.accepted
           ? `<button onclick="fulfillOrder('${order.id}')" ${state.inventory.cases < order.cases ? "disabled" : ""}>Fulfill</button>`
-          : `<button onclick="acceptOrder('${order.id}')">Accept at list price</button>`}
+          : `<button onclick="acceptOrder('${order.id}')" ${aboveCeiling ? "disabled" : ""}>${aboveCeiling ? "Above buyer ceiling" : "Accept at list price"}</button>`}
         <button class="ghost" onclick="rejectOrder('${order.id}')">${order.accepted ? "Cancel" : "Pass"}</button>
       </div>
     </div>
@@ -2565,6 +2914,9 @@ window.saveGame = saveGame;
 window.loadGame = loadGame;
 window.resetGame = resetGame;
 window.selectSetup = selectSetup;
+window.setSetupStep = setSetupStep;
+window.nextSetupStep = nextSetupStep;
+window.prevSetupStep = prevSetupStep;
 window.setTab = setTab;
 window.toggleHelp = toggleHelp;
 window.useAction = useAction;
@@ -2580,5 +2932,6 @@ window.hireStaff = hireStaff;
 window.fireStaff = fireStaff;
 window.unlockAdvancement = unlockAdvancement;
 window.resolveEvent = resolveEvent;
+window.dismissHarvestReport = dismissHarvestReport;
 
 render();
