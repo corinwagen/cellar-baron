@@ -1104,6 +1104,26 @@ button:disabled {
   gap: 8px;
 }
 
+.capacity-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: -3px 0 9px;
+}
+
+.capacity-strip span {
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: #fffdfa;
+  font-size: 11px;
+}
+
+.capacity-strip strong {
+  color: var(--ink);
+}
+
 .action-card {
   display: grid;
   gap: 5px;
