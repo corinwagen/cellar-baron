@@ -71,7 +71,7 @@ button:disabled {
   top: 0;
   z-index: 5;
   border-bottom: 1px solid var(--line);
-  background: rgba(247, 244, 237, 0.96);
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
   backdrop-filter: blur(10px);
 }
 
@@ -497,6 +497,92 @@ button:disabled {
   background: #f5efe3;
   font-size: 11px;
   line-height: 1.4;
+}
+
+.tag.trait-virtue {
+  border-color: #c4a84a;
+  color: #6b5010;
+  background: #fdf5dc;
+}
+
+.tag.trait-vice {
+  border-color: #b0a090;
+  color: #5a4f44;
+  background: #eee8df;
+}
+
+.personality-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+/* ── Intro modal ─────────────────────────────────��─────────────── */
+.intro-modal-card {
+  max-width: 680px;
+  width: 100%;
+}
+
+.intro-scene {
+  margin: 4px 0 14px;
+  color: #5a5040;
+  font-style: italic;
+}
+
+.intro-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 20px;
+  margin-bottom: 16px;
+}
+
+.intro-goals {
+  grid-column: 1 / -1;
+}
+
+.intro-section {
+  background: #faf6ee;
+  border: 1px solid #e2d9cc;
+  border-radius: 7px;
+  padding: 10px 12px;
+}
+
+.intro-head {
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #8a7050;
+  margin-bottom: 7px;
+}
+
+.intro-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.intro-row span { color: #5a5040; }
+.intro-row strong { color: #2c2018; text-align: right; }
+.intro-row em { color: #7a6a58; font-style: normal; text-align: right; }
+
+.intro-row.score-guide span { font-family: monospace; font-size: 11px; color: #6a5840; }
+
+.intro-goal {
+  font-size: 12px;
+  color: #3a3028;
+  padding: 4px 0 4px 14px;
+  position: relative;
+}
+
+.intro-goal::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: #a08850;
 }
 
 .game-grid {
@@ -2063,4 +2149,133 @@ input[type="range"] {
 
 .muted {
   color: var(--muted);
+}
+
+/* ── Region color theming ─────────────────────────────────────── */
+/* napa: default warm amber/wine — no override needed */
+body[data-region="bordeaux"] { --wine: #5c243c; --paper: #f5f3f0; --line: #d6d0c8; }
+body[data-region="mendoza"]  { --wine: #5f2268; --paper: #f6f2f5; --line: #d8d0d6; }
+body[data-region="mosel"]    { --wine: #1e4f5a; --paper: #f2f5f4; --line: #cdd4d2; }
+body[data-region="burgundy"] { --wine: #501e5a; --paper: #f4f2f6; --line: #d4cfd8; }
+body[data-region="barossa"]  { --wine: #8a2a10; --paper: #f8f1e6; --line: #ddd4c4; }
+body[data-region="piedmont"] { --wine: #5a2010; --paper: #f6f1e8; --line: #dad2c2; }
+body[data-region="rioja"]    { --wine: #881a14; --paper: #f7f0e8; --line: #dcd3c2; }
+
+/* ── Event choice hints ───────────────────────────────────────── */
+.event-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  text-align: left;
+  padding: 8px 12px;
+}
+
+.event-choice-label {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.event-choice-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+  line-height: 1.3;
+}
+
+/* ── Critic score in gantt ────────────────────────────────────── */
+.critic-score {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gold);
+  margin-left: 4px;
+  opacity: 0.9;
+}
+
+/* ── Naming modal ─────────────────────────────────────────────── */
+.naming-modal-card {
+  max-width: 440px;
+}
+
+.naming-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 18px 0 8px;
+}
+
+.naming-btn {
+  padding: 10px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  font-size: 14px;
+  font-style: italic;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: center;
+}
+
+.naming-btn:hover {
+  border-color: var(--wine);
+  background: color-mix(in srgb, var(--wine) 8%, var(--paper));
+}
+
+/* ── Insurance row ────────────────────────────────────────────── */
+.insurance-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  background: color-mix(in srgb, var(--paper) 60%, white);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+.insurance-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.insurance-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--wine);
+  cursor: pointer;
+}
+
+/* ── Stash control ────────────────────────────────────────────── */
+.stash-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.stash-control .micro {
+  padding: 2px 8px;
+  font-size: 11px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  cursor: pointer;
+  line-height: 1.6;
+}
+
+.stash-control .micro:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.stash-control span {
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 24px;
+  text-align: center;
 }
