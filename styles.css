@@ -594,15 +594,10 @@ button:disabled {
 }
 
 .tabs {
-  position: sticky;
-  top: 86px;
-  z-index: 4;
   display: flex;
   gap: 8px;
   align-items: center;
   padding: 10px 0;
-  background: rgba(247, 244, 237, 0.94);
-  backdrop-filter: blur(8px);
 }
 
 .tabs button {
@@ -956,17 +951,6 @@ button:disabled {
   display: block;
 }
 
-.tabs [data-tip]::after {
-  top: calc(100% + 8px);
-  right: auto;
-  bottom: auto;
-  left: 0;
-}
-
-.tabs .help-toggle[data-tip]::after {
-  right: 0;
-  left: auto;
-}
 
 .kpis [data-tip]::after {
   top: calc(100% + 8px);
@@ -983,6 +967,13 @@ button:disabled {
 .help-dot[data-tip]::after {
   right: auto;
   left: 0;
+}
+
+.side-rail .help-dot[data-tip]::after {
+  top: calc(100% + 8px);
+  bottom: auto;
+  left: auto;
+  right: 0;
 }
 
 .small {
@@ -2087,13 +2078,35 @@ input[type="range"] {
   grid-template-rows: auto auto;
 }
 
-.bulk-sell-btn {
+.lot-actions {
   grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: -2px;
+}
+
+.bulk-sell-btn,
+.early-release-btn {
   font-size: 11px;
   padding: 3px 8px;
   color: var(--muted);
-  justify-self: start;
-  margin-top: -2px;
+}
+
+.early-release-btn {
+  color: color-mix(in srgb, #b04020 70%, var(--muted));
+  border-color: color-mix(in srgb, #b04020 40%, var(--line));
+}
+
+.early-badge {
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 600;
+  color: #b04020;
+  opacity: 0.75;
+  margin-left: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .gantt-meta {
@@ -2229,6 +2242,13 @@ body[data-region="rioja"]    { --wine: #881a14; --paper: #f7f0e8; --line: #dcd3c
 .naming-btn:hover {
   border-color: var(--wine);
   background: color-mix(in srgb, var(--wine) 8%, var(--paper));
+}
+
+/* ── Price anchor note ────────────────────────────────────────── */
+.price-anchor-note {
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 6px;
 }
 
 /* ── Insurance row ────────────────────────────────────────────── */

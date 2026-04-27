@@ -1809,6 +1809,7 @@ const ACTIONS = [
     seasons: ["Budbreak", "Flowering", "Veraison", "Harvest", "Cellar", "Dormant"],
     consequence: s => seasonalAction(s).consequence,
     apply: s => {
+      s.seasonalUsedMonth = s.month;
       if (s.season === "Budbreak") {
         // Spray program: deep disease knockdown + frost protection
         s.marketMods.frostReady = 3;
@@ -1833,6 +1834,7 @@ const ACTIONS = [
         log(s, `Canopy thinning opened the fruit zone. Disease ${Math.round(averageDisease(s))}, water ${Math.round(averageWater(s))}.`);
       } else if (s.season === "Veraison") {
         // Green harvest: sacrifice ~20% yield in exchange for quality + disease cleanup
+        s.greenHarvestYear = START_YEAR + Math.floor((s.month - 1) / 12);
         s.marketMods.greenHarvest = 1;
         s.rows.forEach(row => {
           ensureRowFields(row);
@@ -1897,6 +1899,7 @@ const ACTIONS = [
     seasons: ["Cellar", "Dormant"],
     consequence: "Profile +6 toward artisan. Quality +2. Best paired with concrete-egg tanks or Grand Cru barrels.",
     apply: s => {
+      s.naturalCellarUsedMonth = s.month;
       s.profile = clamp((s.profile ?? 50) + 6, 0, 100);
       s.quality += 2;
       s.prestige += (s.buildings.tank || 0) >= 3 || (s.buildings.barrel || 0) >= 4 ? 2 : 0;
@@ -2104,6 +2107,7 @@ function createState() {
     sustainability: 45 + p.sustainability,
     influence: r.influence || 2,
     price: 28,
+    monthStartPrice: 28,
     actionsLeft: 3,
     staff: [],
     staffProgress: {},
@@ -2147,6 +2151,9 @@ function createState() {
     introSeen: false,
     pendingNaming: null,
     insurance: { crop: false },
+    seasonalUsedMonth: -1,
+    greenHarvestYear: -1,
+    naturalCellarUsedMonth: -1,
     history: [],
     totalSold: 0,
     totalRevenue: 0,
@@ -2221,6 +2228,10 @@ function ensureEconomy(s) {
   ensureStaffTraits(s);
   if (typeof s.introSeen !== "boolean") s.introSeen = true; // existing saves skip intro
   if (!('pendingNaming' in s)) s.pendingNaming = null;
+  if (!('monthStartPrice' in s)) s.monthStartPrice = s.price;
+  if (!('seasonalUsedMonth' in s)) s.seasonalUsedMonth = -1;
+  if (!('greenHarvestYear' in s)) s.greenHarvestYear = -1;
+  if (!('naturalCellarUsedMonth' in s)) s.naturalCellarUsedMonth = -1;
   if (!s.insurance) s.insurance = { crop: false };
   if (s.inventory && !('stash' in s.inventory)) s.inventory.stash = 0;
 }
@@ -3073,6 +3084,7 @@ function advanceMonth() {
 }
 
 function monthlyTick(s) {
+  s.monthStartPrice = s.price; // anchor for next month's price cap
   const startingCases = s.inventory.cases;
   const sales = directSales(s);
   s.inventory.cases -= sales.cases;
@@ -3589,12 +3601,12 @@ function gameView() {
     ${topbar()}
     <main class="shell">
       ${tabs()}
-      ${eventPanel()}
-      ${harvestReportPanel()}
-      ${helpOpen ? tutorialPanel() : ""}
       <div class="tab-layout">
         <div class="tab-main">
           ${negativeCashBanner()}
+          ${eventPanel()}
+          ${harvestReportPanel()}
+          ${helpOpen ? tutorialPanel() : ""}
           ${tabPanel()}
         </div>
         <aside class="side-rail">
@@ -4177,6 +4189,14 @@ function vineyardPanel() {
 }
 
 function actionInventoryNote(action, s) {
+  if (action.id === "seasonal") {
+    if (s.seasonalUsedMonth === s.month) return { text: "Already done this month", hard: true };
+    const currentYear = START_YEAR + Math.floor((s.month - 1) / 12);
+    if (s.season === "Veraison" && s.greenHarvestYear === currentYear) return { text: "Green harvest already done this year", hard: true };
+  }
+  if (action.id === "natural-cellar" && s.naturalCellarUsedMonth === s.month) {
+    return { text: "Already done this month", hard: true };
+  }
   if (action.id === "bottle") {
     const ready = readyVintages(s);
     if (!ready.length && totalBulkWine(s) === 0) return { text: "No bulk wine to bottle", hard: true };
@@ -4234,8 +4254,11 @@ function marketPanel() {
       </div>
       <div class="market-line">
         <label>
-          <span class="small">List price per bottle</span>
-          <input type="range" min="14" max="${profilePriceCeil(state)}" value="${state.price}" oninput="setPrice(this.value)">
+          <span class="small">List price per bottle <span class="price-anchor-note">anchored ${money(state.monthStartPrice ?? state.price)} · ±${money(PRICE_SWING_CAP)} this month</span></span>
+          <input type="range"
+            min="${Math.max(14, (state.monthStartPrice ?? state.price) - PRICE_SWING_CAP)}"
+            max="${Math.min(profilePriceCeil(state), (state.monthStartPrice ?? state.price) + PRICE_SWING_CAP)}"
+            value="${state.price}" oninput="setPrice(this.value)">
         </label>
         <strong>${money(state.price)}</strong>
       </div>
@@ -4305,6 +4328,26 @@ function grapePurchasePrice(s) {
   const v = varietal();
   const r = region();
   return Math.round(180 * (v.quality || 1) * (r.costMod || 1) * (v.difficulty || 1) * 0.85);
+}
+
+function earlyRelease(lotId) {
+  if (!state || state.event || state.gameOver) return;
+  const lot = (state.vintages || []).find(v => v.id === lotId);
+  if (!lot || lot.bulkWine <= 0 || lot.agingMonths >= lot.agingTarget) return;
+  const remaining = lot.agingTarget - lot.agingMonths;
+  const ratio = remaining / lot.agingTarget;
+  if (ratio > 0.75) {
+    log(state, `${lot.label} is too young — wait until at least 25% of aging is complete before forcing a release.`);
+    render(); return;
+  }
+  // Penalty: -2 score if more than a third of aging skipped, -1 if in the home stretch
+  const penalty = ratio > 0.33 ? 2 : 1;
+  lot.score = Math.max(1, (lot.score || 3) - penalty);
+  lot.agingMonths = lot.agingTarget;
+  lot.earlyReleased = true;
+  log(state, `Early release: ${lot.label} cut ${remaining} months short. Vintage score −${penalty} (harsh tannins, unintegrated structure).`);
+  normalizeState(state);
+  render();
 }
 
 function sellBulk(lotId, amount) {
@@ -4384,17 +4427,23 @@ function vintageCellarPanel() {
       : "";
 
     const bulkSellPrice = Math.round(state.price * 12 * 0.55);
+    const agedRatio = target > 0 ? (lot.agingMonths || 0) / target : 1;
+    const canEarlyRelease = hasBulk && !isReady && !isPreagedStock && target > 0 && agedRatio >= 0.25;
+    const earlyPenalty = canEarlyRelease ? ((1 - agedRatio) > 0.33 ? 2 : 1) : 0;
     return `
       <div class="gantt-row">
         <div class="gantt-meta">
-          <span class="gantt-label">${escapeHtml(lot.label)}</span>
+          <span class="gantt-label">${escapeHtml(lot.label)}${lot.earlyReleased ? ' <em class="early-badge">early</em>' : ""}</span>
           <span class="gantt-score">${vintageScoreStars(lot.score)}${lot.criticScore ? ` <span class="critic-score">${lot.criticScore}pts</span>` : ""}</span>
         </div>
         <div class="gantt-track">
           ${barHtml}
         </div>
         <div class="gantt-status ${isReady || isPreagedStock ? "ready" : ""}">${statusText}</div>
-        ${hasBulk ? `<button class="ghost compact bulk-sell-btn" onclick="sellBulk('${lot.id}', 100)" title="Sell 100 CE to a négociant at ${money(bulkSellPrice)}/CE (55% of bottle rate)">Sell 100 CE bulk · ${money(bulkSellPrice * 100)}</button>` : ""}
+        ${hasBulk ? `<div class="lot-actions">
+          <button class="ghost compact bulk-sell-btn" onclick="sellBulk('${lot.id}', 100)" title="Sell 100 CE to a négociant at ${money(bulkSellPrice)}/CE">Sell bulk · ${money(bulkSellPrice * 100)}</button>
+          ${canEarlyRelease ? `<button class="ghost compact early-release-btn" onclick="earlyRelease('${lot.id}')" title="Force bottling now — vintage score −${earlyPenalty} for cutting ${monthsLeft} months short">Early release −${earlyPenalty}★</button>` : ""}
+        </div>` : ""}
       </div>
     `;
   });
@@ -4416,7 +4465,13 @@ function vintageCellarPanel() {
       ` : `<p class="small muted">No active lots. Harvest or purchase grapes to begin.</p>`}
       <div class="vintage-buy-row">
         <span class="small">Buy 200 CE ${varietal().name}: <strong>${money(gpPrice * 200)}</strong></span>
-        <button onclick="buyGrapes()" ${state.actionsLeft <= 0 || state.cash < gpPrice * 200 || state.event || state.gameOver ? "disabled" : ""}>Buy grapes</button>
+        ${(() => {
+          const why = state.event ? "resolve the current event first"
+            : state.actionsLeft <= 0 ? "no action slots left this month"
+            : state.cash < gpPrice * 200 ? `need ${money(gpPrice * 200)} (have ${money(state.cash)})`
+            : null;
+          return `<button onclick="buyGrapes()" ${why || state.gameOver ? "disabled" : ""} ${why ? `title="${why}"` : ""}>${why ? `Buy grapes — ${why}` : "Buy grapes"}</button>`;
+        })()}
       </div>
     </section>
   `;
@@ -4461,8 +4516,13 @@ function debtPanel() {
   `;
 }
 
+const PRICE_SWING_CAP = 6;
+
 function setPrice(value) {
-  state.price = clamp(Number(value), 14, profilePriceCeil(state));
+  const anchor = state.monthStartPrice ?? state.price;
+  const lo = Math.max(14, anchor - PRICE_SWING_CAP);
+  const hi = Math.min(profilePriceCeil(state), anchor + PRICE_SWING_CAP);
+  state.price = clamp(Number(value), lo, hi);
   render();
 }
 
@@ -4690,7 +4750,7 @@ function namingModal() {
         <h2>Name this release</h2>
         <p>The <strong>${escapeHtml(lot.label)}</strong> earned a critic score of <strong>${lot.criticScore}/100</strong>. Give it a lasting name to mark it in the cellar book — prestige bonus included.</p>
         <div class="naming-options">
-          ${options.map(n => `<button class="naming-btn" onclick="chooseName(${JSON.stringify(lot.id)}, ${JSON.stringify(n)})">${escapeHtml(n)}</button>`).join("")}
+          ${options.map(n => `<button class="naming-btn" onclick="chooseName(${JSON.stringify(lot.id).replace(/"/g,'&quot;')}, ${JSON.stringify(n).replace(/"/g,'&quot;')})">${escapeHtml(n)}</button>`).join("")}
         </div>
         <div class="top-actions">
           <button class="ghost" onclick="skipNaming()">Skip naming</button>
@@ -4834,6 +4894,7 @@ window.unlockAdvancement = unlockAdvancement;
 window.resolveEvent = resolveEvent;
 window.dismissHarvestReport = dismissHarvestReport;
 window.buyGrapes = buyGrapes;
+window.earlyRelease = earlyRelease;
 window.sellBulk = sellBulk;
 window.chooseName = chooseName;
 window.skipNaming = skipNaming;
