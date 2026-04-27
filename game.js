@@ -357,6 +357,51 @@ const SEASON_WINDOWS = {
   Cellar: "Nov-Feb"
 };
 
+const CHANNELS = {
+  cellarDoor: { label: "Cellar Door", orderType: null },
+  club: { label: "Wine Club", orderType: "club" },
+  restaurant: { label: "Restaurants", orderType: "restaurant" },
+  distributor: { label: "Distribution", orderType: "distributor" },
+  export: { label: "Export", orderType: "export" },
+  collector: { label: "Collectors", orderType: "collector" },
+  mass: { label: "Mass Market", orderType: "supermarket" }
+};
+
+const ORDER_CHANNEL = {
+  club: "club",
+  restaurant: "restaurant",
+  distributor: "distributor",
+  export: "export",
+  collector: "collector",
+  supermarket: "mass"
+};
+
+const STAFF_AGENDAS = {
+  ines: "Wants healthy blocks, sustainability, and no shortcut harvests.",
+  marco: "Wants cellar discipline, lower flaw risk, and patient releases.",
+  beatrice: "Wants hospitality quality without burning out the floor.",
+  asha: "Wants reliable trade allocations and no broken promises.",
+  omar: "Wants cash discipline, capacity before expansion, and clean debt.",
+  lucy: "Wants premium positioning and critic-facing polish.",
+  samir: "Wants maintenance windows, bottling reliability, and operational slack.",
+  priya: "Wants reach, accessibility, and a wider audience.",
+  felix: "Wants memorable visits that do not overwhelm the estate.",
+  dr_chen: "Wants disease prevention, scouting accuracy, and resilient vines.",
+  margot: "Wants members protected with dependable allocations.",
+  oscar: "Wants low-intervention credibility without careless spoilage."
+};
+
+const EVENT_RULES = {
+  competition: { cooldown: 18, max: 2 },
+  investor: { max: 1 },
+  "bordeaux-appellation": { cooldown: 30, max: 2 },
+  "burgundy-premier-cru": { cooldown: 36, max: 1 },
+  "rioja-consejo": { cooldown: 14 },
+  "barossa-old-vine": { max: 1 },
+  "natural-wine-fair": { cooldown: 14 },
+  "supermarket-pitch": { cooldown: 18 }
+};
+
 const REGION_CLIMATE = {
   napa: {
     avgHigh: [56, 61, 65, 70, 76, 83, 87, 87, 84, 76, 64, 56],
@@ -1368,7 +1413,7 @@ const EVENT_DECK = [
     id: "bordeaux-appellation",
     title: "Appellation Classification Review",
     body: "The appellation body is conducting a five-year quality review. Estates with strong barrel programs and track records of consistent prestige are eligible for classification upgrades.",
-    condition: s => s.region === "bordeaux",
+    condition: s => s.region === "bordeaux" && s.classification?.bordeaux !== "granted",
     minMonth: 12,
     choices: [
       { label: "Host the committee", cost: 8000,
@@ -1377,7 +1422,8 @@ const EVENT_DECK = [
           const strong = (s.buildings.barrel || 0) >= 2 && s.prestige >= 40;
           s.prestige += strong ? 8 : 3;
           s.influence += strong ? 5 : 1;
-          log(s, strong ? "The committee was impressed. Classification standing improved." : "The visit went politely. More barrel investment needed to move the needle.");
+          s.classification.bordeaux = strong ? "granted" : "deferred";
+          log(s, strong ? "The committee was impressed. Classification standing was granted for this cycle." : "The visit went politely. Classification was deferred until the next review cycle.");
         }},
       { label: "Skip this cycle",
         hint: "No cost or penalty.",
@@ -1461,12 +1507,18 @@ const EVENT_DECK = [
     id: "burgundy-premier-cru",
     title: "Premier Cru Classification Whisper",
     body: "Word has reached the Conseil that your parcel's consistent quality and elevation profile may qualify for a premier cru designation — but a formal application requires lobbying, documentation, and a memorable tasting.",
-    condition: s => s.region === "burgundy" && s.prestige >= 55,
+    condition: s => s.region === "burgundy" && s.prestige >= 55 && s.classification?.burgundy !== "granted",
     minMonth: 16,
     choices: [
       { label: "Pursue the classification", cost: 18000,
         hint: "Prestige +12, Demand +8, Influence +6.",
-        effect: s => { s.prestige += 12; s.demand += 8; s.influence += 6; log(s, "The designation was granted. Premier cru changes every conversation with buyers."); } },
+        effect: s => {
+          s.prestige += 12;
+          addChannelDemand(s, ["collector", "restaurant"], 8);
+          s.influence += 6;
+          s.classification.burgundy = "granted";
+          log(s, "The designation was granted. Premier cru changes every conversation with buyers.");
+        } },
       { label: "Stay unclassified — preserve identity",
         hint: "Prestige +3, House Style more artisan.",
         effect: s => { s.prestige += 3; s.profile = clamp((s.profile ?? 50) + 4, 0, 100); log(s, "Staying outside the classification reinforced the cult positioning."); } }
@@ -1670,6 +1722,7 @@ const ACTIONS = [
         row.threat  = Math.round(row.disease / 11);
       });
       s.morale  += vBonus + 1;
+      s.fatigue += 2;
       s.quality += 1 + vBonus;
       log(s, `Vineyard crew cleaned canopies and scouted disease. Average disease now ${Math.round(averageDisease(s))}.`);
     }
@@ -1688,6 +1741,7 @@ const ACTIONS = [
       if (lot && used > 0) {
         lot.grapes -= used;
         lot.bulkWine += Math.round(used * 0.72);
+        lot.flawRisk = clamp((typeof lot.flawRisk === "number" ? lot.flawRisk : baseLotFlawRisk(s, lot)) + Math.round(philosophy().risk * 4) - staffBonus(s, "cellar") * 2 - (s.buildings.lab || 0) * 2, 3, 80);
         const target = agingTarget(s);
         if (lot.agingTarget === 0 && target > 0) lot.agingTarget = target;
         const monthsLeft = Math.max(0, lot.agingTarget - lot.agingMonths);
@@ -1698,6 +1752,7 @@ const ACTIONS = [
       }
       s.quality += 2 + s.buildings.barrel + staffBonus(s, "cellar");
       s.prestige += Math.max(1, Math.floor((s.buildings.barrel * varietal(s).barrelNeed) / 2));
+      s.fatigue += 1;
     }
   },
   {
@@ -1713,6 +1768,7 @@ const ACTIONS = [
       const ready = readyVintages(s);
       if (!ready.length) { log(s, "No wine has finished aging yet."); return; }
       const lot = ready[0];
+      applyBottlingFlawCheck(s, lot);
       const bulkAvail = Math.min(lot.bulkWine, capacity);
       const cases = Math.floor(Math.min(bulkAvail, s.inventory.glass));
       if (cases <= 0) return;
@@ -1731,11 +1787,15 @@ const ACTIONS = [
         : effectiveScore;
       if (!lot.criticScore) {
         lot.criticScore = calcCriticScore(effectiveScore, s.quality);
+        recordArchiveBottling(s, lot, cases);
+        applyReleaseExpectations(s, lot);
         log(s, `Bottled ${cases} cases from ${lot.label} — ${lot.bulkWine} CE remaining. ${vintageScoreLabel(effectiveScore)} vintage (${vintageScoreStars(effectiveScore)}) · critic score ${lot.criticScore}/100.`);
         if (effectiveScore >= 4 && !s.pendingNaming) s.pendingNaming = lot.id;
       } else {
+        recordArchiveBottling(s, lot, cases);
         log(s, `Bottled ${cases} cases from ${lot.label} — ${lot.bulkWine} CE remaining.`);
       }
+      s.fatigue += 2;
     }
   },
   {
@@ -1751,7 +1811,9 @@ const ACTIONS = [
       s.cash += direct.revenue;
       s.totalSold += direct.cases;
       s.totalRevenue += direct.revenue;
-      s.demand += 3 + staffBonus(s, "sales") + staffBonus(s, "brand");
+      recordArchiveSale(s, direct.cases, direct.revenue, direct.channel);
+      addChannelDemand(s, ["restaurant", "distributor", "export", "collector"], 1 + staffBonus(s, "sales"));
+      addChannelDemand(s, ["cellarDoor"], 2 + staffBonus(s, "brand"));
       if (rand() < 0.75) addOrder(s);
       log(s, `Direct channels sold ${direct.cases} cases for ${money(direct.revenue)}.`);
     }
@@ -1771,9 +1833,11 @@ const ACTIONS = [
       s.cash += revenue + visits * 14;
       s.totalSold += cases;
       s.totalRevenue += revenue + visits * 14;
+      recordArchiveSale(s, cases, revenue, "cellarDoor");
       s.morale += 3 + staffBonus(s, "hospitality");
       s.prestige += 1 + Math.floor(s.buildings.room / 2);
-      s.demand += 2 + staffBonus(s, "hospitality");
+      addChannelDemand(s, ["cellarDoor", "club"], 2 + staffBonus(s, "hospitality"));
+      s.fatigue += Math.max(1, Math.round(visits / 120) - staffBonus(s, "hospitality"));
       log(s, `Hospitality hosted ${visits} guests and sold ${cases} premium cases.`);
     }
   },
@@ -1788,8 +1852,29 @@ const ACTIONS = [
       const gain = 5500 + staffBonus(s, "finance") * 2200 + Math.floor(s.influence * 120);
       s.cash += gain;
       s.influence += 2;
-      s.demand -= 1;
+      addChannelDemand(s, ["distributor", "export", "mass"], 1);
+      addChannelDemand(s, ["collector"], -1);
       log(s, `Finance found ${money(gain)} in grants, rebates, and better terms.`);
+    }
+  },
+  {
+    id: "heroics",
+    name: "Ask for Heroics",
+    detail: "Borrow one more push from the team this month.",
+    seasons: ["Budbreak", "Flowering", "Veraison", "Harvest", "Cellar", "Dormant"],
+    consequence: "Gain +1 placement now. Fatigue +14; repeated use risks burnout.",
+    cost: 0,
+    apply: s => {
+      s.heroicsUsedMonth = s.month;
+      s.actionsLeft += 2; // one extra net placement after this action is spent
+      s.fatigue += 14 + Math.max(0, (s.heroicsStreak || 0) * 4);
+      s.heroicsStreak = (s.heroicsStreak || 0) + 1;
+      if (s.heroicsStreak >= 3) {
+        s.morale -= 8;
+        log(s, "The team delivered, but repeated heroics are becoming a burnout problem.");
+      } else {
+        log(s, "The team found one more gear. This month gained an emergency placement.");
+      }
     }
   },
   {
@@ -1820,6 +1905,7 @@ const ACTIONS = [
           row.pressure = "sprayed";
         });
         s.quality += 1;
+        s.fatigue += 1;
         log(s, `Spray program knocked disease pressure down to ${Math.round(averageDisease(s))} avg. Frost protection ready.`);
       } else if (s.season === "Flowering") {
         // Canopy thinning: disease down, water normalised slightly, quality up
@@ -1831,6 +1917,7 @@ const ACTIONS = [
           row.pressure = "canopy thinned";
         });
         s.quality += 2;
+        s.fatigue += 1;
         log(s, `Canopy thinning opened the fruit zone. Disease ${Math.round(averageDisease(s))}, water ${Math.round(averageWater(s))}.`);
       } else if (s.season === "Veraison") {
         // Green harvest: sacrifice ~20% yield in exchange for quality + disease cleanup
@@ -1844,14 +1931,16 @@ const ACTIONS = [
           row.pressure = "green harvested";
         });
         s.quality += 4;
-        s.demand  += 1;
+        addChannelDemand(s, ["collector", "restaurant"], 1);
         s.profile = (s.profile ?? 50) + 3;
+        s.fatigue += 2;
         log(s, "Green harvest dropped 20% of the crop to concentrate the remaining fruit. Quality up sharply.");
       } else if (s.season === "Harvest") {
         if (isHarvestMonth(s.month)) {
           s.marketMods.harvestCrew = 2;
           s.quality += 3;
           s.morale  -= 1;
+          s.fatigue += 4;
           log(s, "Selective picking crews are booked for harvest.");
         } else {
           s.rows.forEach(row => {
@@ -1860,6 +1949,7 @@ const ACTIONS = [
             row.threat  = Math.round(row.disease / 11);
           });
           s.quality += 1;
+          s.fatigue += 1;
           log(s, "Post-harvest vineyard walk — disease pressure eased.");
         }
       } else if (s.season === "Cellar") {
@@ -1867,11 +1957,15 @@ const ACTIONS = [
         const lot = ready[0] || null;
         const cases = lot ? Math.min(lot.bulkWine, 90 + staffBonus(s, "cellar") * 25) : 0;
         if (lot && cases > 0) {
+          lot.flawRisk = clamp((lot.flawRisk || baseLotFlawRisk(s, lot)) - (12 + staffBonus(s, "cellar") * 3 + (s.buildings.lab || 0) * 3), 1, 80);
           lot.bulkWine -= cases;
           lot.bottled = (lot.bottled || 0) + cases;
           s.inventory.cases += Math.round(cases * 0.95);
           log(s, `Cellar topping and racking finished ${cases} cases from ${lot.label}.`);
         } else {
+          (s.vintages || []).forEach(lot => {
+            if (lot.bulkWine > 0) lot.flawRisk = clamp((lot.flawRisk || baseLotFlawRisk(s, lot)) - 7 - staffBonus(s, "cellar") * 2, 1, 80);
+          });
           log(s, "Cellar topping and racking tightened the post-harvest pipeline.");
         }
         s.quality += 1;
@@ -1887,7 +1981,9 @@ const ACTIONS = [
         });
         s.quality += 1;
         s.morale  += 2;
-        log(s, "Winter pruning recovered vine health and reset soil moisture toward neutral.");
+        s.fatigue = Math.max(0, s.fatigue - 8 - staffBonus(s, "finance") * 2);
+        s.marketMods.winterPlan = 8;
+        log(s, "Winter planning and pruning recovered vine health, reset soil moisture, and gave next year's operations a cleaner plan.");
       }
     }
   },
@@ -1903,6 +1999,11 @@ const ACTIONS = [
       s.profile = clamp((s.profile ?? 50) + 6, 0, 100);
       s.quality += 2;
       s.prestige += (s.buildings.tank || 0) >= 3 || (s.buildings.barrel || 0) >= 4 ? 2 : 0;
+      (s.vintages || []).forEach(lot => {
+        if (lot.bulkWine > 0) lot.flawRisk = clamp((lot.flawRisk || baseLotFlawRisk(s, lot)) + 8 - staffBonus(s, "cellar"), 1, 90);
+      });
+      addChannelDemand(s, ["collector"], 3);
+      addChannelDemand(s, ["mass", "distributor"], -2);
       log(s, `Natural cellar pass complete. House style shifted to ${profileLabel(s.profile)} (${s.profile}).`);
     }
   }
@@ -1920,6 +2021,21 @@ const SETUP_STEPS = [
   { key: "varietal", title: "Choose Grape", kicker: "Your flagship grape determines yield, demand, cellar needs, and fragility." },
   { key: "philosophy", title: "Choose Style", kicker: "The house philosophy changes yield, quality, risk, sustainability, and costs." },
   { key: "difficulty", title: "Choose Difficulty", kicker: "Difficulty sets starting debt, lease pressure, credit line, inventory, and margin for error." }
+];
+
+const RANDOM_WINERY_NAMES = [
+  "Stonegate Cellars",
+  "Madrone Hill",
+  "Clos Ember",
+  "Riverbench Estate",
+  "North Slope Wine Co.",
+  "The Weathered Barrel",
+  "Larkspur Domaine",
+  "Red Lantern Vineyard",
+  "Fogline Cellars",
+  "Terrace & Thistle",
+  "Juniper Road Estate",
+  "Old Mill Vintners"
 ];
 
 const TABS = [
@@ -1966,9 +2082,9 @@ const SEASONAL_ACTIONS = {
     consequence: "Move ready bulk wine toward cases, quality +1."
   },
   Dormant: {
-    name: "Winter Pruning",
-    detail: "Prune vines, repair trellises, and reset water toward neutral before the next season.",
-    consequence: "Health +6, disease −8, water normalised, morale +2."
+    name: "Winter Planning",
+    detail: "Prune vines, review release allocation, schedule maintenance, and let the crew recover before spring.",
+    consequence: "Health +6, disease −8, fatigue down, next-year operations cleaner."
   }
 };
 
@@ -2079,6 +2195,52 @@ const VARIETAL_PROFILE   = { gamay: 10, pinot: 8, riesling: 8, malbec: -2,
                              sauvignon: -2, chardonnay: -4, merlot: 0,
                              cabernet: 0, shiraz: -6 };
 
+function initialChannelTrust() {
+  return Object.keys(CHANNELS).reduce((acc, key) => {
+    acc[key] = 58;
+    return acc;
+  }, {});
+}
+
+function initialChannelDemand(regionDef, varietalDef, philosophyDef, difficultyDef, profile, varietalId = setup.varietal) {
+  const base = Math.round(regionDef.demand * varietalDef.demand * philosophyDef.demand * difficultyDef.demandMod);
+  const artisan = (profile - 50) / 50;
+  const commercial = -artisan;
+  const regional = {
+    napa: { cellarDoor: 18, club: 8, collector: 8 },
+    bordeaux: { restaurant: 10, distributor: 8, collector: 7 },
+    mendoza: { export: 14, distributor: 8, mass: 4 },
+    mosel: { collector: 14, restaurant: 4, mass: -8 },
+    burgundy: { collector: 18, restaurant: 8, mass: -10 },
+    barossa: { export: 15, distributor: 10, mass: 6 },
+    piedmont: { collector: 16, restaurant: 7, export: 5 },
+    rioja: { export: 12, distributor: 8, restaurant: 4 }
+  }[regionDef.id] || {};
+  const varietalMods = {
+    pinot: { collector: 9, restaurant: 5 },
+    riesling: { collector: 10, restaurant: 3 },
+    gamay: { cellarDoor: 7, collector: 5 },
+    cabernet: { restaurant: 6, collector: 5 },
+    shiraz: { export: 8, mass: 5 },
+    malbec: { export: 7, distributor: 5, mass: 5 },
+    nebbiolo: { collector: 12, restaurant: 5, mass: -8 },
+    tempranillo: { export: 7, distributor: 5 }
+  }[varietalId] || {};
+  const profileMods = {
+    cellarDoor: Math.round(commercial * 4),
+    club: Math.round(artisan * 6),
+    restaurant: Math.round(artisan * 4),
+    distributor: Math.round(commercial * 7),
+    export: Math.round(commercial * 3),
+    collector: Math.round(artisan * 12),
+    mass: Math.round(commercial * 14)
+  };
+  return Object.keys(CHANNELS).reduce((acc, key) => {
+    acc[key] = clamp(base + (regional[key] || 0) + (varietalMods[key] || 0) + (profileMods[key] || 0), 0, 130);
+    return acc;
+  }, {});
+}
+
 function createState() {
   const r = selectedRegion();
   const v = selectedVarietal();
@@ -2102,7 +2264,10 @@ function createState() {
     leaseCost: d.rent,
     prestige: r.prestige,
     demand: Math.round(r.demand * v.demand * p.demand * d.demandMod),
+    channelDemand: initialChannelDemand(r, v, p, d, startProfile, setup.varietal),
+    channelTrust: initialChannelTrust(),
     morale: 58,
+    fatigue: 18,
     quality: Math.round(48 * v.quality * p.quality * (r.qualityMod || 1)),
     sustainability: 45 + p.sustainability,
     influence: r.influence || 2,
@@ -2111,10 +2276,7 @@ function createState() {
     actionsLeft: 3,
     staff: [],
     staffProgress: {},
-    staffMarket: (() => {
-      const pool = [...STAFF_POOL].sort(() => 0.5 - Math.random()).slice(0, 3).map(p => p.id);
-      return pool;
-    })(),
+    staffMarket: STAFF_POOL.map(p => p.id),
     staffTraits: {},
     buildings: { block: 0, tank: 1, barrel: 1, line: 0, room: 0, lab: 0 },
     rows: makeRows(d.rows),
@@ -2138,11 +2300,15 @@ function createState() {
     vintageWeatherScore: 52,
     currentVintageScore: 3,
     orders: [],
+    archive: [],
+    eventMemory: {},
+    classification: {},
     log: [],
     marketHeat: 52,
     marketMods: {},
     investor: null,
     event: null,
+    lastEventResult: null,
     lastWeather: "Clear",
     lastTemp: regionalTempRange(r.id, 3),
     lastClose: null,
@@ -2187,6 +2353,7 @@ function log(s, text) {
 
 function startGame() {
   state = createState();
+  ensureEconomy(state);
   setupStep = 0;
   activeTab = "overview";
   helpOpen = true;
@@ -2195,6 +2362,16 @@ function startGame() {
   log(state, `${state.wineryName} founded in ${region().name} around ${varietal().name}.`);
   recordHistory(state, 0);
   render();
+}
+
+function randomStart() {
+  const regionPick = REGIONS[randint(0, REGIONS.length - 1)];
+  setup.region = regionPick.id;
+  setup.varietal = regionPick.varietals[randint(0, regionPick.varietals.length - 1)];
+  setup.philosophy = PHILOSOPHIES[randint(0, PHILOSOPHIES.length - 1)].id;
+  setup.difficulty = DIFFICULTIES[randint(0, DIFFICULTIES.length - 1)].id;
+  setup.wineryName = RANDOM_WINERY_NAMES[randint(0, RANDOM_WINERY_NAMES.length - 1)];
+  startGame();
 }
 
 function saveGame() {
@@ -2234,6 +2411,14 @@ function ensureEconomy(s) {
   if (!('naturalCellarUsedMonth' in s)) s.naturalCellarUsedMonth = -1;
   if (!s.insurance) s.insurance = { crop: false };
   if (s.inventory && !('stash' in s.inventory)) s.inventory.stash = 0;
+  s.staffMarket = STAFF_POOL.map(p => p.id).filter(staffId => !(s.staff || []).includes(staffId));
+  ensureStaffTraits(s);
+  ensureChannels(s);
+  ensureArchive(s);
+  ensureEventMemory(s);
+  if (typeof s.fatigue !== "number") s.fatigue = 18;
+  if (!s.classification) s.classification = {};
+  ensureLotRisk(s);
 }
 
 function resetGame() {
@@ -2317,15 +2502,17 @@ function fixedCostBreakdown(s) {
     const salaryMod = traits.reduce((m, t) => m * (PERSONALITY_TRAITS[t]?.salaryMod || 1), 1);
     return sum + Math.round(person.salary * salaryMod);
   }, 0);
-  const operating = 6200 + s.rows.length * 1050 + s.buildings.tank * 520 + s.buildings.barrel * 620 + s.buildings.room * 720;
+  const operating = 6200 + s.rows.length * 1050 + s.buildings.tank * 520 + s.buildings.barrel * 620 + s.buildings.room * 720 + s.buildings.line * 460 + s.buildings.lab * 380;
+  const loadCost = Math.max(0, loadPressure(s)) * 420;
   const investorOverhead = s.investor?.pressureMonths > 0 ? 4500 : 0;
   const interest = monthlyInterest(s);
   const insurancePremium = s.insurance?.crop ? 750 : 0;
-  const subtotal = operating + salaries + investorOverhead + s.leaseCost + interest + insurancePremium;
+  const subtotal = operating + loadCost + salaries + investorOverhead + s.leaseCost + interest + insurancePremium;
   const multiplier = region().costMod * philosophy().cost * difficulty().costMod * staffCostMod(s);
   const total = Math.round(subtotal * multiplier);
   return {
     operating,
+    loadCost,
     salaries,
     lease: s.leaseCost,
     interest,
@@ -2430,6 +2617,131 @@ function ensureHistory(s) {
   if (typeof s.totalSold !== "number") s.totalSold = 0;
 }
 
+function ensureChannels(s) {
+  if (!s.channelTrust) s.channelTrust = initialChannelTrust();
+  Object.keys(CHANNELS).forEach(key => {
+    if (typeof s.channelTrust[key] !== "number") s.channelTrust[key] = 58;
+  });
+  if (!s.channelDemand) {
+    const r = REGIONS.find(item => item.id === s.region) || REGIONS[0];
+    const v = VARIETALS[s.varietal] || VARIETALS.cabernet;
+    const p = PHILOSOPHIES.find(item => item.id === s.philosophy) || PHILOSOPHIES[1];
+    const d = DIFFICULTIES.find(item => item.id === s.difficulty) || DIFFICULTIES[1];
+    s.channelDemand = initialChannelDemand(r, v, p, d, s.profile ?? 50, s.varietal);
+  }
+  Object.keys(CHANNELS).forEach(key => {
+    if (typeof s.channelDemand[key] !== "number") s.channelDemand[key] = s.demand || 45;
+    s.channelDemand[key] = clamp(Math.round(s.channelDemand[key]), 0, 130);
+    s.channelTrust[key] = clamp(Math.round(s.channelTrust[key]), 0, 100);
+  });
+  s.demand = channelHeadlineDemand(s);
+}
+
+function ensureArchive(s) {
+  if (!Array.isArray(s.archive)) s.archive = [];
+  s.archive.forEach(entry => {
+    if (typeof entry.casesProduced !== "number") entry.casesProduced = 0;
+    if (typeof entry.casesSold !== "number") entry.casesSold = 0;
+    if (typeof entry.revenue !== "number") entry.revenue = 0;
+    if (!entry.channels) entry.channels = {};
+    if (!Array.isArray(entry.accolades)) entry.accolades = [];
+  });
+}
+
+function ensureEventMemory(s) {
+  if (!s.eventMemory) s.eventMemory = {};
+}
+
+function ensureLotRisk(s) {
+  (s.vintages || []).forEach(lot => {
+    if (typeof lot.flawRisk !== "number") lot.flawRisk = baseLotFlawRisk(s, lot);
+    if (!Array.isArray(lot.flaws)) lot.flaws = [];
+  });
+}
+
+function channelHeadlineDemand(s) {
+  ensureChannelsShape(s);
+  const d = s.channelDemand;
+  return clamp(Math.round(
+    d.cellarDoor * 0.22 +
+    d.club * 0.17 +
+    d.restaurant * 0.17 +
+    d.distributor * 0.15 +
+    d.export * 0.12 +
+    d.collector * 0.10 +
+    d.mass * 0.07
+  ), 0, 130);
+}
+
+function ensureChannelsShape(s) {
+  if (!s.channelDemand) s.channelDemand = {};
+  if (!s.channelTrust) s.channelTrust = {};
+  Object.keys(CHANNELS).forEach(key => {
+    if (typeof s.channelDemand[key] !== "number") s.channelDemand[key] = typeof s.demand === "number" ? s.demand : 45;
+    if (typeof s.channelTrust[key] !== "number") s.channelTrust[key] = 58;
+  });
+}
+
+function addChannelDemand(s, channels, amount) {
+  ensureChannels(s);
+  channels.forEach(key => {
+    if (key in s.channelDemand) s.channelDemand[key] = clamp(s.channelDemand[key] + amount, 0, 130);
+  });
+  s.demand = channelHeadlineDemand(s);
+}
+
+function addChannelTrust(s, channel, amount) {
+  ensureChannels(s);
+  if (channel in s.channelTrust) s.channelTrust[channel] = clamp(s.channelTrust[channel] + amount, 0, 100);
+}
+
+function channelDemandForOrder(s, type) {
+  ensureChannels(s);
+  const channel = ORDER_CHANNEL[type] || "distributor";
+  return (s.channelDemand[channel] || s.demand || 40) * ((s.channelTrust[channel] || 55) / 65);
+}
+
+function baseLotFlawRisk(s, lot) {
+  const profile = s.profile ?? 50;
+  const p = PHILOSOPHIES.find(item => item.id === s.philosophy) || PHILOSOPHIES[1];
+  const naturalRisk = p.id === "natural" || profile >= 70 ? 10 : p.id === "industrial" ? -4 : 0;
+  const labProtection = (s.buildings?.lab || 0) * 5 + staffBonus(s, "cellar") * 3 + staffBonus(s, "bottling") * 2;
+  const disease = Math.max(0, averageDisease(s) - 30) * 0.22;
+  const purchased = lot?.purchased ? -4 : 0;
+  return clamp(Math.round(20 + naturalRisk + disease - labProtection + purchased), 3, 70);
+}
+
+function managementLoad(s) {
+  const accepted = s.orders.filter(o => o.accepted).length;
+  const unaccepted = s.orders.length - accepted;
+  const debtLoad = s.debt > 0 ? Math.ceil(s.debt / 50000) : 0;
+  const investorLoad = s.investor?.pressureMonths > 0 ? 3 : 0;
+  const clubLoad = staffBonus(s, "clubIncome") > 0 ? 2 : 0;
+  const buildingLoad = Object.values(s.buildings || {}).reduce((sum, level) => sum + level, 0) * 0.8;
+  return Math.round(s.rows.length * 1.5 + buildingLoad + accepted * 2.2 + unaccepted * 0.6 + s.staff.length * 0.8 + debtLoad + investorLoad + clubLoad);
+}
+
+function organizationCapacity(s) {
+  return Math.round(9 + staffBonus(s, "finance") * 3 + staffBonus(s, "bottling") * 2 + staffBonus(s, "sales") * 1.5 + (s.buildings.lab || 0) * 2 + (s.buildings.line || 0) + (s.marketMods?.winterPlan ? 2 : 0));
+}
+
+function loadPressure(s) {
+  return Math.max(0, managementLoad(s) - organizationCapacity(s));
+}
+
+function reconcileGlobalDemand(s) {
+  ensureChannelsShape(s);
+  const headline = channelHeadlineDemand(s);
+  const desired = typeof s.demand === "number" ? clamp(Math.round(s.demand), 0, 130) : headline;
+  const delta = desired - headline;
+  if (Math.abs(delta) >= 1) {
+    Object.keys(CHANNELS).forEach(key => {
+      s.channelDemand[key] = clamp(s.channelDemand[key] + delta, 0, 130);
+    });
+  }
+  s.demand = channelHeadlineDemand(s);
+}
+
 function recordHistory(s, fixedCost) {
   ensureHistory(s);
   const breakdown = typeof fixedCost === "object" ? fixedCost : { total: fixedCost };
@@ -2462,17 +2774,114 @@ function recordHistory(s, fixedCost) {
 }
 
 function directSales(s) {
+  ensureChannels(s);
   const demandMod = profileDemandMod(s);
-  const desirability = (s.demand * demandMod * 0.9 + s.prestige * 0.8 + s.quality * 0.7 + s.marketHeat * 0.6) / 4;
+  const directDemand = s.channelDemand.cellarDoor * 0.75 + s.channelDemand.club * 0.15 + s.channelDemand.collector * 0.10;
+  const directTrust = (s.channelTrust.cellarDoor * 0.75 + s.channelTrust.club * 0.15 + s.channelTrust.collector * 0.10) / 58;
+  const desirability = (directDemand * demandMod * 0.9 + s.prestige * 0.8 + s.quality * 0.7 + s.marketHeat * 0.6) / 4;
   const priceResistance = Math.pow(s.price / 28, 1.55);
-  const capacity = 70 + s.buildings.room * 80 + staffBonus(s, "sales") * 45 + staffBonus(s, "brand") * 55;
+  const capacity = (70 + s.buildings.room * 80 + staffBonus(s, "sales") * 45 + staffBonus(s, "brand") * 55) * clamp(directTrust, 0.65, 1.35);
   const rawCases = Math.max(0, Math.floor((capacity * desirability) / (65 * priceResistance)));
   const salesCeiling = 35 + s.buildings.room * 50 + staffBonus(s, "sales") * 20 + staffBonus(s, "brand") * 15;
   const cases = Math.min(availableCases(s), rawCases, salesCeiling);
   const premium = 1 + Math.max(0, s.prestige - 45) / 210 + staffBonus(s, "brand") * 0.06;
   const vintageMod = vintageScoreMultiplier(s.currentVintageScore || 3);
   const revenue = Math.round(cases * s.price * 12 * premium * vintageMod);
-  return { cases, revenue };
+  return { cases, revenue, channel: "cellarDoor" };
+}
+
+function recordArchiveBottling(s, lot, cases) {
+  ensureArchive(s);
+  const id = lot.archiveId || lot.id;
+  lot.archiveId = id;
+  let entry = s.archive.find(item => item.id === id);
+  if (!entry) {
+    entry = {
+      id,
+      year: lot.year,
+      label: lot.label,
+      grape: varietal().name,
+      region: region().name,
+      score: lot.criticScore || calcCriticScore(lot.score || 3, s.quality),
+      vintageScore: lot.score || 3,
+      casesProduced: 0,
+      casesSold: 0,
+      revenue: 0,
+      avgPrice: 0,
+      accolades: [],
+      channels: {},
+      summary: tastingNote(s, lot),
+      bottledMonth: s.month,
+      soldOutMonth: null
+    };
+    s.archive.unshift(entry);
+  }
+  entry.label = lot.label;
+  entry.score = lot.criticScore || entry.score;
+  entry.vintageScore = lot.score || entry.vintageScore;
+  entry.casesProduced += cases;
+  if (entry.score >= 94 && !entry.accolades.includes("Breakout vintage")) entry.accolades.push("Breakout vintage");
+  if (entry.vintageScore >= 5 && !entry.accolades.includes("Exceptional harvest")) entry.accolades.push("Exceptional harvest");
+}
+
+function recordArchiveSale(s, cases, revenue, channel = "cellarDoor") {
+  ensureArchive(s);
+  let remainingCases = cases;
+  let remainingRevenue = revenue;
+  const candidates = [...s.archive].reverse().filter(entry => entry.casesSold < entry.casesProduced);
+  candidates.forEach(entry => {
+    if (remainingCases <= 0) return;
+    const open = Math.max(0, entry.casesProduced - entry.casesSold);
+    const sold = Math.min(open, remainingCases);
+    const saleRevenue = cases > 0 ? Math.round(revenue * (sold / cases)) : 0;
+    entry.casesSold += sold;
+    entry.revenue += saleRevenue;
+    entry.avgPrice = entry.casesSold ? Math.round(entry.revenue / (entry.casesSold * 12)) : 0;
+    entry.channels[channel] = (entry.channels[channel] || 0) + sold;
+    remainingCases -= sold;
+    remainingRevenue -= saleRevenue;
+    if (entry.casesSold >= entry.casesProduced && !entry.soldOutMonth) {
+      entry.soldOutMonth = s.month;
+      const strong = entry.score >= 92 || entry.vintageScore >= 5;
+      if (strong) {
+        entry.accolades.push("Sold out");
+        addChannelDemand(s, ["collector", "club"], 3);
+        log(s, `${entry.label} sold through. Scarcity is now part of the story.`);
+      }
+    }
+  });
+  if (remainingCases > 0 && s.archive.length) {
+    const entry = s.archive[0];
+    entry.casesSold += remainingCases;
+    entry.revenue += remainingRevenue;
+    entry.avgPrice = entry.casesSold ? Math.round(entry.revenue / (entry.casesSold * 12)) : 0;
+    entry.channels[channel] = (entry.channels[channel] || 0) + remainingCases;
+  }
+}
+
+function tastingNote(s, lot) {
+  const tier = profileTier(s.profile ?? 50);
+  const grape = VARIETALS[s.varietal]?.name || "Estate Red";
+  const quality = lot.criticScore || calcCriticScore(lot.score || 3, s.quality);
+  const body = quality >= 94 ? "layered and cellar-worthy" : quality >= 90 ? "polished and expressive" : quality >= 86 ? "honest and balanced" : "simple and early-drinking";
+  const style = tier === "cult" ? "wild herb, lifted fruit, and a savory edge" :
+    tier === "artisan" ? "red fruit, mineral tension, and careful oak" :
+    tier === "commercial" || tier === "classic" ? "ripe fruit, clean structure, and a steady finish" :
+    "soft fruit and broad appeal";
+  return `${grape} showing ${style}; ${body}.`;
+}
+
+function archiveMemory(s) {
+  ensureArchive(s);
+  const made = s.archive.filter(entry => entry.casesProduced > 0);
+  if (!made.length) return { bestScore: 0, avgScore: 0, consistency: 0, soldOutPrestige: 0 };
+  const scores = made.map(entry => entry.score || 0).filter(Boolean);
+  const bestScore = Math.max(0, ...scores);
+  const avgScore = scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+  const recent = made.slice(0, 4);
+  const consistency = recent.length >= 3 ? 6 - (Math.max(...recent.map(e => e.score || 84)) - Math.min(...recent.map(e => e.score || 84))) : 0;
+  const soldOutPrestige = made.filter(entry => entry.soldOutMonth && (entry.score || 0) >= 92).length;
+  return { bestScore, avgScore, consistency, soldOutPrestige };
 }
 
 function reservedCases(s) {
@@ -2520,7 +2929,70 @@ function calcCriticScore(vintageScore, quality) {
   const base = 82 + (vintageScore - 3) * 4;
   const qMod = Math.floor(Math.max(0, quality - 60) / 8);
   const variance = randint(-2, 2);
-  return clamp(base + qMod + variance, 78, 100);
+  const raw = base + qMod + variance;
+  return clamp(Math.min(raw, qualityCeiling(state, vintageScore)), 78, 100);
+}
+
+function qualityCeiling(s, vintageScore = 3) {
+  if (!s) return 92;
+  const site = Math.round((REGIONS.find(r => r.id === s.region)?.qualityMod || 1) * 3);
+  const infrastructure = (s.buildings.tank || 0) * 0.9 + (s.buildings.barrel || 0) * 1.25 + (s.buildings.lab || 0) * 1.3 + (s.buildings.line || 0) * 0.6;
+  const people = staffBonus(s, "cellar") * 1.8 + staffBonus(s, "vineyard") * 0.8 + staffBonus(s, "bottling") * 0.5;
+  const vineyard = clamp((productiveRows(s).reduce((sum, row) => sum + row.health, 0) / Math.max(1, productiveRows(s).length) - 70) / 5, -3, 4);
+  const vintage = (vintageScore - 3) * 1.6;
+  const artisan = (s.profile ?? 50) >= 65 ? 1 : 0;
+  return Math.round(clamp(88 + site + infrastructure + people + vineyard + vintage + artisan, 88, 99));
+}
+
+function applyBottlingFlawCheck(s, lot) {
+  ensureLotRisk(s);
+  if (!lot || lot.flawRisk <= 0) return;
+  const pressure = loadPressure(s);
+  const risk = clamp(lot.flawRisk + pressure * 2 - staffBonus(s, "bottling") * 3 - (s.buildings.lab || 0) * 4, 1, 90);
+  if (rand() * 100 > risk) {
+    lot.flawRisk = clamp(lot.flawRisk - 8 - staffBonus(s, "cellar") * 2, 1, 90);
+    return;
+  }
+  const flaws = ["volatile acidity", "oxidation", "Brett", "refermentation", "mousiness"];
+  const flaw = flaws[randint(0, flaws.length - 1)];
+  lot.flaws = lot.flaws || [];
+  lot.flaws.push(flaw);
+  lot.score = Math.max(1, (lot.score || 3) - 1);
+  s.quality -= 4;
+  s.prestige -= 2;
+  lot.flawRisk = clamp(lot.flawRisk + 10, 1, 95);
+  log(s, `${lot.label} showed ${flaw} risk at bottling. The wine was downgraded before release.`);
+}
+
+function flawRiskDrift(s, lot) {
+  const lowIntervention = (s.profile ?? 50) >= 70 || s.philosophy === "natural" ? 3 : 0;
+  const longAging = lot.agingTarget > 0 && lot.agingMonths > lot.agingTarget ? 1 : 0;
+  const lab = (s.buildings.lab || 0) * -2;
+  const cellar = staffBonus(s, "cellar") * -1;
+  const load = Math.floor(loadPressure(s) / 5);
+  const lineProtection = (s.buildings.line || 0) >= 2 ? -1 : 0;
+  return lowIntervention + longAging + load + lab + cellar + lineProtection;
+}
+
+function applyReleaseExpectations(s, lot) {
+  const memory = archiveMemory(s);
+  const score = lot.criticScore || 0;
+  if (score >= 94) {
+    addChannelDemand(s, ["collector", "club", "restaurant"], 8);
+    addChannelTrust(s, "collector", 6);
+    addChannelTrust(s, "restaurant", 4);
+    s.prestige += 5;
+    log(s, `${lot.label} became a breakout release. Future buyers will compare new vintages against it.`);
+  } else if (memory.bestScore >= 94 && score <= memory.bestScore - 5) {
+    addChannelTrust(s, "collector", -5);
+    addChannelTrust(s, "club", -3);
+    s.prestige -= 2;
+    log(s, `Buyers remember the ${memory.bestScore}-point high-water mark. ${lot.label} will need careful release management.`);
+  } else if (score >= 90 && memory.avgScore >= 88) {
+    addChannelTrust(s, "restaurant", 2);
+    addChannelTrust(s, "club", 2);
+    s.prestige += 1;
+  }
 }
 
 function estimatePassiveStaffIncome(s) {
@@ -2673,6 +3145,7 @@ function applyPassiveStaffEffects(s) {
     const roomLevel = Math.max(1, s.buildings.room);
     tourIncome = tourPoints * roomLevel * 1800;
     s.cash += tourIncome;
+    addChannelDemand(s, ["cellarDoor"], 1);
     if (s.month % 3 === 0) log(s, `Estate tours brought in ${money(tourIncome)} this month.`);
   }
 
@@ -2681,6 +3154,11 @@ function applyPassiveStaffEffects(s) {
   if (clubPoints > 0) {
     clubIncome = clubPoints * (2200 + Math.max(0, s.prestige - 30) * 40);
     s.cash += clubIncome;
+    addChannelDemand(s, ["club"], 1);
+    if (availableCases(s) < clubPoints * 35) {
+      addChannelTrust(s, "club", -2);
+      if (s.month % 3 === 0) log(s, "Wine club demand is outpacing available allocation. Member trust slipped.");
+    }
     if (s.month % 3 === 0) log(s, `Wine club subscribers paid ${money(clubIncome)} in dues.`);
   }
 
@@ -2755,6 +3233,7 @@ function applyImmediatePerk(s, perk) {
 }
 
 function addOrder(s, forcedType) {
+  ensureChannels(s);
   if (s.orders.length >= 6) return;
   const profile = s.profile ?? 50;
   const eligible = Object.keys(ORDER_TYPES).filter(id => {
@@ -2765,11 +3244,13 @@ function addOrder(s, forcedType) {
     return true;
   });
   if (!eligible.length) return;
-  const typeId = forcedType || eligible[randint(0, eligible.length - 1)];
+  const typeId = forcedType || weightedChoice(eligible.map(id => ({ id, weight: Math.max(1, channelDemandForOrder(s, id)) })));
   const type = ORDER_TYPES[typeId];
-  const prestigeFit = s.prestige + randint(-8, 16);
+  const channel = ORDER_CHANNEL[typeId] || "distributor";
+  const prestigeFit = s.prestige + randint(-8, 16) + Math.floor(((s.channelTrust[channel] || 58) - 58) / 5);
   if (!forcedType && prestigeFit < type.prestige) return;
-  const cases = randint(type.cases[0], type.cases[1]);
+  const demandScale = clamp(channelDemandForOrder(s, typeId) / 65, 0.65, 1.45);
+  const cases = Math.round(randint(type.cases[0], type.cases[1]) * demandScale);
   const maxPrice = Math.round(randint(type.price[0], type.price[1]) * (1 + s.quality / 260 + staffBonus(s, "sales") * 0.03));
   const due = s.month + randint(type.due[0], type.due[1]);
   const id = `${typeId}-${Date.now()}-${Math.floor(rand() * 10000)}`;
@@ -2777,6 +3258,7 @@ function addOrder(s, forcedType) {
     id,
     type: typeId,
     buyer: type.name,
+    channel,
     cases,
     maxPrice,
     due,
@@ -2784,6 +3266,12 @@ function addOrder(s, forcedType) {
     accepted: false,
     penalty: Math.round(cases * maxPrice * 12 * 0.18)
   });
+}
+
+function weightedChoice(items) {
+  const total = items.reduce((sum, item) => sum + item.weight, 0);
+  let roll = rand() * total;
+  return (items.find(item => { roll -= item.weight; return roll <= 0; }) || items[items.length - 1]).id;
 }
 
 function acceptOrder(id) {
@@ -2795,7 +3283,7 @@ function acceptOrder(id) {
     return;
   }
   order.accepted = true;
-  state.demand += 1;
+  addChannelDemand(state, [order.channel || ORDER_CHANNEL[order.type] || "distributor"], 1);
   log(state, `${order.buyer} signed for ${order.cases} cases at ${money(state.price)} per bottle.`);
   render();
 }
@@ -2809,7 +3297,9 @@ function fulfillOrder(id) {
   state.inventory.cases -= order.cases;
   state.cash += revenue;
   state.prestige += order.type === "collector" ? 5 : order.type === "club" || order.type === "restaurant" ? 3 : 1;
-  state.demand += 2;
+  recordArchiveSale(state, order.cases, revenue, order.channel || ORDER_CHANNEL[order.type] || "distributor");
+  addChannelDemand(state, [order.channel || ORDER_CHANNEL[order.type] || "distributor"], 2);
+  addChannelTrust(state, order.channel || ORDER_CHANNEL[order.type] || "distributor", 3);
   state.fulfilled += 1;
   state.totalSold += order.cases;
   state.totalRevenue += revenue;
@@ -2823,7 +3313,8 @@ function rejectOrder(id) {
   const order = state.orders.find(o => o.id === id);
   if (order?.accepted) {
     state.prestige -= 2;
-    state.demand -= 3;
+    addChannelDemand(state, [order.channel || ORDER_CHANNEL[order.type] || "distributor"], -3);
+    addChannelTrust(state, order.channel || ORDER_CHANNEL[order.type] || "distributor", -5);
   }
   state.orders = state.orders.filter(o => o.id !== id);
   render();
@@ -2888,7 +3379,7 @@ function applyBuildEffect(s, id, tier) {
     s.rows.push(row);
     s.rows[s.rows.length - 1].id = s.rows.length;
   }
-  if (id === "room") { s.demand += 4; if (s.buildings.room === 3) s.morale += 3; if (s.buildings.room === 4) s.prestige += 8; }
+  if (id === "room") { addChannelDemand(s, ["cellarDoor", "club"], 4); if (s.buildings.room === 3) s.morale += 3; if (s.buildings.room === 4) { s.prestige += 8; addChannelDemand(s, ["collector"], 3); } }
   if (id === "barrel") s.quality += Math.round(varietal().barrelNeed * 2);
   if (id === "line" && s.buildings.line === 4) s.prestige += 2;
 }
@@ -2950,15 +3441,10 @@ function hireStaff(id) {
   state.staff.push(id);
   ensureStaffProgress(state, id);
   state.staffMarket = state.staffMarket.filter(staffId => staffId !== id);
-  while (state.staffMarket.length < 3) {
-    const candidates = STAFF_POOL.filter(p => !state.staff.includes(p.id) && !state.staffMarket.includes(p.id));
-    if (!candidates.length) break;
-    const newId = candidates[randint(0, candidates.length - 1)].id;
-    state.staffMarket.push(newId);
-    rollTraitsForStaff(state, newId);
-  }
+  state.staffMarket = STAFF_POOL.map(p => p.id).filter(staffId => !state.staff.includes(staffId));
   applyStaffPassive(state, person);
   log(state, `${person.name} joined as ${person.role}.`);
+  normalizeState(state);
   render();
 }
 
@@ -2970,6 +3456,7 @@ function fireStaff(id) {
   state.staff = state.staff.filter(staffId => staffId !== id);
   if (!state.staffMarket.includes(id)) state.staffMarket.push(id);
   log(state, `${person.name} left the estate.`);
+  normalizeState(state);
   render();
 }
 
@@ -3040,8 +3527,9 @@ function seasonListLabel(seasons) {
 function normalizeState(s) {
   s.cash = Math.round(s.cash);
   s.prestige = clamp(Math.round(s.prestige), 0, 120);
-  s.demand = clamp(Math.round(s.demand), 0, 130);
+  reconcileGlobalDemand(s);
   s.morale = clamp(Math.round(s.morale), 0, 100);
+  s.fatigue = clamp(Math.round(s.fatigue || 0), 0, 100);
   s.quality = clamp(Math.round(s.quality), 0, 120);
   s.sustainability = clamp(Math.round(s.sustainability), 0, 100);
   s.influence = clamp(Math.round(s.influence), 0, 100);
@@ -3084,6 +3572,7 @@ function advanceMonth() {
 }
 
 function monthlyTick(s) {
+  ensureEconomy(s);
   s.monthStartPrice = s.price; // anchor for next month's price cap
   const startingCases = s.inventory.cases;
   const sales = directSales(s);
@@ -3091,6 +3580,7 @@ function monthlyTick(s) {
   s.cash += sales.revenue;
   s.totalSold += sales.cases;
   s.totalRevenue += sales.revenue;
+  recordArchiveSale(s, sales.cases, sales.revenue, sales.channel);
 
   const costs = fixedCostBreakdown(s);
   s.cash -= costs.total;
@@ -3103,7 +3593,12 @@ function monthlyTick(s) {
   const staffPassiveIncome = applyPassiveStaffEffects(s);
   applyPassiveBuildingEffects(s);
   decayAndOrders(s);
-  (s.vintages || []).forEach(v => { if (v.bulkWine > 0) v.agingMonths = (v.agingMonths || 0) + 1; });
+  (s.vintages || []).forEach(v => {
+    if (v.bulkWine > 0) {
+      v.agingMonths = (v.agingMonths || 0) + 1;
+      v.flawRisk = clamp((v.flawRisk || baseLotFlawRisk(s, v)) + flawRiskDrift(s, v), 1, 95);
+    }
+  });
 
   const harvestResult = isHarvestMonth(s.month) ? harvest(s) : null;
 
@@ -3114,16 +3609,20 @@ function monthlyTick(s) {
   s.marketHeat = clamp(s.marketHeat + randint(-6, 8) + Math.floor((s.demand - 55) / 16), 10, 100);
   s.demand = clamp(s.demand + Math.floor((s.marketHeat - 50) / 18) - Math.max(0, Math.floor((s.price - 34) / 9)), 0, 130);
   const qualityPressure = s.quality > 100 ? 2 : s.quality > 85 ? 1 : 0;
-  s.quality = clamp(s.quality - 1 + Math.floor(s.morale / 55) - qualityPressure, 0, 120);
+  const load = loadPressure(s);
+  s.quality = clamp(s.quality - 1 + Math.floor(s.morale / 55) - qualityPressure - Math.floor(load / 8), 0, 120);
   const traitPassive = staffTraitPassiveEffects(s);
   const frictionDelta = staffFrictionMorale(s);
-  s.morale = clamp(s.morale - 2 + Math.floor(s.cash / 160000) + traitPassive.morale + frictionDelta, 0, 100);
+  const fatigueClear = 4 + staffBonus(s, "finance") + staffBonus(s, "bottling") + (s.season === "Dormant" ? 4 : 0);
+  s.fatigue = clamp((s.fatigue || 0) + Math.max(0, load - 4) - fatigueClear, 0, 100);
+  s.morale = clamp(s.morale - 2 + Math.floor(s.cash / 160000) + traitPassive.morale + frictionDelta - Math.floor((s.fatigue || 0) / 28) - Math.floor(load / 9), 0, 100);
   s.demand = clamp(s.demand + traitPassive.demand, 0, 130);
 
   Object.keys(s.marketMods).forEach(key => {
     s.marketMods[key] -= 1;
     if (s.marketMods[key] <= 0) delete s.marketMods[key];
   });
+  if (s.heroicsUsedMonth !== s.month) s.heroicsStreak = 0;
 
   if (s.cash < -25000) {
     const overdraft = Math.abs(s.cash);
@@ -3161,7 +3660,7 @@ function monthlyTick(s) {
   };
   recordHistory(s, closeCosts);
   s.month += 1;
-  s.actionsLeft = 3 + (s.morale > 78 ? 1 : 0) - (s.morale < 20 ? 1 : 0);
+  s.actionsLeft = 3 - (s.morale < 20 ? 1 : 0) - ((s.fatigue || 0) > 78 ? 1 : 0);
   s.season = seasonName(s.month);
   log(s, `Month closed: direct channels sold ${sales.cases} cases for ${money(sales.revenue)}; costs ${money(totalCloseCost)} including ${money(costs.interest)} interest${harvestResult?.laborCost ? ` and ${money(harvestResult.laborCost)} harvest labor` : ""}.`);
 }
@@ -3409,7 +3908,8 @@ function decayAndOrders(s) {
     if (order.accepted && order.due < s.month) {
       s.cash -= order.penalty;
       s.prestige -= 3;
-      s.demand -= 4;
+      addChannelDemand(s, [order.channel || ORDER_CHANNEL[order.type] || "distributor"], -4);
+      addChannelTrust(s, order.channel || ORDER_CHANNEL[order.type] || "distributor", -8);
       s.morale -= 3;
       s.missed += 1;
       log(s, `Missed ${order.buyer}. Penalty paid: ${money(order.penalty)}.`);
@@ -3420,9 +3920,14 @@ function decayAndOrders(s) {
 }
 
 function drawEvent(s) {
+  ensureEventMemory(s);
   const candidates = EVENT_DECK.filter(event => {
     if (event.minMonth && s.month < event.minMonth) return false;
     if (event.condition && !event.condition(s)) return false;
+    const rule = EVENT_RULES[event.id];
+    const memory = s.eventMemory[event.id] || { count: 0, lastMonth: -999 };
+    if (rule?.max && memory.count >= rule.max) return false;
+    if (rule?.cooldown && s.month - memory.lastMonth < rule.cooldown) return false;
     if (!event.type) return true;
     if (event.type === "frost") return s.lastWeather.includes("Frost") || rand() < 0.35;
     if (event.type === "rain") return s.lastWeather.includes("Wet") || rand() < 0.45;
@@ -3442,8 +3947,18 @@ function resolveEvent(choiceIndex) {
   if (choice.insured && state.insurance?.crop && choice.cost) {
     log(state, `Crop insurance covered ${money((choice.cost || 0) - cost)} of the damage cost.`);
   }
+  const beforeLog = state.log.length;
   choice.effect(state);
   log(state, `${event.title}: ${choice.label}.`);
+  const summary = state.log.slice(0, Math.max(1, state.log.length - beforeLog)).map(entry => entry.text).reverse().join(" ");
+  state.lastEventResult = {
+    title: `${event.title} resolved`,
+    choice: choice.label,
+    summary: summary || "Outcome recorded in the estate ledger."
+  };
+  ensureEventMemory(state);
+  const memory = state.eventMemory[event.id] || { count: 0, lastMonth: -999 };
+  state.eventMemory[event.id] = { count: memory.count + 1, lastMonth: state.month };
   state.event = null;
   normalizeState(state);
   checkGameOver();
@@ -3521,6 +4036,7 @@ function setupView() {
           </div>
           <div class="setup-section top-actions">
             ${loadButton}
+            <button class="ghost" onclick="randomStart()">Random start</button>
             <button onclick="prevSetupStep()" ${setupStep === 0 ? "disabled" : ""}>Back</button>
             ${setupStep < SETUP_STEPS.length - 1
               ? `<button class="primary" onclick="nextSetupStep()">Next</button>`
@@ -3605,6 +4121,7 @@ function gameView() {
         <div class="tab-main">
           ${negativeCashBanner()}
           ${eventPanel()}
+          ${eventResultPanel()}
           ${harvestReportPanel()}
           ${helpOpen ? tutorialPanel() : ""}
           ${tabPanel()}
@@ -3637,15 +4154,15 @@ function tabPanel() {
     return `${artBanner("vineyard", "Vineyard blocks, weather, and disease pressure")}${vineyardPanel()}`;
   }
   if (activeTab === "commercial") {
-    return `${artBanner("commercial", "Tasting room, buyers, and distribution")}${marketPanel()}${analyticsPanel()}${ordersPanel()}`;
+    return `${artBanner("commercial", "Tasting room, buyers, and distribution")}${marketPanel()}${channelPanel()}${analyticsPanel()}${ordersPanel()}`;
   }
   if (activeTab === "estate") {
-    return `${artBanner("cellar", "Cellar, bottling line, tanks, and barrels")}${buildingsPanel()}${vintageCellarPanel()}`;
+    return `${artBanner("cellar", "Cellar, bottling line, tanks, and barrels")}${buildingsPanel()}${vintageCellarPanel()}${archivePanel()}`;
   }
   if (activeTab === "people") {
     return `${staffPanel()}`;
   }
-  return `${overviewPanel()}${analyticsPanel()}${marketPanel()}${ordersPanel()}`;
+  return `${overviewPanel()}${analyticsPanel()}${marketPanel()}${channelPanel()}${ordersPanel()}`;
 }
 
 function setTab(tab) {
@@ -3689,6 +4206,7 @@ function topbar() {
           ${kpi("Demand", `${state.demand}/130`, "Commercial pull for your wine. Higher demand improves direct sales and buyer interest.")}
           ${kpi("Quality", `${state.quality}/120`, "Current house quality. Vineyard health, weather, cellar work, and barrels move this. Decays faster above 85.")}
           ${kpi("Morale", `${state.morale}/100`, "Staff and crew confidence. Below 20 loses an action/month and triggers labor events; 0 ends the game.", state.morale < 20 ? "danger" : state.morale < 40 ? "warn" : "")}
+          ${kpi("Fatigue", `${state.fatigue || 0}/100`, "Operational strain. Harvest, bottling, hospitality, emergencies, and heroics add fatigue; winter rest and operations capacity clear it.", (state.fatigue || 0) > 75 ? "danger" : (state.fatigue || 0) > 50 ? "warn" : "")}
           ${kpi("Grape CE", totalGrapes(state), "Case-equivalent grapes across all vintage lots. Harvest adds these; cellar work converts them to bulk wine.")}
           ${kpi("Bulk CE", totalBulkWine(state), "Case-equivalent bulk wine aging across all vintage lots. Bottling converts this into finished cases.")}
           ${kpi("Cases", state.inventory.cases, "Finished cases ready to sell or reserve for contracts. Passive direct sales can reduce this at month close.")}
@@ -3731,6 +4249,27 @@ function eventPanel() {
       </div>
     </section>
   `;
+}
+
+function eventResultPanel() {
+  const result = state.lastEventResult;
+  if (!result) return "";
+  return `
+    <section class="panel event-result">
+      <div class="panel-head">
+        <h2>${escapeHtml(result.title)}</h2>
+        <button class="ghost compact" onclick="dismissEventResult()">Dismiss</button>
+      </div>
+      <p>${escapeHtml(result.choice)}</p>
+      <div class="small">${escapeHtml(result.summary)}</div>
+    </section>
+  `;
+}
+
+function dismissEventResult() {
+  if (!state) return;
+  state.lastEventResult = null;
+  render();
 }
 
 function harvestReportPanel() {
@@ -3816,6 +4355,7 @@ function overviewPanel() {
   const worth = netWorth(state);
   return `
     ${estateDashboard()}
+    ${operationsPanel()}
     <section class="panel overview-panel">
       <div class="panel-head">
         <h2>Operating Brief</h2>
@@ -3843,6 +4383,27 @@ function overviewPanel() {
           <em>Morale ${state.morale}</em>
         </button>
       </div>
+    </section>
+  `;
+}
+
+function operationsPanel() {
+  const load = managementLoad(state);
+  const capacity = organizationCapacity(state);
+  const pressure = Math.max(0, load - capacity);
+  return `
+    <section class="panel operations-panel">
+      <div class="panel-head">
+        <h2>Operations Pressure ${helpIcon("Growth creates load: blocks, buildings, staff, debt, buyer contracts, club commitments, and investor pressure all need management capacity.")}</h2>
+        <span class="small">${pressure > 0 ? `${pressure} over capacity` : "within capacity"}</span>
+      </div>
+      <div class="two-col">
+        <div class="stat-box"><span>Management load</span><strong>${load}</strong><em>${state.orders.filter(o => o.accepted).length} active obligations</em></div>
+        <div class="stat-box"><span>Org capacity</span><strong>${capacity}</strong><em>finance, ops, sales, lab</em></div>
+        <div class="stat-box"><span>Fatigue</span><strong>${state.fatigue || 0}/100</strong><em>high fatigue reduces execution</em></div>
+        <div class="stat-box"><span>Quality ceiling</span><strong>${qualityCeiling(state, state.currentVintageScore || 3)} pts</strong><em>site + people + infrastructure</em></div>
+      </div>
+      ${meter("Load pressure", Math.min(100, Math.round((load / Math.max(1, capacity)) * 60)), pressure ? "danger" : "gold")}
     </section>
   `;
 }
@@ -3942,6 +4503,7 @@ function pnlPanel(forecast) {
         ${forecast.tourIncome ? pnlLine("Estate tour income", forecast.tourIncome, true) : ""}
         ${forecast.clubIncome ? pnlLine("Wine club dues", forecast.clubIncome, true) : ""}
         ${pnlLine("Operating / vineyard / cellar", -costs.operating)}
+        ${costs.loadCost ? pnlLine("Management load friction", -costs.loadCost) : ""}
         ${pnlLine("Payroll", -costs.salaries)}
         ${pnlLine("Lease / rent", -costs.lease)}
         ${pnlLine(`Interest (${Math.round(debtRate(state) * 1000) / 10}% monthly)`, -costs.interest)}
@@ -4197,6 +4759,9 @@ function actionInventoryNote(action, s) {
   if (action.id === "natural-cellar" && s.naturalCellarUsedMonth === s.month) {
     return { text: "Already done this month", hard: true };
   }
+  if (action.id === "heroics" && s.heroicsUsedMonth === s.month) {
+    return { text: "Already asked this month", hard: true };
+  }
   if (action.id === "bottle") {
     const ready = readyVintages(s);
     if (!ready.length && totalBulkWine(s) === 0) return { text: "No bulk wine to bottle", hard: true };
@@ -4215,7 +4780,7 @@ function actionsPanel() {
   return `
     <section class="panel">
       <div class="panel-head">
-        <h2>Monthly Actions ${helpIcon("Actions are your core worker placements. You can end the month early, but unused placements are lost.")}</h2>
+        <h2>Monthly Actions ${helpIcon("Actions are owner attention and scarce operating focus. Staff, infrastructure, fatigue, and obligations determine how far those choices actually stretch.")}</h2>
         <span class="small">${state.actionsLeft} placements left</span>
       </div>
       <div class="actions">
@@ -4284,6 +4849,49 @@ function marketPanel() {
       ${meter("Vineyard pressure", Math.round(averageThreat(state) * 11), "danger")}
     </section>
   `;
+}
+
+function channelPanel() {
+  ensureChannels(state);
+  const rows = Object.entries(CHANNELS).map(([key, def]) => {
+    const demand = state.channelDemand[key] || 0;
+    const trust = state.channelTrust[key] || 0;
+    const tone = trust < 40 ? "danger" : trust < 55 ? "warn" : "";
+    return `
+      <div class="channel-row ${tone}">
+        <div>
+          <strong>${def.label}</strong>
+          <span>${channelSummary(key)}</span>
+        </div>
+        <div class="channel-bars">
+          <label><span>Demand</span><meter min="0" max="130" value="${demand}"></meter><em>${demand}</em></label>
+          <label><span>Trust</span><meter min="0" max="100" value="${trust}"></meter><em>${trust}</em></label>
+        </div>
+      </div>
+    `;
+  }).join("");
+  return `
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Channel Demand ${helpIcon("Each channel has separate demand and trust. Hospitality mostly builds cellar-door and club demand; trade work builds restaurants, distribution, export, and collector access.")}</h2>
+        <span class="small">Headline demand ${state.demand}/130</span>
+      </div>
+      <div class="channel-grid">${rows}</div>
+    </section>
+  `;
+}
+
+function channelSummary(key) {
+  const copy = {
+    cellarDoor: "tourism, tasting room, walk-ins",
+    club: "recurring members and allocations",
+    restaurant: "prestige placements and consistency",
+    distributor: "volume, reliability, lower margins",
+    export: "broker reach and regional fit",
+    collector: "scarcity, scores, allocation pressure",
+    mass: "large volume, price sensitive"
+  };
+  return copy[key] || "";
 }
 
 function flowPanel() {
@@ -4416,6 +5024,8 @@ function vintageCellarPanel() {
     }
 
     const bottled = lot.bottled || 0;
+    const risk = typeof lot.flawRisk === "number" ? lot.flawRisk : baseLotFlawRisk(state, lot);
+    const riskTone = risk >= 55 ? "text-danger" : risk >= 32 ? "text-warn" : "";
     const statusText = isPreagedStock
       ? `${lot.bulkWine} CE ready${bottled ? ` · ${bottled} bottled` : ""}`
       : hasGrapes && !hasBulk
@@ -4434,7 +5044,7 @@ function vintageCellarPanel() {
       <div class="gantt-row">
         <div class="gantt-meta">
           <span class="gantt-label">${escapeHtml(lot.label)}${lot.earlyReleased ? ' <em class="early-badge">early</em>' : ""}</span>
-          <span class="gantt-score">${vintageScoreStars(lot.score)}${lot.criticScore ? ` <span class="critic-score">${lot.criticScore}pts</span>` : ""}</span>
+          <span class="gantt-score">${vintageScoreStars(lot.score)}${lot.criticScore ? ` <span class="critic-score">${lot.criticScore}pts</span>` : ""} <span class="${riskTone}">risk ${risk}%</span></span>
         </div>
         <div class="gantt-track">
           ${barHtml}
@@ -4452,7 +5062,7 @@ function vintageCellarPanel() {
     <section class="panel">
       <div class="panel-head">
         <h2>Vintage Cellar ${helpIcon("Each harvest creates a lot. Cellar work ferments grapes to bulk wine; aging time must pass before bottling is allowed.")}</h2>
-        <span class="small">${vintageScoreLabel(state.currentVintageScore)} vintage on shelves ${vintageScoreStars(state.currentVintageScore)}</span>
+        <span class="small">${vintageScoreLabel(state.currentVintageScore)} vintage on shelves ${vintageScoreStars(state.currentVintageScore)} • score ceiling ${qualityCeiling(state, state.currentVintageScore || 3)} pts</span>
       </div>
       ${lots.length ? `
         <div class="gantt-legend">
@@ -4473,6 +5083,45 @@ function vintageCellarPanel() {
           return `<button onclick="buyGrapes()" ${why || state.gameOver ? "disabled" : ""} ${why ? `title="${why}"` : ""}>${why ? `Buy grapes — ${why}` : "Buy grapes"}</button>`;
         })()}
       </div>
+    </section>
+  `;
+}
+
+function archivePanel() {
+  ensureArchive(state);
+  const memory = archiveMemory(state);
+  const rows = state.archive
+    .filter(entry => entry.casesProduced > 0)
+    .map(entry => {
+      const soldOut = entry.casesSold >= entry.casesProduced;
+      const accolades = entry.accolades.length ? entry.accolades.join(", ") : "None yet";
+      return `
+        <div class="archive-card ${soldOut ? "sold-out" : ""}">
+          <div class="archive-head">
+            <div>
+              <strong>${escapeHtml(entry.label)}</strong>
+              <span>${entry.year} • ${escapeHtml(entry.grape)} • ${escapeHtml(entry.region)}</span>
+            </div>
+            <span class="tag">${entry.score || "-"} pts</span>
+          </div>
+          <p>${escapeHtml(entry.summary || tastingNote(state, entry))}</p>
+          <div class="archive-stats">
+            <span>Produced <strong>${entry.casesProduced}</strong></span>
+            <span>Sold <strong>${entry.casesSold}</strong></span>
+            <span>Avg price <strong>${entry.avgPrice ? money(entry.avgPrice) : "-"}</strong></span>
+            <span>${soldOut ? `Sold out ${monthDateLabel(entry.soldOutMonth)}` : `${entry.casesProduced - entry.casesSold} left in memory`}</span>
+          </div>
+          <div class="small">Accolades: ${escapeHtml(accolades)}</div>
+        </div>
+      `;
+    }).join("");
+  return `
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Vintage Archive ${helpIcon("Bottled wines stay in the estate memory. Strong vintages raise future expectations; disappointing follow-ups can pressure trust and prestige.")}</h2>
+        <span class="small">Best ${memory.bestScore || "-"} pts • avg ${memory.avgScore ? Math.round(memory.avgScore) : "-"}</span>
+      </div>
+      ${rows ? `<div class="archive-grid">${rows}</div>` : `<div class="empty">Bottle a vintage to begin the estate archive.</div>`}
     </section>
   `;
 }
@@ -4666,6 +5315,7 @@ function staffView(person, employed) {
         <span class="tag">${person.role}</span>
       </div>
       <p>${person.text}</p>
+      <p class="staff-agenda">${STAFF_AGENDAS[person.id] || "Wants the estate to match their discipline."}</p>
       <div class="staff-traits">
         ${person.traits.map(trait => `<span class="tag">${trait}</span>`).join("")}
         <span class="tag">${money(effectiveSalary(state, person))}/mo</span>
@@ -4764,6 +5414,8 @@ function chooseName(lotId, name) {
   const lot = (state.vintages || []).find(v => v.id === lotId);
   if (lot) {
     lot.label = `${lot.label} "${name}"`;
+    const entry = (state.archive || []).find(item => item.id === (lot.archiveId || lot.id));
+    if (entry) entry.label = lot.label;
     state.prestige += 2;
     log(state, `Named release: "${name}" joins the cellar book. Prestige +2.`);
   }
@@ -4867,6 +5519,7 @@ function render() {
 }
 
 window.startGame = startGame;
+window.randomStart = randomStart;
 window.dismissIntro = dismissIntro;
 window.saveGame = saveGame;
 window.loadGame = loadGame;
@@ -4892,6 +5545,7 @@ window.hireStaff = hireStaff;
 window.fireStaff = fireStaff;
 window.unlockAdvancement = unlockAdvancement;
 window.resolveEvent = resolveEvent;
+window.dismissEventResult = dismissEventResult;
 window.dismissHarvestReport = dismissHarvestReport;
 window.buyGrapes = buyGrapes;
 window.earlyRelease = earlyRelease;
