@@ -358,13 +358,13 @@ const SEASON_WINDOWS = {
 };
 
 const CHANNELS = {
-  cellarDoor: { label: "Cellar Door", orderType: null },
-  club: { label: "Wine Club", orderType: "club" },
-  restaurant: { label: "Restaurants", orderType: "restaurant" },
-  distributor: { label: "Distribution", orderType: "distributor" },
-  export: { label: "Export", orderType: "export" },
-  collector: { label: "Collectors", orderType: "collector" },
-  mass: { label: "Mass Market", orderType: "supermarket" }
+  cellarDoor: { label: "Cellar Door", orderType: null, net: 1 },
+  club: { label: "Wine Club", orderType: "club", net: 0.9 },
+  restaurant: { label: "Restaurants", orderType: "restaurant", net: 0.62 },
+  distributor: { label: "Distribution", orderType: "distributor", net: 0.52 },
+  export: { label: "Export", orderType: "export", net: 0.45 },
+  collector: { label: "Collectors", orderType: "collector", net: 1.08 },
+  mass: { label: "Mass Market", orderType: "supermarket", net: 0.38 }
 };
 
 const ORDER_CHANNEL = {
@@ -2414,6 +2414,7 @@ function ensureEconomy(s) {
   s.staffMarket = STAFF_POOL.map(p => p.id).filter(staffId => !(s.staff || []).includes(staffId));
   ensureStaffTraits(s);
   ensureChannels(s);
+  ensureOrders(s);
   ensureArchive(s);
   ensureEventMemory(s);
   if (typeof s.fatigue !== "number") s.fatigue = 18;
@@ -2637,6 +2638,20 @@ function ensureChannels(s) {
   s.demand = channelHeadlineDemand(s);
 }
 
+function ensureOrders(s) {
+  if (!Array.isArray(s.orders)) s.orders = [];
+  s.orders.forEach(order => {
+    order.channel = order.channel || ORDER_CHANNEL[order.type] || "distributor";
+    if (typeof order.retailCeiling !== "number") order.retailCeiling = order.maxPrice ?? s.price ?? 28;
+    if (typeof order.maxPrice !== "number") order.maxPrice = order.retailCeiling;
+    if (order.accepted && typeof order.acceptedReleasePrice !== "number") order.acceptedReleasePrice = Math.min(order.retailCeiling, s.price ?? order.retailCeiling);
+    if (typeof order.netPrice !== "number") {
+      order.netPrice = channelNetPrice(order, order.accepted ? order.acceptedReleasePrice : Math.min(s.price ?? order.retailCeiling, order.retailCeiling));
+    }
+    if (typeof order.penalty !== "number") order.penalty = Math.round((order.cases || 0) * order.netPrice * 12 * 0.18);
+  });
+}
+
 function ensureArchive(s) {
   if (!Array.isArray(s.archive)) s.archive = [];
   s.archive.forEach(entry => {
@@ -2699,6 +2714,19 @@ function channelDemandForOrder(s, type) {
   ensureChannels(s);
   const channel = ORDER_CHANNEL[type] || "distributor";
   return (s.channelDemand[channel] || s.demand || 40) * ((s.channelTrust[channel] || 55) / 65);
+}
+
+function channelNetMultiplier(channel) {
+  return CHANNELS[channel]?.net || 0.55;
+}
+
+function channelNetPrice(order, releasePrice) {
+  const channel = order.channel || ORDER_CHANNEL[order.type] || "distributor";
+  return Math.round(releasePrice * channelNetMultiplier(channel));
+}
+
+function orderRetailCeiling(order) {
+  return order.retailCeiling ?? order.maxPrice ?? 0;
 }
 
 function baseLotFlawRisk(s, lot) {
@@ -3251,7 +3279,8 @@ function addOrder(s, forcedType) {
   if (!forcedType && prestigeFit < type.prestige) return;
   const demandScale = clamp(channelDemandForOrder(s, typeId) / 65, 0.65, 1.45);
   const cases = Math.round(randint(type.cases[0], type.cases[1]) * demandScale);
-  const maxPrice = Math.round(randint(type.price[0], type.price[1]) * (1 + s.quality / 260 + staffBonus(s, "sales") * 0.03));
+  const retailCeiling = Math.round(randint(type.price[0], type.price[1]) * (1 + s.quality / 260 + staffBonus(s, "sales") * 0.03));
+  const netPrice = channelNetPrice({ type: typeId, channel }, Math.min(s.price, retailCeiling));
   const due = s.month + randint(type.due[0], type.due[1]);
   const id = `${typeId}-${Date.now()}-${Math.floor(rand() * 10000)}`;
   s.orders.push({
@@ -3260,11 +3289,13 @@ function addOrder(s, forcedType) {
     buyer: type.name,
     channel,
     cases,
-    maxPrice,
+    retailCeiling,
+    maxPrice: retailCeiling,
+    netPrice,
     due,
     expires: s.month + 2,
     accepted: false,
-    penalty: Math.round(cases * maxPrice * 12 * 0.18)
+    penalty: Math.round(cases * netPrice * 12 * 0.18)
   });
 }
 
@@ -3277,14 +3308,18 @@ function weightedChoice(items) {
 function acceptOrder(id) {
   const order = state.orders.find(o => o.id === id);
   if (!order) return;
-  if (state.price > order.maxPrice) {
-    log(state, `${order.buyer} would not sign at ${money(state.price)} per bottle; their ceiling is ${money(order.maxPrice)}.`);
+  const retailCeiling = orderRetailCeiling(order);
+  if (state.price > retailCeiling) {
+    log(state, `${order.buyer} would not sign with a ${money(state.price)} release price; their channel ceiling is ${money(retailCeiling)}.`);
     render();
     return;
   }
   order.accepted = true;
+  order.acceptedReleasePrice = state.price;
+  order.netPrice = channelNetPrice(order, state.price);
+  order.penalty = Math.round(order.cases * order.netPrice * 12 * 0.18);
   addChannelDemand(state, [order.channel || ORDER_CHANNEL[order.type] || "distributor"], 1);
-  log(state, `${order.buyer} signed for ${order.cases} cases at ${money(state.price)} per bottle.`);
+  log(state, `${order.buyer} signed for ${order.cases} cases at ${money(order.netPrice)} net per bottle.`);
   render();
 }
 
@@ -3293,7 +3328,8 @@ function fulfillOrder(id) {
   if (!order || !order.accepted || state.inventory.cases < order.cases) return;
   const premium = 1 + Math.max(0, state.quality - 55) / 260;
   const vintageMod = vintageScoreMultiplier(state.currentVintageScore || 3);
-  const revenue = Math.round(order.cases * state.price * 12 * premium * vintageMod);
+  const netPrice = order.netPrice ?? channelNetPrice(order, order.acceptedReleasePrice ?? state.price);
+  const revenue = Math.round(order.cases * netPrice * 12 * premium * vintageMod);
   state.inventory.cases -= order.cases;
   state.cash += revenue;
   state.prestige += order.type === "collector" ? 5 : order.type === "club" || order.type === "restaurant" ? 3 : 1;
@@ -3534,6 +3570,7 @@ function normalizeState(s) {
   s.sustainability = clamp(Math.round(s.sustainability), 0, 100);
   s.influence = clamp(Math.round(s.influence), 0, 100);
   s.profile = clamp(Math.round(s.profile ?? 50), 0, 100);
+  ensureOrders(s);
   // temperate trait: morale never falls below 10
   const hasTemperate = (s.staff || []).some(id => (s.staffTraits?.[id] || []).includes("temperate"));
   if (hasTemperate) s.morale = Math.max(s.morale, 10);
@@ -4554,7 +4591,8 @@ function commercialForecast(s) {
     .forEach(order => {
       if (available < order.cases) return;
       const premium = 1 + Math.max(0, s.quality - 55) / 260;
-      contractRevenue += Math.round(order.cases * s.price * 12 * premium);
+      const netPrice = order.netPrice ?? channelNetPrice(order, order.acceptedReleasePrice ?? s.price);
+      contractRevenue += Math.round(order.cases * netPrice * 12 * premium);
       contractCases += order.cases;
       available -= order.cases;
     });
@@ -4814,12 +4852,12 @@ function marketPanel() {
   return `
     <section class="panel">
       <div class="panel-head">
-        <h2>Market and Cellar ${helpIcon("Bottle price affects passive direct sales and whether buyer contracts will accept your offer.")}</h2>
+        <h2>Market and Cellar ${helpIcon("Release price affects direct sales and whether trade buyers can place the wine. Buyer contracts pay channel-specific net prices.")}</h2>
         <span class="small">Net worth ${money(worth)}</span>
       </div>
       <div class="market-line">
         <label>
-          <span class="small">List price per bottle <span class="price-anchor-note">anchored ${money(state.monthStartPrice ?? state.price)} · ±${money(PRICE_SWING_CAP)} this month</span></span>
+          <span class="small">Release price per bottle <span class="price-anchor-note">anchored ${money(state.monthStartPrice ?? state.price)} · ±${money(PRICE_SWING_CAP)} this month</span></span>
           <input type="range"
             min="${Math.max(14, (state.monthStartPrice ?? state.price) - PRICE_SWING_CAP)}"
             max="${Math.min(profilePriceCeil(state), (state.monthStartPrice ?? state.price) + PRICE_SWING_CAP)}"
@@ -5188,7 +5226,7 @@ function ordersPanel() {
   return `
     <section class="panel">
       <div class="panel-head">
-        <h2>Buyer Queue ${helpIcon("Accepting a buyer reserves cases. Fulfill before the due month to gain cash, demand, and prestige.")}</h2>
+        <h2>Buyer Queue ${helpIcon("Accepting a buyer reserves cases at a channel-specific net price. Fulfill before the due month to gain cash, demand, and prestige.")}</h2>
         <span class="small">${state.fulfilled} fulfilled • ${state.missed} missed</span>
       </div>
       <div class="orders">
@@ -5199,18 +5237,29 @@ function ordersPanel() {
 }
 
 function orderView(order) {
-  const aboveCeiling = !order.accepted && state.price > order.maxPrice;
+  const retailCeiling = orderRetailCeiling(order);
+  const channel = order.channel || ORDER_CHANNEL[order.type] || "distributor";
+  const multiplier = channelNetMultiplier(channel);
+  const netPrice = order.accepted
+    ? order.netPrice ?? channelNetPrice(order, order.acceptedReleasePrice ?? state.price)
+    : channelNetPrice(order, Math.min(state.price, retailCeiling));
+  const aboveCeiling = !order.accepted && state.price > retailCeiling;
+  const status = order.accepted
+    ? `net ${money(netPrice)}/btl • penalty ${money(order.penalty)}`
+    : aboveCeiling
+      ? `release price ${money(state.price)} exceeds channel ceiling`
+      : `net offer ${money(netPrice)}/btl • delivery due ${monthDateLabel(order.due)}`;
   return `
     <div class="order">
       <div class="order-head">
         <strong>${order.buyer}</strong>
         <span class="tag">${order.accepted ? `Due ${monthDateLabel(order.due)}` : `Offer expires ${monthDateLabel(order.expires)}`}</span>
       </div>
-      <p>${order.cases} cases • ceiling ${money(order.maxPrice)}/bottle • ${order.accepted ? `penalty ${money(order.penalty)}` : aboveCeiling ? `current list ${money(state.price)} is too high` : `delivery due ${monthDateLabel(order.due)}`}</p>
+      <p>${order.cases} cases • release ceiling ${money(retailCeiling)}/btl • ${Math.round(multiplier * 100)}% channel net • ${status}</p>
       <div class="order-actions">
         ${order.accepted
           ? `<button onclick="fulfillOrder('${order.id}')" ${state.inventory.cases < order.cases ? "disabled" : ""}>Fulfill</button>`
-          : `<button onclick="acceptOrder('${order.id}')" ${aboveCeiling ? "disabled" : ""}>${aboveCeiling ? "Above buyer ceiling" : "Accept at list price"}</button>`}
+          : `<button onclick="acceptOrder('${order.id}')" ${aboveCeiling ? "disabled" : ""}>${aboveCeiling ? "Above channel ceiling" : "Accept net offer"}</button>`}
         <button class="ghost" onclick="rejectOrder('${order.id}')">${order.accepted ? "Cancel" : "Pass"}</button>
       </div>
     </div>
