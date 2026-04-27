@@ -106,6 +106,20 @@ const REGIONS = [
     yieldMod: 1.06,
     weather: { heat: 1.12, frost: 0.58, rain: 0.62, drought: 1.22 },
     varietals: ["tempranillo", "malbec", "cabernet"]
+  },
+  {
+    id: "fingerlakes",
+    name: "Finger Lakes",
+    blurb: "Cool-climate lake country where Riesling shines and Cab Franc can build a nimble regional following.",
+    tags: ["Cool climate", "Frost risk", "Wine trail"],
+    cash: 96000,
+    prestige: 18,
+    demand: 44,
+    costMod: 0.92,
+    yieldMod: 0.9,
+    qualityMod: 1.08,
+    weather: { heat: 0.58, frost: 1.55, rain: 1.12, drought: 0.62 },
+    varietals: ["riesling", "cabfranc"]
   }
 ];
 
@@ -135,6 +149,19 @@ const VARIETALS = {
     droughtSensitivity: 0.6,
     optimalWater: 38,
     blurb: "High price ceiling, slower to charm buyers, strong in warm regions."
+  },
+  cabfranc: {
+    name: "Cabernet Franc",
+    tags: ["Cool-climate red", "Aromatic"],
+    yield: 0.92,
+    quality: 1.07,
+    demand: 0.98,
+    difficulty: 1.05,
+    barrelNeed: 0.75,
+    diseaseRisk: 1.05,
+    droughtSensitivity: 0.85,
+    optimalWater: 48,
+    blurb: "Lighter, aromatic, and resilient in cool sites, with loyal restaurant appeal."
   },
   chardonnay: {
     name: "Chardonnay",
@@ -357,6 +384,15 @@ const SEASON_WINDOWS = {
   Cellar: "Nov-Feb"
 };
 
+const SOUTHERN_SEASON_WINDOWS = {
+  Dormant: "Jun-Aug",
+  Budbreak: "Sep-Oct",
+  Flowering: "Nov-Dec",
+  Veraison: "Jan-Feb",
+  Harvest: "Mar-Apr",
+  Cellar: "May"
+};
+
 const CHANNELS = {
   cellarDoor: { label: "Cellar Door", orderType: null, net: 1 },
   club: { label: "Wine Club", orderType: "club", net: 0.9 },
@@ -400,6 +436,15 @@ const EVENT_RULES = {
   "barossa-old-vine": { max: 1 },
   "natural-wine-fair": { cooldown: 14 },
   "supermarket-pitch": { cooldown: 18 }
+};
+
+const ACTION_CAPACITY = {
+  vineyard: "vineyard",
+  cellar: "cellar",
+  bottle: "ops",
+  sales: "sales",
+  hospitality: "hospitality",
+  "natural-cellar": "cellar"
 };
 
 const REGION_CLIMATE = {
@@ -450,8 +495,16 @@ const REGION_CLIMATE = {
     avgLow: [32, 34, 40, 45, 52, 59, 65, 64, 57, 48, 39, 33],
     volatility: 10,
     humidity: 0.52
+  },
+  fingerlakes: {
+    avgHigh: [33, 35, 43, 56, 68, 76, 81, 79, 72, 60, 48, 38],
+    avgLow: [18, 19, 26, 37, 48, 57, 62, 61, 54, 43, 34, 25],
+    volatility: 9,
+    humidity: 0.76
   }
 };
+
+const SOUTHERN_HEMISPHERE_REGIONS = new Set(["mendoza", "barossa"]);
 
 const STAFF_POOL = [
   {
@@ -1936,7 +1989,7 @@ const ACTIONS = [
         s.fatigue += 2;
         log(s, "Green harvest dropped 20% of the crop to concentrate the remaining fruit. Quality up sharply.");
       } else if (s.season === "Harvest") {
-        if (isHarvestMonth(s.month)) {
+        if (isHarvestMonth(s.month, s.region)) {
           s.marketMods.harvestCrew = 2;
           s.quality += 3;
           s.morale  -= 1;
@@ -2099,9 +2152,9 @@ const VINTAGE_NAMES = {
 const AGING_TARGETS = {
   sauvignon: 3, riesling: 3, chardonnay: 5, pinot: 6,
   merlot: 5, malbec: 6, cabernet: 8, shiraz: 7, gamay: 2,
-  nebbiolo: 10, tempranillo: 7
+  nebbiolo: 10, tempranillo: 7, cabfranc: 5
 };
-const REGION_AGING_BONUS = { bordeaux: 2, burgundy: 3, napa: 1, mosel: 0, mendoza: 0, barossa: 0, piedmont: 3, rioja: 1 };
+const REGION_AGING_BONUS = { bordeaux: 2, burgundy: 3, napa: 1, mosel: 0, mendoza: 0, barossa: 0, piedmont: 3, rioja: 1, fingerlakes: 0 };
 
 function rand() {
   return Math.random();
@@ -2144,7 +2197,7 @@ function calendarMonthNumber(month) {
 
 function firstHarvestMonth(matureMonth) {
   let m = matureMonth;
-  while (calendarMonthNumber(m) !== 9) m++;
+  while (!isHarvestMonth(m)) m++;
   return m;
 }
 
@@ -2193,7 +2246,7 @@ function selectedDifficulty() {
 const PHILOSOPHY_PROFILE = { natural: 20, industrial: -20, classic: 0 };
 const VARIETAL_PROFILE   = { gamay: 10, pinot: 8, riesling: 8, malbec: -2,
                              sauvignon: -2, chardonnay: -4, merlot: 0,
-                             cabernet: 0, shiraz: -6 };
+                             cabernet: 0, cabfranc: 4, shiraz: -6 };
 
 function initialChannelTrust() {
   return Object.keys(CHANNELS).reduce((acc, key) => {
@@ -2214,13 +2267,15 @@ function initialChannelDemand(regionDef, varietalDef, philosophyDef, difficultyD
     burgundy: { collector: 18, restaurant: 8, mass: -10 },
     barossa: { export: 15, distributor: 10, mass: 6 },
     piedmont: { collector: 16, restaurant: 7, export: 5 },
-    rioja: { export: 12, distributor: 8, restaurant: 4 }
+    rioja: { export: 12, distributor: 8, restaurant: 4 },
+    fingerlakes: { cellarDoor: 12, club: 7, restaurant: 5, collector: 4, mass: -6 }
   }[regionDef.id] || {};
   const varietalMods = {
     pinot: { collector: 9, restaurant: 5 },
     riesling: { collector: 10, restaurant: 3 },
     gamay: { cellarDoor: 7, collector: 5 },
     cabernet: { restaurant: 6, collector: 5 },
+    cabfranc: { restaurant: 7, cellarDoor: 4 },
     shiraz: { export: 8, mass: 5 },
     malbec: { export: 7, distributor: 5, mass: 5 },
     nebbiolo: { collector: 12, restaurant: 5, mass: -8 },
@@ -2251,7 +2306,7 @@ function createState() {
   const s = {
     month: 1,
     maxMonths: 60,
-    season: "Budbreak",
+    season: seasonName(1, r.id),
     difficulty: d.id,
     region: r.id,
     varietal: setup.varietal,
@@ -2273,7 +2328,9 @@ function createState() {
     influence: r.influence || 2,
     price: 28,
     monthStartPrice: 28,
-    actionsLeft: 3,
+    actionsLeft: 2,
+    capacityLeft: { vineyard: 0, cellar: 0, ops: 0, hospitality: 0, sales: 0 },
+    capacityMonth: 1,
     staff: [],
     staffProgress: {},
     staffMarket: STAFF_POOL.map(p => p.id),
@@ -2359,6 +2416,7 @@ function startGame() {
   helpOpen = true;
   addOrder(state, "distributor");
   addOrder(state, "restaurant");
+  resetActionBudgets(state);
   log(state, `${state.wineryName} founded in ${region().name} around ${varietal().name}.`);
   recordHistory(state, 0);
   render();
@@ -2413,6 +2471,7 @@ function ensureEconomy(s) {
   if (s.inventory && !('stash' in s.inventory)) s.inventory.stash = 0;
   s.staffMarket = STAFF_POOL.map(p => p.id).filter(staffId => !(s.staff || []).includes(staffId));
   ensureStaffTraits(s);
+  ensureActionBudgets(s);
   ensureChannels(s);
   ensureOrders(s);
   ensureArchive(s);
@@ -2755,6 +2814,83 @@ function organizationCapacity(s) {
 
 function loadPressure(s) {
   return Math.max(0, managementLoad(s) - organizationCapacity(s));
+}
+
+function monthlyOperationalCapacity(s) {
+  const cap = { vineyard: 0, cellar: 0, ops: 0, hospitality: 0, sales: 0 };
+  const has = id => (s.staff || []).includes(id);
+  if (has("ines")) cap.vineyard += 1;
+  if (has("dr_chen")) cap.vineyard += 1;
+  if (has("marco")) cap.cellar += 1;
+  if (has("oscar")) cap.cellar += 1;
+  if (has("samir")) cap.ops += 1;
+  if (has("beatrice")) cap.hospitality += 1;
+  if (has("felix")) cap.hospitality += 1;
+  ["asha", "lucy", "priya", "margot"].forEach(id => { if (has(id)) cap.sales += 1; });
+  if ((s.buildings.lab || 0) >= 2) cap.vineyard += 1;
+  if ((s.buildings.tank || 0) >= 3) cap.cellar += 1;
+  if ((s.buildings.line || 0) >= 2) cap.ops += 1;
+  if ((s.buildings.room || 0) >= 2) cap.hospitality += 1;
+  return cap;
+}
+
+function resetActionBudgets(s) {
+  s.actionsLeft = Math.max(1, 2 - (s.morale < 20 ? 1 : 0) - ((s.fatigue || 0) > 78 ? 1 : 0));
+  s.capacityLeft = monthlyOperationalCapacity(s);
+  s.capacityMonth = s.month;
+}
+
+function ensureActionBudgets(s) {
+  if (!s.capacityLeft || typeof s.capacityMonth !== "number") {
+    s.capacityLeft = monthlyOperationalCapacity(s);
+    s.capacityMonth = s.month || 1;
+  }
+  Object.keys(monthlyOperationalCapacity(s)).forEach(key => {
+    if (typeof s.capacityLeft[key] !== "number") s.capacityLeft[key] = 0;
+  });
+  if (typeof s.actionsLeft !== "number") s.actionsLeft = 2;
+}
+
+function seasonalCapacityKey(s) {
+  if (s.season === "Budbreak" || s.season === "Flowering" || s.season === "Veraison") return "vineyard";
+  if (s.season === "Harvest") return isHarvestMonth(s.month, s.region) ? "vineyard" : "cellar";
+  if (s.season === "Cellar") return "cellar";
+  return null;
+}
+
+function actionCapacityKey(action, s) {
+  if (action.id === "seasonal") return seasonalCapacityKey(s);
+  return ACTION_CAPACITY[action.id] || null;
+}
+
+function canSpendForAction(action, s) {
+  const key = actionCapacityKey(action, s);
+  if (key && (s.capacityLeft?.[key] || 0) > 0) return true;
+  return s.actionsLeft > 0;
+}
+
+function spendForAction(action, s) {
+  const key = actionCapacityKey(action, s);
+  if (key && (s.capacityLeft?.[key] || 0) > 0) {
+    s.capacityLeft[key] -= 1;
+    return { type: "capacity", key };
+  }
+  s.actionsLeft -= 1;
+  if (key) s.fatigue += 2;
+  return { type: "owner", key };
+}
+
+function capacityLabel(key) {
+  return ({ vineyard: "Vineyard", cellar: "Cellar", ops: "Ops", hospitality: "Hospitality", sales: "Sales" })[key] || "Staff";
+}
+
+function applyCapacityDelta(s, beforeCap) {
+  const afterCap = monthlyOperationalCapacity(s);
+  ensureActionBudgets(s);
+  Object.keys(afterCap).forEach(key => {
+    const delta = afterCap[key] - (beforeCap[key] || 0);
+    s.capacityLeft[key] = clamp((s.capacityLeft[key] || 0) + delta, 0, afterCap[key]);
+  });
 }
 
 function reconcileGlobalDemand(s) {
@@ -3324,8 +3460,10 @@ function acceptOrder(id) {
 }
 
 function fulfillOrder(id) {
+  ensureActionBudgets(state);
   const order = state.orders.find(o => o.id === id);
   if (!order || !order.accepted || state.inventory.cases < order.cases) return;
+  applyFulfillmentLoad(state, order);
   const premium = 1 + Math.max(0, state.quality - 55) / 260;
   const vintageMod = vintageScoreMultiplier(state.currentVintageScore || 3);
   const netPrice = order.netPrice ?? channelNetPrice(order, order.acceptedReleasePrice ?? state.price);
@@ -3343,6 +3481,29 @@ function fulfillOrder(id) {
   log(state, `Fulfilled ${order.buyer}: ${order.cases} cases for ${money(revenue)}.`);
   checkGameOver();
   render();
+}
+
+function applyFulfillmentLoad(s, order) {
+  const channel = order.channel || ORDER_CHANNEL[order.type] || "distributor";
+  const isLarge = order.cases >= 180 || ["distributor", "export", "supermarket", "club"].includes(order.type);
+  if (!isLarge) return;
+  const preferred = order.type === "club" ? "sales" : "ops";
+  const backup = preferred === "ops" ? "sales" : "ops";
+  if ((s.capacityLeft?.[preferred] || 0) > 0) {
+    s.capacityLeft[preferred] -= 1;
+    log(s, `${order.buyer} shipment used ${capacityLabel(preferred).toLowerCase()} capacity.`);
+    return;
+  }
+  if ((s.capacityLeft?.[backup] || 0) > 0) {
+    s.capacityLeft[backup] -= 1;
+    s.fatigue += 2;
+    log(s, `${order.buyer} shipment leaned on ${capacityLabel(backup).toLowerCase()} capacity outside its lane. Fatigue +2.`);
+    return;
+  }
+  const fatigue = Math.min(12, 3 + Math.floor(order.cases / 140));
+  s.fatigue += fatigue;
+  addChannelTrust(s, channel, -2);
+  log(s, `${order.buyer} shipment was handled without enough ops capacity. Fatigue +${fatigue}; ${CHANNELS[channel]?.label || "buyer"} trust slipped.`);
 }
 
 function rejectOrder(id) {
@@ -3421,6 +3582,7 @@ function applyBuildEffect(s, id, tier) {
 }
 
 function buyBuilding(id) {
+  ensureActionBudgets(state);
   const bDef = BUILDINGS.find(item => item.id === id);
   const owned = state.buildings[id] || 0;
   if (!bDef || owned >= bDef.max || state.actionsLeft <= 0 || state.event || state.gameOver) return;
@@ -3430,6 +3592,7 @@ function buyBuilding(id) {
 }
 
 function financeBuild(id) {
+  ensureActionBudgets(state);
   const bDef = BUILDINGS.find(item => item.id === id);
   const owned = state.buildings[id] || 0;
   if (!bDef || owned >= bDef.max || state.actionsLeft <= 0 || state.event || state.gameOver) return;
@@ -3440,12 +3603,14 @@ function financeBuild(id) {
 }
 
 function _doBuild(s, id, cashCost) {
+  const beforeCap = monthlyOperationalCapacity(s);
   const owned = s.buildings[id] || 0;
   const tier = capexTier(id, owned);
   s.cash -= cashCost;
   s.buildings[id] = owned + 1;
   applyBuildEffect(s, id, tier);
   s.actionsLeft -= 1;
+  applyCapacityDelta(s, beforeCap);
   log(s, `Built: ${tier?.name || id}${cashCost === 0 ? " (financed)" : ""}.`);
   normalizeState(s);
   render();
@@ -3469,29 +3634,37 @@ function sellBuilding(id) {
 }
 
 function hireStaff(id) {
+  ensureActionBudgets(state);
   const person = STAFF_POOL.find(p => p.id === id);
-  if (!person || state.staff.includes(id) || state.staff.length >= 5) return;
+  if (!person || state.staff.includes(id) || state.staff.length >= 5 || state.actionsLeft <= 0 || state.event || state.gameOver) return;
   const signing = Math.round(person.salary * 1.4);
   if (state.cash < signing) return;
+  const beforeCap = monthlyOperationalCapacity(state);
   state.cash -= signing;
+  state.actionsLeft -= 1;
   state.staff.push(id);
   ensureStaffProgress(state, id);
   state.staffMarket = state.staffMarket.filter(staffId => staffId !== id);
   state.staffMarket = STAFF_POOL.map(p => p.id).filter(staffId => !state.staff.includes(staffId));
+  applyCapacityDelta(state, beforeCap);
   applyStaffPassive(state, person);
-  log(state, `${person.name} joined as ${person.role}.`);
+  log(state, `${person.name} joined as ${person.role}. Hiring used owner attention.`);
   normalizeState(state);
   render();
 }
 
 function fireStaff(id) {
+  ensureActionBudgets(state);
   const person = STAFF_POOL.find(p => p.id === id);
-  if (!person) return;
+  if (!person || state.actionsLeft <= 0 || state.event || state.gameOver) return;
+  const beforeCap = monthlyOperationalCapacity(state);
   state.cash -= Math.round(person.salary * 0.8);
+  state.actionsLeft -= 1;
   state.morale -= 5;
   state.staff = state.staff.filter(staffId => staffId !== id);
   if (!state.staffMarket.includes(id)) state.staffMarket.push(id);
-  log(state, `${person.name} left the estate.`);
+  applyCapacityDelta(state, beforeCap);
+  log(state, `${person.name} left the estate. The transition used owner attention.`);
   normalizeState(state);
   render();
 }
@@ -3505,20 +3678,24 @@ function applyStaffPassive(s, person) {
 
 function useAction(id) {
   const action = ACTIONS.find(a => a.id === id);
+  ensureActionBudgets(state);
   if (!action || state.event || state.gameOver) return;
   if (action.navigateTab) {
     activeTab = action.navigateTab;
     render();
     return;
   }
-  if (state.actionsLeft <= 0) return;
+  if (!canSpendForAction(action, state)) return;
   if (!isActionAvailable(action, state)) return;
   const cost = actionCost(action, state);
   if (state.cash < cost) return;
   state.cash -= cost;
   action.apply(state);
   grantActionXp(state, id);
-  state.actionsLeft -= 1;
+  const spent = spendForAction(action, state);
+  if (spent.type === "owner" && spent.key) {
+    log(state, `Founder attention covered ${capacityLabel(spent.key).toLowerCase()} work this month. Fatigue +2.`);
+  }
   normalizeState(state);
   checkGameOver();
   render();
@@ -3546,7 +3723,7 @@ function actionDetail(action, s) {
 }
 
 function seasonalAction(s) {
-  if (s.season === "Harvest" && !isHarvestMonth(s.month)) {
+  if (s.season === "Harvest" && !isHarvestMonth(s.month, s.region)) {
     return {
       name: "Post-Harvest Walk",
       detail: "Walk blocks after picking, move first batches to tank, and start row recovery.",
@@ -3557,7 +3734,12 @@ function seasonalAction(s) {
 }
 
 function seasonListLabel(seasons) {
-  return seasons.map(season => `${season} (${SEASON_WINDOWS[season]})`).join(", ");
+  const windows = seasonWindows(state?.region);
+  return seasons.map(season => `${season} (${windows[season]})`).join(", ");
+}
+
+function seasonWindows(regionId = state?.region) {
+  return SOUTHERN_HEMISPHERE_REGIONS.has(regionId) ? SOUTHERN_SEASON_WINDOWS : SEASON_WINDOWS;
 }
 
 function normalizeState(s) {
@@ -3637,7 +3819,7 @@ function monthlyTick(s) {
     }
   });
 
-  const harvestResult = isHarvestMonth(s.month) ? harvest(s) : null;
+  const harvestResult = isHarvestMonth(s.month, s.region) ? harvest(s) : null;
 
   if (rand() < 0.36 * eventRiskMod(s) * difficulty().eventMod) {
     s.event = drawEvent(s);
@@ -3697,8 +3879,8 @@ function monthlyTick(s) {
   };
   recordHistory(s, closeCosts);
   s.month += 1;
-  s.actionsLeft = 3 - (s.morale < 20 ? 1 : 0) - ((s.fatigue || 0) > 78 ? 1 : 0);
-  s.season = seasonName(s.month);
+  s.season = seasonName(s.month, s.region);
+  resetActionBudgets(s);
   log(s, `Month closed: direct channels sold ${sales.cases} cases for ${money(sales.revenue)}; costs ${money(totalCloseCost)} including ${money(costs.interest)} interest${harvestResult?.laborCost ? ` and ${money(harvestResult.laborCost)} harvest labor` : ""}.`);
 }
 
@@ -3747,8 +3929,16 @@ function applyInvestorPressure(s, costs) {
   }
 }
 
-function seasonName(month) {
+function seasonName(month, regionId = state?.region) {
   const m = calendarMonthNumber(month);
+  if (SOUTHERN_HEMISPHERE_REGIONS.has(regionId)) {
+    if ([6, 7, 8].includes(m)) return "Dormant";
+    if ([9, 10].includes(m)) return "Budbreak";
+    if ([11, 12].includes(m)) return "Flowering";
+    if ([1, 2].includes(m)) return "Veraison";
+    if ([3, 4].includes(m)) return "Harvest";
+    return "Cellar";
+  }
   if ([12, 1, 2].includes(m)) return "Dormant";
   if ([3, 4].includes(m)) return "Budbreak";
   if ([5, 6].includes(m)) return "Flowering";
@@ -3757,8 +3947,9 @@ function seasonName(month) {
   return "Cellar";
 }
 
-function isHarvestMonth(month) {
+function isHarvestMonth(month, regionId = state?.region) {
   const m = calendarMonthNumber(month);
+  if (SOUTHERN_HEMISPHERE_REGIONS.has(regionId)) return m === 3;
   return m === 9;
 }
 
@@ -3767,13 +3958,14 @@ function applyWeather(s) {
   const v = varietal();
   const lab = 1 - s.buildings.lab * 0.12;
   const month = calendarMonthNumber(s.month);
+  const season = seasonName(s.month, s.region);
   s.lastTemp = regionalTempRange(r.id, month);
-  const springFrost = [3, 4].includes(month) ? 1 : [2, 5, 10, 11].includes(month) ? 0.35 : 0.03;
-  const summerHeat = [6, 7, 8, 9].includes(month) ? 1 : [5, 10].includes(month) ? 0.4 : 0.08;
-  const rainSeason = [3, 4, 5, 10, 11].includes(month) ? 1 : [6, 9, 12, 1, 2].includes(month) ? 0.55 : 0.25;
-  const droughtSeason = [6, 7, 8, 9].includes(month) ? 1 : [5, 10].includes(month) ? 0.45 : 0.12;
-  const tempHeat = s.lastTemp.high >= 95 ? 1.7 : s.lastTemp.high >= 88 ? 1.25 : 0.8;
-  const tempFrost = s.lastTemp.low <= 33 ? 1.8 : s.lastTemp.low <= 38 ? 1.2 : 0.45;
+  const springFrost = season === "Budbreak" ? 1 : season === "Flowering" || season === "Harvest" ? 0.25 : 0.03;
+  const summerHeat = season === "Veraison" || season === "Harvest" ? 1 : season === "Flowering" ? 0.45 : 0.08;
+  const rainSeason = ["Budbreak", "Flowering", "Harvest", "Cellar"].includes(season) ? 1 : season === "Dormant" ? 0.55 : 0.35;
+  const droughtSeason = ["Flowering", "Veraison", "Harvest"].includes(season) ? 1 : season === "Budbreak" ? 0.35 : 0.12;
+  const tempHeat = s.lastTemp.high >= 95 ? 1.7 : s.lastTemp.high >= 88 ? 1.25 : s.lastTemp.high >= 80 ? 0.75 : 0;
+  const tempFrost = s.lastTemp.low <= 33 ? 1.8 : s.lastTemp.low <= 38 ? 1.2 : s.lastTemp.low <= 43 ? 0.45 : 0;
   const humidity = REGION_CLIMATE[r.id]?.humidity || 0.55;
   const options = [
     { name: "Heat spike",    key: "heat",    weight: 0.18 * r.weather.heat    * summerHeat  * tempHeat },
@@ -4113,6 +4305,7 @@ function setupSummary(r, v, p, d) {
       <div><span>Opening debt</span><strong>${money(d.debt)}</strong></div>
       <div><span>Lease / month</span><strong>${money(d.rent)}</strong></div>
       <div><span>Demand</span><strong>${Math.round(r.demand * v.demand * p.demand * d.demandMod)}</strong></div>
+      <div><span>Harvest window</span><strong>${seasonWindows(r.id).Harvest}</strong></div>
     </div>
   `;
 }
@@ -4366,7 +4559,7 @@ function tutorialPanel() {
       <div class="tutorial-grid">
         <div>
           <strong>1. Spend monthly actions</strong>
-          <p>Most turns start with three placements. The available work changes by season, and September is the harvest month.</p>
+          <p>Most turns start with two owner-attention choices plus any staff capacity you have built. Harvest follows the estate's hemisphere.</p>
         </div>
         <div>
           <strong>2. Price against demand</strong>
@@ -4382,7 +4575,7 @@ function tutorialPanel() {
         </div>
       </div>
       <div class="season-strip">
-        ${Object.entries(SEASON_WINDOWS).map(([season, months]) => `<span><strong>${season}</strong> ${months}</span>`).join("")}
+        ${Object.entries(seasonWindows(state.region)).map(([season, months]) => `<span><strong>${season}</strong> ${months}</span>`).join("")}
       </div>
     </section>
   `;
@@ -4598,7 +4791,7 @@ function commercialForecast(s) {
     });
   const costBreakdown = fixedCostBreakdown(s);
   const fixedCost = costBreakdown.total;
-  const harvestLabor = isHarvestMonth(s.month) ? harvestLaborEstimate(s) : 0;
+  const harvestLabor = isHarvestMonth(s.month, s.region) ? harvestLaborEstimate(s) : 0;
   const { tourIncome, clubIncome } = estimatePassiveStaffIncome(s);
   return {
     directCases: direct.cases,
@@ -4814,21 +5007,29 @@ function actionInventoryNote(action, s) {
 }
 
 function actionsPanel() {
+  ensureActionBudgets(state);
   const sorted = [...ACTIONS].sort((a, b) => Number(isActionAvailable(b, state)) - Number(isActionAvailable(a, state)));
   return `
     <section class="panel">
       <div class="panel-head">
         <h2>Monthly Actions ${helpIcon("Actions are owner attention and scarce operating focus. Staff, infrastructure, fatigue, and obligations determine how far those choices actually stretch.")}</h2>
-        <span class="small">${state.actionsLeft} placements left</span>
+        <span class="small">${state.actionsLeft} owner attention left</span>
+      </div>
+      <div class="capacity-strip">
+        ${Object.entries(state.capacityLeft || {}).map(([key, value]) => `<span>${capacityLabel(key)} <strong>${value}</strong></span>`).join("")}
       </div>
       <div class="actions">
         ${sorted.map(action => {
           const cost = actionCost(action, state);
           const available = isActionAvailable(action, state);
           const invNote = actionInventoryNote(action, state);
+          const capKey = actionCapacityKey(action, state);
+          const spendLabel = capKey && (state.capacityLeft?.[capKey] || 0) > 0
+            ? `${capacityLabel(capKey)} capacity`
+            : capKey ? "Owner fallback" : "Owner attention";
           const disabled = action.navigateTab
             ? state.event || state.gameOver
-            : !available || state.actionsLeft <= 0 || state.cash < cost || state.event || state.gameOver || (invNote && invNote.hard);
+            : !available || !canSpendForAction(action, state) || state.cash < cost || state.event || state.gameOver || (invNote && invNote.hard);
           const effectText = invNote
             ? invNote.text
             : available ? actionConsequence(action, state) : `Off-season: available ${seasonListLabel(action.seasons)}`;
@@ -4837,7 +5038,7 @@ function actionsPanel() {
               <b>${actionName(action, state)}</b>
               <span>${actionDetail(action, state)}</span>
               <span class="effect">${effectText}</span>
-              <em>${action.navigateTab ? "Open Estate" : money(cost)}</em>
+              <em>${action.navigateTab ? "Open Estate" : `${money(cost)} · ${spendLabel}`}</em>
             </button>
           `;
         }).join("")}
@@ -5012,6 +5213,7 @@ function sellBulk(lotId, amount) {
 }
 
 function buyGrapes() {
+  ensureActionBudgets(state);
   if (!state || state.actionsLeft <= 0 || state.event || state.gameOver) return;
   const lotSize = 200;
   const costPer = grapePurchasePrice(state);
@@ -5028,7 +5230,7 @@ function buyGrapes() {
   state.cash -= total;
   state.actionsLeft -= 1;
   state.profile = clamp((state.profile ?? 50) - 4, 0, 100);
-  log(state, `Purchased ${lotSize} CE of ${v.name} grapes for ${money(total)}.`);
+  log(state, `Purchased ${lotSize} CE of ${v.name} grapes for ${money(total)}. Procurement used owner attention.`);
   normalizeState(state);
   render();
 }
@@ -5115,7 +5317,7 @@ function vintageCellarPanel() {
         <span class="small">Buy 200 CE ${varietal().name}: <strong>${money(gpPrice * 200)}</strong></span>
         ${(() => {
           const why = state.event ? "resolve the current event first"
-            : state.actionsLeft <= 0 ? "no action slots left this month"
+            : state.actionsLeft <= 0 ? "no owner attention left this month"
             : state.cash < gpPrice * 200 ? `need ${money(gpPrice * 200)} (have ${money(state.cash)})`
             : null;
           return `<button onclick="buyGrapes()" ${why || state.gameOver ? "disabled" : ""} ${why ? `title="${why}"` : ""}>${why ? `Buy grapes — ${why}` : "Buy grapes"}</button>`;
@@ -5165,7 +5367,7 @@ function archivePanel() {
 }
 
 function harvestForecast(s) {
-  const monthsUntilHarvest = Array.from({ length: 12 }, (_, i) => i).find(offset => isHarvestMonth(s.month + offset)) || 0;
+  const monthsUntilHarvest = Array.from({ length: 12 }, (_, i) => i).find(offset => isHarvestMonth(s.month + offset, s.region)) || 0;
   const harvestMonth = s.month + monthsUntilHarvest;
   const matureAtHarvest = s.rows.filter(row => (row.matureMonth || 1) <= harvestMonth);
   const health = matureAtHarvest.length
@@ -5352,8 +5554,10 @@ function staffPanel() {
 }
 
 function staffView(person, employed) {
+  ensureActionBudgets(state);
   const signing = Math.round(person.salary * 1.4);
   const progress = employed ? ensureStaffProgress(state, person.id) : null;
+  const blocked = state.actionsLeft <= 0 || state.event || state.gameOver;
   return `
     <div class="staff">
       <div class="staff-head">
@@ -5378,8 +5582,8 @@ function staffView(person, employed) {
       })()}
       <div class="staff-actions">
         ${employed
-          ? `<button class="ghost" onclick="fireStaff('${person.id}')">Release</button>`
-          : `<button onclick="hireStaff('${person.id}')" ${state.cash < signing || state.staff.length >= 5 ? "disabled" : ""}>Hire ${money(signing)}</button>`}
+          ? `<button class="ghost" onclick="fireStaff('${person.id}')" ${blocked ? "disabled" : ""}>Release · owner attention</button>`
+          : `<button onclick="hireStaff('${person.id}')" ${blocked || state.cash < signing || state.staff.length >= 5 ? "disabled" : ""}>Hire ${money(signing)} · owner attention</button>`}
       </div>
       ${employed ? advancementTree(person, progress) : ""}
     </div>

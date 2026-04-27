@@ -1104,6 +1104,26 @@ button:disabled {
   gap: 8px;
 }
 
+.capacity-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: -3px 0 9px;
+}
+
+.capacity-strip span {
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: #fffdfa;
+  font-size: 11px;
+}
+
+.capacity-strip strong {
+  color: var(--ink);
+}
+
 .action-card {
   display: grid;
   gap: 5px;
@@ -2317,6 +2337,7 @@ body[data-region="burgundy"] { --wine: #501e5a; --paper: #f4f2f6; --line: #d4cfd
 body[data-region="barossa"]  { --wine: #8a2a10; --paper: #f8f1e6; --line: #ddd4c4; }
 body[data-region="piedmont"] { --wine: #5a2010; --paper: #f6f1e8; --line: #dad2c2; }
 body[data-region="rioja"]    { --wine: #881a14; --paper: #f7f0e8; --line: #dcd3c2; }
+body[data-region="fingerlakes"] { --wine: #255c68; --paper: #f1f5f3; --line: #cad7d4; }
 
 /* ── Event choice hints ───────────────────────────────────────── */
 .event-choice {
