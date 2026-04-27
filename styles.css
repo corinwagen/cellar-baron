@@ -2083,7 +2083,17 @@ input[type="range"] {
   display: grid;
   grid-template-columns: 180px 1fr 130px;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
+  grid-template-rows: auto auto;
+}
+
+.bulk-sell-btn {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  padding: 3px 8px;
+  color: var(--muted);
+  justify-self: start;
+  margin-top: -2px;
 }
 
 .gantt-meta {

@@ -2023,6 +2023,12 @@ function calendarMonthNumber(month) {
   return ((START_MONTH_INDEX + month - 1) % 12) + 1;
 }
 
+function firstHarvestMonth(matureMonth) {
+  let m = matureMonth;
+  while (calendarMonthNumber(m) !== 9) m++;
+  return m;
+}
+
 function regionalTempRange(regionId, calendarMonth) {
   const climate = REGION_CLIMATE[regionId] || REGION_CLIMATE.napa;
   const index = calendarMonth - 1;
@@ -2101,7 +2107,10 @@ function createState() {
     actionsLeft: 3,
     staff: [],
     staffProgress: {},
-    staffMarket: ["ines", "asha", "marco"],
+    staffMarket: (() => {
+      const pool = [...STAFF_POOL].sort(() => 0.5 - Math.random()).slice(0, 3).map(p => p.id);
+      return pool;
+    })(),
     staffTraits: {},
     buildings: { block: 0, tank: 1, barrel: 1, line: 0, room: 0, lab: 0 },
     rows: makeRows(d.rows),
@@ -2390,7 +2399,9 @@ function repayDebt(amount) {
     lot.principal -= paid;
     remaining -= paid;
   });
-  ensureDebtLots(state);
+  // Update debt before filtering so ensureDebtLots doesn't see a gap and re-add a phantom draw
+  state.debtLots = state.debtLots.filter(lot => lot.principal > 0);
+  state.debt = Math.round(state.debtLots.reduce((sum, lot) => sum + lot.principal, 0));
   state.cash -= payment;
   state.influence += payment >= 50000 ? 2 : 1;
   log(state, `Repaid ${money(payment)} of winery debt.`);
@@ -3578,12 +3589,12 @@ function gameView() {
     ${topbar()}
     <main class="shell">
       ${tabs()}
-      ${negativeCashBanner()}
       ${eventPanel()}
       ${harvestReportPanel()}
       ${helpOpen ? tutorialPanel() : ""}
       <div class="tab-layout">
         <div class="tab-main">
+          ${negativeCashBanner()}
           ${tabPanel()}
         </div>
         <aside class="side-rail">
@@ -3832,7 +3843,7 @@ function estateDashboard() {
     ensureRowFields(row);
     const tone = young ? "muted" : row.disease > 60 ? "danger" : row.disease > 38 || row.health < 50 ? "warn" : "";
     const status = young
-      ? `young · crops ${monthDateLabel(row.matureMonth)}`
+      ? `young · first harvest ${monthDateLabel(firstHarvestMonth(row.matureMonth))}`
       : `health ${row.health} · disease ${row.disease}`;
     return `<div class="dash-row ${tone}"><span>${escapeHtml(row.name)}</span><em>${status}</em></div>`;
   });
@@ -3931,16 +3942,19 @@ function pnlPanel(forecast) {
       </div>
       <div class="pnl-block">
         <div class="pnl-title">Last Closed Month</div>
-        ${last && close ? `
-          ${pnlLine("Revenue", last.revenue, true)}
-          ${(close.tourIncome || close.clubIncome) ? pnlLine("Hospitality income", (close.tourIncome || 0) + (close.clubIncome || 0), true) : ""}
-          ${pnlLine("Fixed burn", -(last.fixedCost - (last.harvestLaborCost || 0)))}
-          ${pnlLine("Interest paid", -last.interestCost)}
-          ${close.harvestLaborCost ? pnlLine("Harvest labor", -close.harvestLaborCost) : ""}
-          ${pnlLineValue("Direct channel cases", `${close.directCases} cases`)}
+        ${last && close ? (() => {
+          const tourClub = (close.tourIncome || 0) + (close.clubIncome || 0);
+          const closedPnl = last.revenue + tourClub - last.fixedCost;
+          return `
+          ${pnlLine("Sales revenue", last.revenue, true)}
+          ${tourClub ? pnlLine("Tour & club income", tourClub, true) : ""}
+          ${pnlLine("Total costs (payroll, ops, interest, lease)", -last.fixedCost)}
+          ${last.interestCost ? pnlLineValue("  Interest included above", money(last.interestCost)) : ""}
+          ${pnlLineValue("Cases sold", `${close.directCases} direct`)}
           ${pnlLineValue("Case inventory", `${close.startingCases} → ${close.endingCases}`)}
-          <div class="pnl-line total"><span>Closed P&L</span><strong>${money(close.pnl)}</strong></div>
-        ` : `<div class="empty">Close a month to see actual P&L.</div>`}
+          <div class="pnl-line total"><span>Closed P&L</span><strong>${money(closedPnl)}</strong></div>
+        `;
+        })() : `<div class="empty">Close a month to see actual P&L.</div>`}
       </div>
     </div>
   `;
@@ -4126,7 +4140,7 @@ function vineyardPanel() {
           return `
             <div class="row-card">
               <div class="row-info">
-                <div class="row-name">${row.name}${young ? ` <em class="row-badge">young · crops ${monthDateLabel(row.matureMonth)}</em>` : ""}</div>
+                <div class="row-name">${row.name}${young ? ` <em class="row-badge">young · first harvest ${monthDateLabel(firstHarvestMonth(row.matureMonth))}</em>` : ""}</div>
                 <div class="row-pressure">${row.pressure || "normal"}</div>
               </div>
               <div class="row-meters">
@@ -4293,6 +4307,21 @@ function grapePurchasePrice(s) {
   return Math.round(180 * (v.quality || 1) * (r.costMod || 1) * (v.difficulty || 1) * 0.85);
 }
 
+function sellBulk(lotId, amount) {
+  if (!state || state.gameOver) return;
+  const lot = (state.vintages || []).find(v => v.id === lotId);
+  if (!lot || lot.bulkWine <= 0) return;
+  const ce = Math.min(amount, lot.bulkWine);
+  const pricePerCe = Math.round(state.price * 12 * 0.55);
+  const revenue = ce * pricePerCe;
+  lot.bulkWine -= ce;
+  state.cash += revenue;
+  state.totalRevenue += revenue;
+  log(state, `Sold ${ce} CE from ${lot.label} to a négociant at ${money(pricePerCe)}/CE — ${money(revenue)} total.`);
+  normalizeState(state);
+  render();
+}
+
 function buyGrapes() {
   if (!state || state.actionsLeft <= 0 || state.event || state.gameOver) return;
   const lotSize = 200;
@@ -4354,6 +4383,7 @@ function vintageCellarPanel() {
       ? `${monthsLeft}mo left (${aged}/${target})`
       : "";
 
+    const bulkSellPrice = Math.round(state.price * 12 * 0.55);
     return `
       <div class="gantt-row">
         <div class="gantt-meta">
@@ -4364,6 +4394,7 @@ function vintageCellarPanel() {
           ${barHtml}
         </div>
         <div class="gantt-status ${isReady || isPreagedStock ? "ready" : ""}">${statusText}</div>
+        ${hasBulk ? `<button class="ghost compact bulk-sell-btn" onclick="sellBulk('${lot.id}', 100)" title="Sell 100 CE to a négociant at ${money(bulkSellPrice)}/CE (55% of bottle rate)">Sell 100 CE bulk · ${money(bulkSellPrice * 100)}</button>` : ""}
       </div>
     `;
   });
@@ -4803,6 +4834,7 @@ window.unlockAdvancement = unlockAdvancement;
 window.resolveEvent = resolveEvent;
 window.dismissHarvestReport = dismissHarvestReport;
 window.buyGrapes = buyGrapes;
+window.sellBulk = sellBulk;
 window.chooseName = chooseName;
 window.skipNaming = skipNaming;
 window.toggleInsurance = toggleInsurance;
