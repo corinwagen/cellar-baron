@@ -106,6 +106,20 @@ const REGIONS = [
     yieldMod: 1.06,
     weather: { heat: 1.12, frost: 0.58, rain: 0.62, drought: 1.22 },
     varietals: ["tempranillo", "malbec", "cabernet"]
+  },
+  {
+    id: "fingerlakes",
+    name: "Finger Lakes",
+    blurb: "Cool-climate lake country where Riesling shines and Cab Franc can build a nimble regional following.",
+    tags: ["Cool climate", "Frost risk", "Wine trail"],
+    cash: 96000,
+    prestige: 18,
+    demand: 44,
+    costMod: 0.92,
+    yieldMod: 0.9,
+    qualityMod: 1.08,
+    weather: { heat: 0.58, frost: 1.55, rain: 1.12, drought: 0.62 },
+    varietals: ["riesling", "cabfranc"]
   }
 ];
 
@@ -135,6 +149,19 @@ const VARIETALS = {
     droughtSensitivity: 0.6,
     optimalWater: 38,
     blurb: "High price ceiling, slower to charm buyers, strong in warm regions."
+  },
+  cabfranc: {
+    name: "Cabernet Franc",
+    tags: ["Cool-climate red", "Aromatic"],
+    yield: 0.92,
+    quality: 1.07,
+    demand: 0.98,
+    difficulty: 1.05,
+    barrelNeed: 0.75,
+    diseaseRisk: 1.05,
+    droughtSensitivity: 0.85,
+    optimalWater: 48,
+    blurb: "Lighter, aromatic, and resilient in cool sites, with loyal restaurant appeal."
   },
   chardonnay: {
     name: "Chardonnay",
@@ -450,6 +477,12 @@ const REGION_CLIMATE = {
     avgLow: [32, 34, 40, 45, 52, 59, 65, 64, 57, 48, 39, 33],
     volatility: 10,
     humidity: 0.52
+  },
+  fingerlakes: {
+    avgHigh: [33, 35, 43, 56, 68, 76, 81, 79, 72, 60, 48, 38],
+    avgLow: [18, 19, 26, 37, 48, 57, 62, 61, 54, 43, 34, 25],
+    volatility: 9,
+    humidity: 0.76
   }
 };
 
@@ -2099,9 +2132,9 @@ const VINTAGE_NAMES = {
 const AGING_TARGETS = {
   sauvignon: 3, riesling: 3, chardonnay: 5, pinot: 6,
   merlot: 5, malbec: 6, cabernet: 8, shiraz: 7, gamay: 2,
-  nebbiolo: 10, tempranillo: 7
+  nebbiolo: 10, tempranillo: 7, cabfranc: 5
 };
-const REGION_AGING_BONUS = { bordeaux: 2, burgundy: 3, napa: 1, mosel: 0, mendoza: 0, barossa: 0, piedmont: 3, rioja: 1 };
+const REGION_AGING_BONUS = { bordeaux: 2, burgundy: 3, napa: 1, mosel: 0, mendoza: 0, barossa: 0, piedmont: 3, rioja: 1, fingerlakes: 0 };
 
 function rand() {
   return Math.random();
@@ -2193,7 +2226,7 @@ function selectedDifficulty() {
 const PHILOSOPHY_PROFILE = { natural: 20, industrial: -20, classic: 0 };
 const VARIETAL_PROFILE   = { gamay: 10, pinot: 8, riesling: 8, malbec: -2,
                              sauvignon: -2, chardonnay: -4, merlot: 0,
-                             cabernet: 0, shiraz: -6 };
+                             cabernet: 0, cabfranc: 4, shiraz: -6 };
 
 function initialChannelTrust() {
   return Object.keys(CHANNELS).reduce((acc, key) => {
@@ -2214,13 +2247,15 @@ function initialChannelDemand(regionDef, varietalDef, philosophyDef, difficultyD
     burgundy: { collector: 18, restaurant: 8, mass: -10 },
     barossa: { export: 15, distributor: 10, mass: 6 },
     piedmont: { collector: 16, restaurant: 7, export: 5 },
-    rioja: { export: 12, distributor: 8, restaurant: 4 }
+    rioja: { export: 12, distributor: 8, restaurant: 4 },
+    fingerlakes: { cellarDoor: 12, club: 7, restaurant: 5, collector: 4, mass: -6 }
   }[regionDef.id] || {};
   const varietalMods = {
     pinot: { collector: 9, restaurant: 5 },
     riesling: { collector: 10, restaurant: 3 },
     gamay: { cellarDoor: 7, collector: 5 },
     cabernet: { restaurant: 6, collector: 5 },
+    cabfranc: { restaurant: 7, cellarDoor: 4 },
     shiraz: { export: 8, mass: 5 },
     malbec: { export: 7, distributor: 5, mass: 5 },
     nebbiolo: { collector: 12, restaurant: 5, mass: -8 },
