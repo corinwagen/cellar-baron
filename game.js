@@ -1812,7 +1812,7 @@ const ACTIONS = [
     id: "bottle",
     name: "Bottle Cases",
     detail: "Bottle finished wine into sellable cases.",
-    seasons: ["Cellar", "Dormant", "Budbreak", "Flowering"],
+    seasons: ["Budbreak", "Flowering", "Veraison", "Harvest", "Cellar", "Dormant"],
     consequence: "Uses aged bulk wine and glass; creates sellable cases.",
     cost: 2400,
     apply: s => {
@@ -1889,9 +1889,17 @@ const ACTIONS = [
       recordArchiveSale(s, cases, revenue, "cellarDoor");
       s.morale += 3 + staffBonus(s, "hospitality");
       s.prestige += 1 + Math.floor(s.buildings.room / 2);
-      addChannelDemand(s, ["cellarDoor", "club"], 2 + staffBonus(s, "hospitality"));
+      if (cases > 0) {
+        addChannelDemand(s, ["cellarDoor"], 2 + staffBonus(s, "hospitality"));
+        addChannelDemand(s, ["club"], 1 + Math.floor(staffBonus(s, "hospitality") / 2));
+      } else {
+        addChannelDemand(s, ["cellarDoor"], 1);
+        addChannelTrust(s, "club", -1);
+      }
       s.fatigue += Math.max(1, Math.round(visits / 120) - staffBonus(s, "hospitality"));
-      log(s, `Hospitality hosted ${visits} guests and sold ${cases} premium cases.`);
+      log(s, cases > 0
+        ? `Hospitality hosted ${visits} guests and sold ${cases} premium cases.`
+        : `Hospitality hosted ${visits} guests, but there was no allocation to sell. Interest rose a little; club patience slipped.`);
     }
   },
   {
@@ -2090,6 +2098,16 @@ const RANDOM_WINERY_NAMES = [
   "Juniper Road Estate",
   "Old Mill Vintners"
 ];
+
+const CHANNEL_SOFT_CAPS = {
+  cellarDoor: 112,
+  club: 105,
+  restaurant: 98,
+  distributor: 94,
+  export: 96,
+  collector: 92,
+  mass: 88
+};
 
 const TABS = [
   { id: "overview", name: "Overview", tip: "A short operating brief and the highest-level estate signals." },
@@ -2311,7 +2329,7 @@ function createState() {
     region: r.id,
     varietal: setup.varietal,
     philosophy: p.id,
-    wineryName: setup.wineryName.trim() || "Unnamed Estate",
+    wineryName: setup.wineryName.trim() || RANDOM_WINERY_NAMES[randint(0, RANDOM_WINERY_NAMES.length - 1)],
     cash: Math.round(r.cash * d.cashMod),
     debt: d.debt,
     debtLots: d.debt ? [{ principal: d.debt, rate: baseDebtRate(d), label: "Opening debt" }] : [],
@@ -2456,7 +2474,9 @@ function ensureEconomy(s) {
   if (typeof s.creditLine !== "number") s.creditLine = d.creditLine;
   if (typeof s.leaseCost !== "number") s.leaseCost = d.rent;
   if (typeof s.debt !== "number") s.debt = d.debt;
-  if (!s.wineryName) s.wineryName = "Unnamed Estate";
+  if (!s.wineryName || s.wineryName === "Unnamed Estate") {
+    s.wineryName = RANDOM_WINERY_NAMES[randint(0, RANDOM_WINERY_NAMES.length - 1)];
+  }
   if (typeof s.profile !== "number") s.profile = 50;
   ensureVintages(s);
   ensureDebtLots(s);
@@ -2759,7 +2779,15 @@ function ensureChannelsShape(s) {
 function addChannelDemand(s, channels, amount) {
   ensureChannels(s);
   channels.forEach(key => {
-    if (key in s.channelDemand) s.channelDemand[key] = clamp(s.channelDemand[key] + amount, 0, 130);
+    if (!(key in s.channelDemand)) return;
+    const current = s.channelDemand[key];
+    const cap = marketDemandCeiling(s, key);
+    const damped = amount > 0 && current >= cap
+      ? Math.max(0, Math.floor(amount * 0.25))
+      : amount > 0 && current >= cap - 12
+      ? Math.max(1, Math.ceil(amount * 0.5))
+      : amount;
+    s.channelDemand[key] = clamp(current + damped, 0, 130);
   });
   s.demand = channelHeadlineDemand(s);
 }
@@ -2786,6 +2814,48 @@ function channelNetPrice(order, releasePrice) {
 
 function orderRetailCeiling(order) {
   return order.retailCeiling ?? order.maxPrice ?? 0;
+}
+
+function currentReleaseScore(s) {
+  ensureArchive(s);
+  const active = s.archive.find(entry => entry.casesProduced > entry.casesSold && entry.score);
+  if (active) return active.score;
+  const recent = s.archive.find(entry => entry.score);
+  if (recent) return recent.score;
+  return calcCriticScore(s.currentVintageScore || 3, s.quality || 60);
+}
+
+function marketDemandCeiling(s, channel) {
+  const score = currentReleaseScore(s);
+  const base = CHANNEL_SOFT_CAPS[channel] || 95;
+  const scoreMod = Math.round((score - 88) * 2.1);
+  const prestigeMod = Math.floor(Math.max(0, (s.prestige || 0) - 45) / 8);
+  const roomMod = channel === "cellarDoor" ? (s.buildings.room || 0) * 3 : 0;
+  const clubMod = channel === "club" ? staffBonus(s, "clubIncome") * 3 : 0;
+  const collectorPenalty = channel === "collector" && score < 90 ? -8 : 0;
+  return clamp(base + scoreMod + prestigeMod + roomMod + clubMod + collectorPenalty, 48, 122);
+}
+
+function applyChannelDemandDrift(s, monthlyCasesSold) {
+  ensureChannels(s);
+  const score = currentReleaseScore(s);
+  Object.keys(CHANNELS).forEach(key => {
+    const cap = marketDemandCeiling(s, key);
+    if (s.channelDemand[key] > cap) {
+      const excess = s.channelDemand[key] - cap;
+      s.channelDemand[key] = Math.max(cap, s.channelDemand[key] - Math.max(1, Math.ceil(excess * 0.22)));
+    }
+    if (monthlyCasesSold <= 0) {
+      s.channelDemand[key] -= key === "cellarDoor" || key === "club" ? 3 : 2;
+      if (key === "club" || key === "restaurant") s.channelTrust[key] -= 1;
+    } else if (monthlyCasesSold < 20 && s.channelDemand[key] > 75) {
+      s.channelDemand[key] -= 1;
+    }
+    if (score < 86 && ["collector", "restaurant", "club"].includes(key)) s.channelDemand[key] -= 1;
+    s.channelDemand[key] = clamp(Math.round(s.channelDemand[key]), 0, 130);
+    s.channelTrust[key] = clamp(Math.round(s.channelTrust[key]), 0, 100);
+  });
+  s.demand = channelHeadlineDemand(s);
 }
 
 function baseLotFlawRisk(s, lot) {
@@ -3826,7 +3896,8 @@ function monthlyTick(s) {
   }
 
   s.marketHeat = clamp(s.marketHeat + randint(-6, 8) + Math.floor((s.demand - 55) / 16), 10, 100);
-  s.demand = clamp(s.demand + Math.floor((s.marketHeat - 50) / 18) - Math.max(0, Math.floor((s.price - 34) / 9)), 0, 130);
+  const marketDemandDelta = Math.floor((s.marketHeat - 50) / 18) - Math.max(0, Math.floor((s.price - 34) / 9));
+  if (marketDemandDelta) addChannelDemand(s, Object.keys(CHANNELS), marketDemandDelta);
   const qualityPressure = s.quality > 100 ? 2 : s.quality > 85 ? 1 : 0;
   const load = loadPressure(s);
   s.quality = clamp(s.quality - 1 + Math.floor(s.morale / 55) - qualityPressure - Math.floor(load / 8), 0, 120);
@@ -3835,7 +3906,7 @@ function monthlyTick(s) {
   const fatigueClear = 4 + staffBonus(s, "finance") + staffBonus(s, "bottling") + (s.season === "Dormant" ? 4 : 0);
   s.fatigue = clamp((s.fatigue || 0) + Math.max(0, load - 4) - fatigueClear, 0, 100);
   s.morale = clamp(s.morale - 2 + Math.floor(s.cash / 160000) + traitPassive.morale + frictionDelta - Math.floor((s.fatigue || 0) / 28) - Math.floor(load / 9), 0, 100);
-  s.demand = clamp(s.demand + traitPassive.demand, 0, 130);
+  if (traitPassive.demand) addChannelDemand(s, ["cellarDoor", "club", "restaurant"], traitPassive.demand);
 
   Object.keys(s.marketMods).forEach(key => {
     s.marketMods[key] -= 1;
@@ -3852,6 +3923,9 @@ function monthlyTick(s) {
     s.morale -= 5;
     log(s, credit >= overdraft ? `The bank covered an overdraft at ${(rate * 100).toFixed(1)}% monthly. Debt rose and confidence fell.` : "The credit line is tapped out. Uncovered bills are damaging the estate.");
   }
+
+  const previousSold = s.history.length ? s.history[s.history.length - 1].totalSold : 0;
+  applyChannelDemandDrift(s, Math.max(0, s.totalSold - previousSold));
 
   normalizeState(s);
   const totalCloseCost = costs.total + (harvestResult?.laborCost || 0);
@@ -5002,7 +5076,8 @@ function actionInventoryNote(action, s) {
     }
   }
   if (action.id === "cellar" && totalGrapes(s) === 0) return { text: "No grapes — cellar quality work only", hard: false };
-  if ((action.id === "sales" || action.id === "hospitality") && availableCases(s) === 0) return { text: "No free cases — generates demand only", hard: false };
+  if (action.id === "sales" && availableCases(s) === 0) return { text: "No free cases — courts buyers only", hard: false };
+  if (action.id === "hospitality" && availableCases(s) === 0) return { text: "No allocation — weak demand, club patience risk", hard: false };
   return null;
 }
 
