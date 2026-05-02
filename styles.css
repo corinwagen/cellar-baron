@@ -1126,9 +1126,9 @@ button:disabled {
 
 .action-card {
   display: grid;
-  gap: 5px;
-  min-height: 104px;
-  padding: 9px;
+  gap: 4px;
+  min-height: 76px;
+  padding: 8px 9px;
   text-align: left;
 }
 

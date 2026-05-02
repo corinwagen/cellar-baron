@@ -58,9 +58,9 @@ const REGIONS = [
     name: "Burgundy",
     blurb: "The prestige ceiling is exceptional, but land is expensive, appellation rules demand barrel aging, and buyers want patience.",
     tags: ["Prestige ceiling", "Barrel required", "High cost"],
-    cash: 95000,
+    cash: 110000,
     prestige: 32,
-    demand: 38,
+    demand: 50,
     costMod: 1.28,
     qualityMod: 1.22,
     weather: { heat: 0.7, frost: 1.3, rain: 1.15, drought: 0.55 },
@@ -1805,7 +1805,7 @@ const ACTIONS = [
       }
       s.quality += 2 + s.buildings.barrel + staffBonus(s, "cellar");
       s.prestige += Math.max(1, Math.floor((s.buildings.barrel * varietal(s).barrelNeed) / 2));
-      s.fatigue += 1;
+      s.fatigue += 3;
     }
   },
   {
@@ -1868,6 +1868,7 @@ const ACTIONS = [
       addChannelDemand(s, ["restaurant", "distributor", "export", "collector"], 1 + staffBonus(s, "sales"));
       addChannelDemand(s, ["cellarDoor"], 2 + staffBonus(s, "brand"));
       if (rand() < 0.75) addOrder(s);
+      s.fatigue += 1;
       log(s, `Direct channels sold ${direct.cases} cases for ${money(direct.revenue)}.`);
     }
   },
@@ -1915,6 +1916,7 @@ const ACTIONS = [
       s.influence += 2;
       addChannelDemand(s, ["distributor", "export", "mass"], 1);
       addChannelDemand(s, ["collector"], -1);
+      s.fatigue += 1;
       log(s, `Finance found ${money(gain)} in grants, rebates, and better terms.`);
     }
   },
@@ -3012,7 +3014,10 @@ function directSales(s) {
   const demandMod = profileDemandMod(s);
   const directDemand = s.channelDemand.cellarDoor * 0.75 + s.channelDemand.club * 0.15 + s.channelDemand.collector * 0.10;
   const directTrust = (s.channelTrust.cellarDoor * 0.75 + s.channelTrust.club * 0.15 + s.channelTrust.collector * 0.10) / 58;
-  const desirability = (directDemand * demandMod * 0.9 + s.prestige * 0.8 + s.quality * 0.7 + s.marketHeat * 0.6) / 4;
+  // Demand gates sales volume multiplicatively: low demand means few buyers regardless of quality/prestige
+  const qualitySignal = (s.prestige * 0.8 + s.quality * 0.7 + s.marketHeat * 0.6) / 3;
+  const demandScale = clamp(directDemand * demandMod / 65, 0.05, 2.2);
+  const desirability = qualitySignal * demandScale;
   const priceResistance = Math.pow(s.price / 28, 1.55);
   const capacity = (70 + s.buildings.room * 80 + staffBonus(s, "sales") * 45 + staffBonus(s, "brand") * 55) * clamp(directTrust, 0.65, 1.35);
   const rawCases = Math.max(0, Math.floor((capacity * desirability) / (65 * priceResistance)));
@@ -3423,6 +3428,11 @@ function applyPassiveStaffEffects(s) {
 
   // Priya pulls profile toward commercial
   if (s.staff.includes("priya")) s.profile = (s.profile ?? 50) - 1;
+
+  // House style drifts toward center without active choices — extremes require ongoing commitment
+  const profileNow = s.profile ?? 50;
+  if (profileNow > 70) s.profile = Math.max(70, profileNow - 0.5);
+  else if (profileNow < 30) s.profile = Math.min(30, profileNow + 0.5);
 
   // Social media prestige drain: if prestige above threshold, pull it back
   s.staff.forEach(id => {
@@ -3907,6 +3917,8 @@ function monthlyTick(s) {
   s.fatigue = clamp((s.fatigue || 0) + Math.max(0, load - 4) - fatigueClear, 0, 100);
   s.morale = clamp(s.morale - 2 + Math.floor(s.cash / 160000) + traitPassive.morale + frictionDelta - Math.floor((s.fatigue || 0) / 28) - Math.floor(load / 9), 0, 100);
   if (traitPassive.demand) addChannelDemand(s, ["cellarDoor", "club", "restaurant"], traitPassive.demand);
+  // Prestige decays without market presence — fame requires buyers
+  if (s.demand < 30 && s.prestige > 20) s.prestige = Math.max(20, s.prestige - 1);
 
   Object.keys(s.marketMods).forEach(key => {
     s.marketMods[key] -= 1;
@@ -4063,7 +4075,7 @@ function applyWeather(s) {
 
     switch (picked.key) {
       case "rain":
-        row.disease = clamp(row.disease + Math.round((8 + randint(0, 6)) * diseaseRisk * philosophy().risk * lab * shield), 0, 100);
+        row.disease = clamp(row.disease + Math.round((11 + randint(0, 8)) * diseaseRisk * philosophy().risk * lab * shield), 0, 100);
         row.water   = clamp(row.water   + randint(8, 16), 0, 100);
         row.pressure = "wet canopy";
         break;
@@ -4092,7 +4104,7 @@ function applyWeather(s) {
     }
 
     // High disease bleeds health over time
-    if (row.disease > 60) row.health = clamp(row.health - Math.floor((row.disease - 60) / 18), 8, 100);
+    if (row.disease > 45) row.health = clamp(row.health - Math.floor((row.disease - 45) / 14), 8, 100);
   });
 
   if (picked.key === "clear") {
@@ -4691,10 +4703,39 @@ function overviewPanel() {
   `;
 }
 
+function managementLoadBreakdown(s) {
+  const accepted = s.orders.filter(o => o.accepted).length;
+  const unaccepted = s.orders.length - accepted;
+  const debtLoad = s.debt > 0 ? Math.ceil(s.debt / 50000) : 0;
+  const investorLoad = s.investor?.pressureMonths > 0 ? 3 : 0;
+  const clubLoad = staffBonus(s, "clubIncome") > 0 ? 2 : 0;
+  const buildingLoad = Math.round(Object.values(s.buildings || {}).reduce((sum, level) => sum + level, 0) * 0.8);
+  const lines = [
+    `Vineyard blocks: ${Math.round(s.rows.length * 1.5)}`,
+    `Buildings: ${buildingLoad}`,
+    `Accepted orders: ${Math.round(accepted * 2.2)}`,
+    `Staff: ${Math.round(s.staff.length * 0.8)}`,
+    unaccepted > 0 ? `Pending orders: ${Math.round(unaccepted * 0.6)}` : null,
+    debtLoad > 0 ? `Debt: ${debtLoad}` : null,
+    investorLoad > 0 ? `Investor pressure: ${investorLoad}` : null,
+    clubLoad > 0 ? `Wine club: ${clubLoad}` : null,
+  ].filter(Boolean);
+  return lines.join(" · ");
+}
+
 function operationsPanel() {
   const load = managementLoad(state);
   const capacity = organizationCapacity(state);
   const pressure = Math.max(0, load - capacity);
+  const capLines = [
+    `Base: 9`,
+    staffBonus(state, "finance") > 0 ? `Finance staff: +${staffBonus(state, "finance") * 3}` : null,
+    staffBonus(state, "bottling") > 0 ? `Bottling staff: +${staffBonus(state, "bottling") * 2}` : null,
+    staffBonus(state, "sales") > 0 ? `Sales staff: +${Math.round(staffBonus(state, "sales") * 1.5)}` : null,
+    (state.buildings.lab || 0) > 0 ? `Lab: +${(state.buildings.lab || 0) * 2}` : null,
+    (state.buildings.line || 0) > 0 ? `Bottling line: +${state.buildings.line || 0}` : null,
+    state.marketMods?.winterPlan > 0 ? `Winter plan: +2` : null,
+  ].filter(Boolean).join(" · ");
   return `
     <section class="panel operations-panel">
       <div class="panel-head">
@@ -4702,8 +4743,8 @@ function operationsPanel() {
         <span class="small">${pressure > 0 ? `${pressure} over capacity` : "within capacity"}</span>
       </div>
       <div class="two-col">
-        <div class="stat-box"><span>Management load</span><strong>${load}</strong><em>${state.orders.filter(o => o.accepted).length} active obligations</em></div>
-        <div class="stat-box"><span>Org capacity</span><strong>${capacity}</strong><em>finance, ops, sales, lab</em></div>
+        <div class="stat-box"><span>Management load</span><strong>${load}</strong><em>${managementLoadBreakdown(state)}</em></div>
+        <div class="stat-box"><span>Org capacity</span><strong>${capacity}</strong><em>${capLines}</em></div>
         <div class="stat-box"><span>Fatigue</span><strong>${state.fatigue || 0}/100</strong><em>high fatigue reduces execution</em></div>
         <div class="stat-box"><span>Quality ceiling</span><strong>${qualityCeiling(state, state.currentVintageScore || 3)} pts</strong><em>site + people + infrastructure</em></div>
       </div>
@@ -5111,7 +5152,6 @@ function actionsPanel() {
           return `
             <button class="action-card ${available ? "" : "offseason"}" onclick="useAction('${action.id}')" ${disabled ? "disabled" : ""}>
               <b>${actionName(action, state)}</b>
-              <span>${actionDetail(action, state)}</span>
               <span class="effect">${effectText}</span>
               <em>${action.navigateTab ? "Open Estate" : `${money(cost)} · ${spendLabel}`}</em>
             </button>
