@@ -591,7 +591,7 @@ const STAFF_BIOS = {
   margot:  { hometown: "Beaune, Burgundy",     bio: "Spent fifteen years managing subscription programs for a Rhône négociant before a sabbatical confirmed she preferred smaller operations. She knows which members will leave and which will stay forever." },
   oscar:   { hometown: "Roussillon, France",   bio: "Apprenticed in natural cellars in Roussillon and Georgia before settling into a philosophy of minimal intervention and maximal attention. His wines are discussed; his methods, debated." },
   rodrigo: { hometown: "Ribera del Duero, Spain", bio: "Managed yield programs across some of Spain's largest cooperative estates before moving to private labels. He is unsentimental about quality ceilings and very good at pushing tonnage." },
-  nadia:   { hometown: "Zagreb, Croatia",      bio: "Built her logistics career coordinating cold-chain shipments across the Adriatic before moving into wine supply. She has never missed a delivery window and considers it a point of personal pride." },
+  nadia:   { hometown: "Rijeka, Croatia",       bio: "Built her logistics career coordinating cold-chain shipments across the Adriatic before moving into wine supply. She has never missed a delivery window and considers it a point of personal pride." },
 };
 
 const STAFF_CAPACITY_KEY = {
@@ -2981,7 +2981,6 @@ let setupMode = "start"; // "start" | "custom"
 let activeTab = "overview";
 let helpOpen = true;
 let guideStep = null;
-let staffPortraitOpen = null;
 
 const SETUP_STEPS = [
   { key: "region", title: "Choose Region", kicker: "Where the estate lives shapes weather, prestige, land cost, and grape options." },
@@ -6109,7 +6108,7 @@ function gameView() {
         </aside>
       </div>
     </main>
-    ${staffPortraitOpen ? staffPortraitModal() : state.gameOver ? gameOverModal() : (guideStep !== null && guideStep < GUIDE_PAGES.length ? guideModal() : (!state.introSeen ? introModal() : (state.pendingNaming ? namingModal() : "")))}
+    ${state.gameOver ? gameOverModal() : (guideStep !== null && guideStep < GUIDE_PAGES.length ? guideModal() : (!state.introSeen ? introModal() : (state.pendingNaming ? namingModal() : "")))}
   `;
 }
 
@@ -7377,7 +7376,19 @@ function staffView(person, employed) {
     <div class="staff">
       <div class="staff-head">
         <div class="staff-id">
-          <img src="assets/${person.portrait || person.id}.png" alt="${person.name}" class="staff-portrait-thumb" onclick="staffPortraitOpen = '${person.id}'; render()" onerror="this.style.display='none'" title="View ${person.name}">
+          <div class="portrait-hover-wrap">
+            <img src="assets/${person.portrait || person.id}.png" alt="${person.name}" onerror="this.style.display='none'">
+            ${(() => { const bio = STAFF_BIOS[person.id] || {}; const portrait = person.portrait || person.id; return `
+            <div class="portrait-popup">
+              <img class="portrait-popup-img" src="assets/${portrait}.png" alt="${person.name}" onerror="this.style.display='none'">
+              <div class="portrait-popup-info">
+                <strong class="portrait-name">${person.name}</strong>
+                <span class="portrait-role">${person.role}</span>
+                ${bio.hometown ? `<span class="portrait-hometown">${bio.hometown}</span>` : ""}
+                ${bio.bio ? `<p class="portrait-bio">${bio.bio}</p>` : ""}
+              </div>
+            </div>`; })()}
+          </div>
           <strong>${person.name}</strong>
         </div>
         <span class="tag">${person.role}</span>
@@ -7525,8 +7536,9 @@ function introModal() {
     <div class="modal">
       <div class="modal-card intro-modal-card">
         <h2>Welcome to ${escapeHtml(state.wineryName)}</h2>
-        <p class="intro-scene">${escapeHtml(state.wineryName)} has been trading for a few years under the previous operator: long enough to have a name, short enough that nothing is fixed. They left behind ${money(state.debt)} in outstanding debt, a monthly lease of ${money(state.leaseCost)}, and a cellar with ${state.inventory.cases} bottled cases from the inherited vintage alongside ${legacyVintage?.bulkWine ?? 0} case-equivalents still aging in tank. That vintage rated ${vintageScoreStars(score)}: ${scoreWord}.</p>
-        <p class="intro-scene">You've followed the business for years and always dreamed of running a winery, so when the chance opened up to take the helm you accepted. It won't be easy to turn ${escapeHtml(state.wineryName)} around, though: capital is tight, there aren't any reliable senior staff, and the wine itself isn't great, and you can only do so many jobs yourself before burning out. Do you have what it takes to navigate the risk and complexity of scaling a winery and building a business that can last over the next five seasons?</p>
+        <p class="intro-scene">${escapeHtml(state.wineryName)} has been trading for about a decade: long enough to have a name, short enough that nothing is fixed.</p>
+        <p class="intro-scene">The previous owners left behind ${money(state.debt)} in outstanding debt, a monthly lease of ${money(state.leaseCost)}, and a cellar with ${state.inventory.cases} bottled cases from the inherited vintage alongside ${legacyVintage?.bulkWine ?? 0} case-equivalents still aging in tank. That vintage rated ${vintageScoreStars(score)}: ${scoreWord}.</p>
+        <p class="intro-scene">You've always dreamed of running a winery, so when the chance opened up to take the helm you accepted. It won't be easy to turn ${escapeHtml(state.wineryName)} around, though: capital is tight, there aren't any reliable senior staff, the wine itself isn't great yet, and you can only do so many jobs yourself before burning out. Do you have what it takes to navigate the risk and complexity of scaling a winery and building a business that can last over the next five seasons?</p>
         <div class="intro-grid">
           <div class="intro-section">
             <div class="intro-head">Starting Position</div>
@@ -7557,27 +7569,6 @@ function introModal() {
 function dismissIntro() {
   state.introSeen = true;
   render();
-}
-
-function staffPortraitModal() {
-  const person = STAFF_POOL.find(p => p.id === staffPortraitOpen);
-  if (!person) return "";
-  const bio = STAFF_BIOS[person.id] || {};
-  const portrait = person.portrait || person.id;
-  return `
-    <div class="modal" onclick="staffPortraitOpen = null; render()">
-      <div class="staff-portrait-card" onclick="event.stopPropagation()">
-        <button class="ghost compact portrait-close" onclick="staffPortraitOpen = null; render()">✕</button>
-        <img class="portrait-large" src="assets/${portrait}.png" alt="${person.name}" onerror="this.style.display='none'">
-        <div class="portrait-info">
-          <strong class="portrait-name">${person.name}</strong>
-          <span class="portrait-role">${person.role}</span>
-          ${bio.hometown ? `<span class="portrait-hometown">${bio.hometown}</span>` : ""}
-          ${bio.bio ? `<p class="portrait-bio">${bio.bio}</p>` : ""}
-        </div>
-      </div>
-    </div>
-  `;
 }
 
 function gameOverModal() {
