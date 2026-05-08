@@ -577,10 +577,27 @@ const REGION_CLIMATE = {
 
 const SOUTHERN_HEMISPHERE_REGIONS = new Set(["mendoza", "barossa"]);
 
+const STAFF_BIOS = {
+  ines:    { hometown: "Alentejo, Portugal",   bio: "Grew up pruning her family's cork oaks before moving to wine at twenty-two. She believes every decision made in the vineyard is either earned or apologized for at harvest." },
+  marco:   { hometown: "Beaune, Burgundy",     bio: "Trained under a Burgundian négociant and spent six years coopering before ever touching a barrel as a winemaker. He has never bottled a wine he thought was quite ready." },
+  asha:    { hometown: "Cape Town, South Africa", bio: "Built her distributor network hustling South African exports into skeptical European markets in her mid-twenties. She knows which buyers take lunch seriously and which don't." },
+  beatrice:{ hometown: "Singapore",            bio: "Ran front-of-house at a two-Michelin-star restaurant before deciding the wine cellar was more interesting than the dining room. Every visitor leaves knowing more than they expected." },
+  omar:    { hometown: "São Paulo, Brazil",    bio: "Spent a decade restructuring distressed agricultural businesses across South America before pivoting to wine estates. He has seen more than one beautiful winery go under, and intends to remember why." },
+  lucy:    { hometown: "Paris, France",        bio: "Cut her teeth at a Paris luxury agency before deciding that wine was the only product still worth romanticizing properly. Her editorial instincts are impeccable; her expense reports, less so." },
+  samir:   { hometown: "Ahmedabad, India",     bio: "Engineered bottling lines across three continents before the romance of estate wine wore him down. He communicates in throughput figures and maintenance windows, and always gets results." },
+  priya:   { hometown: "Kochi, India",         bio: "Started a food blog at nineteen that became one of the most-read in South Asia. She understands what makes people share something and what makes them feel seen." },
+  felix:   { hometown: "Lyon, France",         bio: "Former literature teacher who discovered he preferred the history in a glass to the history in a book. His estate tours run long and nobody complains." },
+  dr_chen: { hometown: "Hangzhou, China",      bio: "Completed her doctoral research on vine-fungal interaction at UC Davis before returning to field work. She can read disease pressure in a leaf and water stress in a shoot tip." },
+  margot:  { hometown: "Beaune, Burgundy",     bio: "Spent fifteen years managing subscription programs for a Rhône négociant before a sabbatical confirmed she preferred smaller operations. She knows which members will leave and which will stay forever." },
+  oscar:   { hometown: "Roussillon, France",   bio: "Apprenticed in natural cellars in Roussillon and Georgia before settling into a philosophy of minimal intervention and maximal attention. His wines are discussed; his methods, debated." },
+  rodrigo: { hometown: "Ribera del Duero, Spain", bio: "Managed yield programs across some of Spain's largest cooperative estates before moving to private labels. He is unsentimental about quality ceilings and very good at pushing tonnage." },
+  nadia:   { hometown: "Zagreb, Croatia",      bio: "Built her logistics career coordinating cold-chain shipments across the Adriatic before moving into wine supply. She has never missed a delivery window and considers it a point of personal pride." },
+};
+
 const STAFF_CAPACITY_KEY = {
-  ines: "vineyard", dr_chen: "vineyard",
+  ines: "vineyard", dr_chen: "vineyard", rodrigo: "vineyard",
   marco: "cellar", oscar: "cellar",
-  samir: "ops",
+  samir: "ops", nadia: "ops",
   beatrice: "hospitality", felix: "hospitality",
   asha: "sales", lucy: "sales", priya: "sales", margot: "sales",
 };
@@ -2964,6 +2981,7 @@ let setupMode = "start"; // "start" | "custom"
 let activeTab = "overview";
 let helpOpen = true;
 let guideStep = null;
+let staffPortraitOpen = null;
 
 const SETUP_STEPS = [
   { key: "region", title: "Choose Region", kicker: "Where the estate lives shapes weather, prestige, land cost, and grape options." },
@@ -4097,9 +4115,11 @@ function monthlyOperationalCapacity(s) {
   const has = id => (s.staff || []).includes(id);
   if (has("ines")) cap.vineyard += 1;
   if (has("dr_chen")) cap.vineyard += 1;
+  if (has("rodrigo")) cap.vineyard += 1;
   if (has("marco")) cap.cellar += 1;
   if (has("oscar")) cap.cellar += 1;
   if (has("samir")) cap.ops += 1;
+  if (has("nadia")) cap.ops += 1;
   if (has("beatrice")) cap.hospitality += 1;
   if (has("felix")) cap.hospitality += 1;
   ["asha", "lucy", "priya", "margot"].forEach(id => { if (has(id)) cap.sales += 1; });
@@ -6089,7 +6109,7 @@ function gameView() {
         </aside>
       </div>
     </main>
-    ${state.gameOver ? gameOverModal() : (guideStep !== null && guideStep < GUIDE_PAGES.length ? guideModal() : (!state.introSeen ? introModal() : (state.pendingNaming ? namingModal() : "")))}
+    ${staffPortraitOpen ? staffPortraitModal() : state.gameOver ? gameOverModal() : (guideStep !== null && guideStep < GUIDE_PAGES.length ? guideModal() : (!state.introSeen ? introModal() : (state.pendingNaming ? namingModal() : "")))}
   `;
 }
 
@@ -7357,7 +7377,7 @@ function staffView(person, employed) {
     <div class="staff">
       <div class="staff-head">
         <div class="staff-id">
-          <img src="assets/${person.portrait || person.id}.png" alt="${person.name}" onerror="this.style.display='none'">
+          <img src="assets/${person.portrait || person.id}.png" alt="${person.name}" class="staff-portrait-thumb" onclick="staffPortraitOpen = '${person.id}'; render()" onerror="this.style.display='none'" title="View ${person.name}">
           <strong>${person.name}</strong>
         </div>
         <span class="tag">${person.role}</span>
@@ -7537,6 +7557,27 @@ function introModal() {
 function dismissIntro() {
   state.introSeen = true;
   render();
+}
+
+function staffPortraitModal() {
+  const person = STAFF_POOL.find(p => p.id === staffPortraitOpen);
+  if (!person) return "";
+  const bio = STAFF_BIOS[person.id] || {};
+  const portrait = person.portrait || person.id;
+  return `
+    <div class="modal" onclick="staffPortraitOpen = null; render()">
+      <div class="staff-portrait-card" onclick="event.stopPropagation()">
+        <button class="ghost compact portrait-close" onclick="staffPortraitOpen = null; render()">✕</button>
+        <img class="portrait-large" src="assets/${portrait}.png" alt="${person.name}" onerror="this.style.display='none'">
+        <div class="portrait-info">
+          <strong class="portrait-name">${person.name}</strong>
+          <span class="portrait-role">${person.role}</span>
+          ${bio.hometown ? `<span class="portrait-hometown">${bio.hometown}</span>` : ""}
+          ${bio.bio ? `<p class="portrait-bio">${bio.bio}</p>` : ""}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function gameOverModal() {
