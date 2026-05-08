@@ -97,7 +97,7 @@ const REGIONS = [
   {
     id: "rioja",
     name: "Rioja",
-    blurb: "Spain's temperate wine heartland — reliable sun, drought-hardy Tempranillo, accessible costs, and a loyal export market.",
+    blurb: "Spain's temperate wine heartland: reliable sun, drought-hardy Tempranillo, accessible costs, and a loyal export market.",
     tags: ["Accessible costs", "Export demand", "Drought resilient"],
     cash: 102000,
     prestige: 20,
@@ -265,7 +265,7 @@ const VARIETALS = {
     diseaseRisk: 1.05,
     droughtSensitivity: 0.9,
     optimalWater: 46,
-    blurb: "Uncompromising — demands long barrel time and a patient market, but delivers the highest prestige ceiling in the cellar."
+    blurb: "Uncompromising: demands long barrel time and a patient market, but delivers the highest prestige ceiling in the cellar."
   },
   tempranillo: {
     name: "Tempranillo",
@@ -278,7 +278,7 @@ const VARIETALS = {
     diseaseRisk: 0.82,
     droughtSensitivity: 0.62,
     optimalWater: 42,
-    blurb: "Spain's signature red — reliable in heat, graceful with age, and easy to sell at a fair price."
+    blurb: "Spain's signature red, reliable in heat, graceful with age, and easy to sell at a fair price."
   }
 };
 
@@ -372,6 +372,49 @@ const DIFFICULTIES = [
   }
 ];
 
+const SUGGESTED_STARTS = [
+  {
+    label: "Easy",
+    title: "Barossa Shiraz",
+    description: "High yield, heat-tolerant fruit, strong export demand. Forgiving cashflow and no long aging required.",
+    region: "barossa",
+    varietal: "shiraz",
+    philosophy: "classic",
+    difficulty: "village",
+    wineryName: "Sunridge Estate"
+  },
+  {
+    label: "Standard",
+    title: "Rioja Tempranillo",
+    description: "Balanced across all dimensions: heat-tolerant, age-worthy fruit, accessible costs, and loyal export buyers.",
+    region: "rioja",
+    varietal: "tempranillo",
+    philosophy: "classic",
+    difficulty: "estate",
+    wineryName: "Casa del Valle"
+  },
+  {
+    label: "Challenging",
+    title: "Napa Cabernet",
+    description: "Grand cru costs and expectations in a proven, heat-friendly region. Prestige buyers demand perfection, but at least the growing conditions are on your side.",
+    region: "napa",
+    varietal: "cabernet",
+    philosophy: "classic",
+    difficulty: "grand",
+    wineryName: "Strata Ridge"
+  },
+  {
+    label: "Expert",
+    title: "Piedmont Nebbiolo",
+    description: "Demanding grape, long barrel aging, thin starting margins. The highest prestige ceiling, but patience is mandatory.",
+    region: "piedmont",
+    varietal: "nebbiolo",
+    philosophy: "classic",
+    difficulty: "grand",
+    wineryName: "Langhe Domaine"
+  }
+];
+
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const START_YEAR = 2027;
 const START_MONTH_INDEX = 2;
@@ -435,7 +478,35 @@ const EVENT_RULES = {
   "rioja-consejo": { cooldown: 14 },
   "barossa-old-vine": { max: 1 },
   "natural-wine-fair": { cooldown: 14 },
-  "supermarket-pitch": { cooldown: 18 }
+  "supermarket-pitch": { cooldown: 18 },
+  "organic-cert": { cooldown: 24, max: 1 },
+  "barrel-taint": { cooldown: 16 },
+  "staff-poaching": { cooldown: 20 },
+  "equipment-fault": { cooldown: 12 },
+  "harvest-labor": { cooldown: 14 },
+  "prestige-dinner": { cooldown: 14 },
+  "cellar-heat": { cooldown: 16 },
+  "used-barrels": { cooldown: 20 },
+  "cork-tca": { cooldown: 18 },
+  "expansion-loan": { cooldown: 30, max: 2 },
+  "fingerlakes-comp": { cooldown: 18 },
+  "napa-earthquake": { cooldown: 30 },
+  "rioja-pavilion": { cooldown: 20 },
+  "critic-pilgrimage": { cooldown: 30, max: 2 },
+  "auction-house": { cooldown: 24, max: 2 },
+  "three-star-placement": { cooldown: 999, max: 1 },
+  "cult-phenomenon": { cooldown: 999, max: 1 },
+  "vertical-collector": { cooldown: 24 },
+  "secondary-market-record": { cooldown: 20, max: 3 },
+  "three-star-delisting": { cooldown: 999, max: 1 },
+  "fall-from-grace": { cooldown: 24, max: 2 },
+  "supermarket-renegotiation": { cooldown: 16 },
+  "distributor-ultimatum": { cooldown: 20 },
+  "brand-fatigue": { cooldown: 30, max: 2 },
+  "mouse-taint": { cooldown: 22 },
+  "vine-disease": { cooldown: 999, max: 1 },
+  "fingerlakes-icewine": { cooldown: 30, max: 2 },
+  "mendoza-inflacion": { cooldown: 24, max: 2 }
 };
 
 const ACTION_CAPACITY = {
@@ -510,6 +581,7 @@ const STAFF_POOL = [
   {
     id: "ines",
     name: "Ines Duarte",
+    gender: "f",
     role: "Vineyard",
     salary: 5200,
     traits: ["Canopy tactician", "Hates shortcuts"],
@@ -519,6 +591,7 @@ const STAFF_POOL = [
   {
     id: "marco",
     name: "Marco Leung",
+    gender: "m",
     role: "Cellar",
     salary: 6100,
     traits: ["Oak whisperer", "Slow"],
@@ -528,6 +601,7 @@ const STAFF_POOL = [
   {
     id: "asha",
     name: "Asha Green",
+    gender: "f",
     role: "Sales",
     salary: 5700,
     traits: ["Distributor network", "Risk taker"],
@@ -537,6 +611,7 @@ const STAFF_POOL = [
   {
     id: "beatrice",
     name: "Beatrice Koh",
+    gender: "f",
     role: "Hospitality",
     salary: 4300,
     traits: ["Calm floor", "Story-first"],
@@ -546,6 +621,7 @@ const STAFF_POOL = [
   {
     id: "omar",
     name: "Omar Silva",
+    gender: "m",
     role: "Finance",
     salary: 4800,
     traits: ["Hedging", "Unsentimental"],
@@ -555,6 +631,7 @@ const STAFF_POOL = [
   {
     id: "lucy",
     name: "Lucy Devereux",
+    gender: "f",
     role: "Brand",
     salary: 6900,
     traits: ["Influencer magnet", "Expensive taste"],
@@ -564,6 +641,7 @@ const STAFF_POOL = [
   {
     id: "samir",
     name: "Samir Patel",
+    gender: "m",
     role: "Operations",
     salary: 5400,
     traits: ["Line optimizer", "Blunt"],
@@ -573,6 +651,7 @@ const STAFF_POOL = [
   {
     id: "priya",
     name: "Priya Nair",
+    gender: "f",
     role: "Social Media",
     salary: 5100,
     traits: ["Viral reach", "Democratizes the brand"],
@@ -582,6 +661,7 @@ const STAFF_POOL = [
   {
     id: "felix",
     name: "Felix Moreau",
+    gender: "m",
     role: "Tour Guide",
     salary: 4600,
     traits: ["Storyteller", "Local anchor"],
@@ -591,6 +671,7 @@ const STAFF_POOL = [
   {
     id: "dr_chen",
     name: "Dr. Lin Chen",
+    gender: "f",
     role: "Agronomist",
     salary: 6200,
     portrait: "lin",
@@ -601,6 +682,7 @@ const STAFF_POOL = [
   {
     id: "margot",
     name: "Margot Bellamy",
+    gender: "f",
     role: "Club Manager",
     salary: 5800,
     traits: ["Subscriber cultivator", "Retention focus"],
@@ -610,11 +692,32 @@ const STAFF_POOL = [
   {
     id: "oscar",
     name: "Oscar Blanc",
+    gender: "m",
     role: "Natural Winemaker",
     salary: 7200,
     traits: ["Low intervention", "Cult following"],
     text: "Slowly shifts the estate toward natural, artisan winemaking. Adds a monthly cellar quality tick and draws occasional attention from cult press.",
     effects: { cellar: 1, quality: 2, profileDrift: 2 }
+  },
+  {
+    id: "rodrigo",
+    name: "Rodrigo Ferreira",
+    gender: "m",
+    role: "Yield Manager",
+    salary: 5500,
+    traits: ["Heavy inputs", "Volume-first"],
+    text: "Applies aggressive soil programs and targeted irrigation to push tonnage per acre. Harvest yield climbs by roughly 18%, but house quality quietly erodes — finesse is not his priority.",
+    effects: { yieldBonus: 0.18, quality: -1 }
+  },
+  {
+    id: "nadia",
+    name: "Nadia Kovač",
+    gender: "f",
+    role: "Logistics",
+    salary: 5900,
+    traits: ["Supply chain", "Reliable"],
+    text: "Manages supplier relationships and fulfillment schedules. Glass and supplies arrive before you run out, operating costs edge down, and she keeps the whole back-of-house running on time.",
+    effects: { glassMonthly: 150, costCut: 0.95, morale: 1 }
   }
 ];
 
@@ -661,6 +764,34 @@ const PERSONALITY_TRAITS = {
     teamDemand: 2,
     friction: ["melancholic"]
   },
+  humble: {
+    name: "Humble", positive: true,
+    summary: "Salary runs 10% lower. Creates no friction with anyone.",
+    flavor: "Neither pride nor vanity governs their conduct.",
+    salaryMod: 0.9,
+    friction: []
+  },
+  merciful: {
+    name: "Merciful", positive: true,
+    summary: "+2 morale to all staff each month when morale is below 40.",
+    flavor: "Misericordia: compassion sharpens in adversity.",
+    moraleWhenLow: 2,
+    friction: ["just"]
+  },
+  just: {
+    name: "Just", positive: true,
+    summary: "+1 morale to all staff each month. Clashes with merciful colleagues; justice by the book resists mercy by exception.",
+    flavor: "Iustitia: every promise kept, every claim settled fairly.",
+    teamMorale: 1,
+    friction: ["merciful"]
+  },
+  faithful: {
+    name: "Faithful", positive: true,
+    summary: "+2 morale to all staff each month. Clashes with melancholic colleagues.",
+    flavor: "Fides: steady conviction that the work is worth doing.",
+    teamMorale: 2,
+    friction: ["melancholic"]
+  },
   // Vice pool
   slothful: {
     name: "Slothful", positive: false,
@@ -672,32 +803,57 @@ const PERSONALITY_TRAITS = {
   proud: {
     name: "Proud", positive: false,
     summary: "Salary runs 10% higher. Clashes with other proud colleagues.",
-    flavor: "Superbia — excellence demands recognition.",
+    flavor: "Superbia: excellence demands recognition.",
     salaryMod: 1.1,
     friction: ["proud"]
   },
   wrathful: {
     name: "Wrathful", positive: false,
     summary: "Clashes with proud and wrathful colleagues (−1 morale/mo per pair). Mitigates crisis damage when confronting adversity.",
-    flavor: "Ira — passionate, occasionally combustible.",
+    flavor: "Ira: passionate, occasionally combustible.",
     crisisBonus: true,
     friction: ["proud", "wrathful"]
   },
   avaricious: {
     name: "Avaricious", positive: false,
     summary: "Salary runs 10% lower, but drains team morale by 2 each month.",
-    flavor: "Avaritia — counts every penny.",
+    flavor: "Avaritia: counts every penny.",
     salaryMod: 0.9,
     teamMorale: -2,
-    friction: ["magnanimous"]
+    friction: ["magnanimous", "gluttonous"]
   },
   melancholic: {
     name: "Melancholic", positive: false,
     summary: "−1 morale to all staff each month. Earns 20% extra XP when sole member in their role.",
-    flavor: "The contemplative humor — brilliant alone, difficult in company.",
+    flavor: "The contemplative humor: brilliant alone, difficult in company.",
     teamMorale: -1,
     soloXpBonus: 1.2,
     friction: ["sanguine", "magnanimous"]
+  },
+  lustful: {
+    name: "Lustful", positive: false,
+    summary: "+2 demand each month. Salary runs 8% higher. Clashes with temperate colleagues.",
+    flavor: "Luxuria: pleasure in all its forms, never moderated.",
+    teamDemand: 2,
+    salaryMod: 1.08,
+    friction: ["temperate"]
+  },
+  gluttonous: {
+    name: "Gluttonous", positive: false,
+    summary: "+1 demand each month. Quietly drains ~3 cases of inventory per month.",
+    flavor: "Gula: the finest bottles rarely survive the month.",
+    teamDemand: 1,
+    inventoryLeak: 3,
+    friction: ["avaricious"]
+  },
+  crafty: {
+    name: "Crafty", positive: false,
+    summary: "+1 demand each month. −1 team morale each month. Adverse event chance +15%. Clashes with prudent and just colleagues.",
+    flavor: "Panourgia: clever in pursuit of self-interest.",
+    teamDemand: 1,
+    teamMorale: -1,
+    eventRiskMod: 1.15,
+    friction: ["prudent", "just"]
   }
 };
 
@@ -1109,7 +1265,7 @@ const CAPEX_TIERS = {
     label: "Bottling Line",
     tiers: [
       { name: "Semi-Auto Bottling Line", cost: 30000, tags: ["Capacity +170 CE/action", "Cost −$0.28/case"],
-        text: "A proper line cuts per-case cost and dramatically raises monthly throughput — essential once harvests scale up." },
+        text: "A proper line cuts per-case cost and dramatically raises monthly throughput, essential once harvests scale up." },
       { name: "Inert Gas System", cost: 46000, tags: ["Vintage score ×1.05 at bottling", "Oxidation protection"],
         text: "Nitrogen flushing protects wine during transfer. Every bottle preserves more of what was in the barrel." },
       { name: "High-Speed Line", cost: 65000, tags: ["Capacity +170 CE/action", "Volume focus"],
@@ -1278,7 +1434,7 @@ const EVENT_DECK = [
   {
     id: "investor",
     title: "A Growth Investor Circles the Estate",
-    body: "A polished investor is circling. The pitch is capital, distribution access, and quarterly targets — either to fund the next leap or bail out a tight balance sheet. Either way, the estate will answer to someone impatient.",
+    body: "A polished investor is circling. The pitch is capital, distribution access, and quarterly targets: fund the next leap or bail out a tight balance sheet. Either way, the estate will answer to someone impatient.",
     image: "assets/investor.png",
     minMonth: 6,
     condition: s => !s.investor && (s.prestige >= 38 || s.debt >= 45000 || s.month >= 16 || s.cash < -15000),
@@ -1358,7 +1514,7 @@ const EVENT_DECK = [
   {
     id: "natural-wine-fair",
     title: "Natural Wine Fair Invitation",
-    body: "A respected natural wine fair has reached out — word about your house style has circulated in the right circles. The audience is passionate, small, and influential.",
+    body: "A respected natural wine fair has reached out; word about your house style has circulated in the right circles. The audience is passionate, small, and influential.",
     condition: s => (s.profile ?? 50) >= 70 && s.prestige >= 30,
     minMonth: 8,
     choices: [
@@ -1444,7 +1600,7 @@ const EVENT_DECK = [
   {
     id: "bordeaux-primeur",
     title: "En Primeur Approach",
-    body: "A respected Bordeaux négociant wants to taste and quote futures on your next vintage — buying the right to purchase it before bottling at a fixed price.",
+    body: "A respected Bordeaux négociant wants to taste and quote futures on your next vintage, buying the right to purchase it before bottling at a fixed price.",
     condition: s => s.region === "bordeaux",
     minMonth: 5,
     choices: [
@@ -1519,7 +1675,7 @@ const EVENT_DECK = [
   {
     id: "mosel-botrytis",
     title: "Noble Rot Developing",
-    body: "Botrytis cinerea is spreading through the late-harvest clusters in a way that could be either disaster or opportunity. A true Spätlese or Auslese requires patience — and nerve.",
+    body: "Botrytis cinerea is spreading through the late-harvest clusters in a way that could be either disaster or opportunity. A true Spätlese or Auslese requires patience and nerve.",
     condition: s => s.region === "mosel",
     minMonth: 7,
     choices: [
@@ -1559,7 +1715,7 @@ const EVENT_DECK = [
   {
     id: "burgundy-premier-cru",
     title: "Premier Cru Classification Whisper",
-    body: "Word has reached the Conseil that your parcel's consistent quality and elevation profile may qualify for a premier cru designation — but a formal application requires lobbying, documentation, and a memorable tasting.",
+    body: "Word has reached the Conseil that your parcel's consistent quality and elevation profile may qualify for a premier cru designation, but a formal application requires lobbying, documentation, and a memorable tasting.",
     condition: s => s.region === "burgundy" && s.prestige >= 55 && s.classification?.burgundy !== "granted",
     minMonth: 16,
     choices: [
@@ -1580,7 +1736,7 @@ const EVENT_DECK = [
   {
     id: "burgundy-negotiant",
     title: "Négociant Surplus Offer",
-    body: "A prominent Burgundy négociant is offering access to surplus premier cru bulk wine. Blending it into your program would lift the lot — but purists would notice.",
+    body: "A prominent Burgundy négociant is offering access to surplus premier cru bulk wine. Blending it into your program would lift the lot, but purists would notice.",
     condition: s => s.region === "burgundy",
     choices: [
       { label: "Buy the surplus bulk", cost: 24000,
@@ -1625,7 +1781,8 @@ const EVENT_DECK = [
         effect: s => {
           s.quality += 4;
           s.prestige += 3;
-          s.rows.push({ id: s.rows.length + 1, name: "Old Vine Block", health: 90, disease: 8, water: 40, matureMonth: s.month, pressure: "old vines", threat: 1, threatName: "none" });
+          const oldVineWater = clamp((VARIETALS[s.varietal]?.optimalWater ?? 45) + Math.round(((REGION_CLIMATE[s.region]?.humidity ?? 0.55) - 0.55) * 15) + randint(-5, 5), 15, 80);
+          s.rows.push({ id: s.rows.length + 1, name: "Old Vine Block", health: 90, disease: 8, water: oldVineWater, matureMonth: s.month, pressure: "old vines", threat: 1, threatName: "none" });
           log(s, "The old vine parcel joined the estate. 80-year-old Shiraz now anchors your flagship.");
         }},
       { label: "Pass — stay focused",
@@ -1674,7 +1831,7 @@ const EVENT_DECK = [
   {
     id: "rioja-consejo",
     title: "Consejo Regulador Inspection",
-    body: "The Rioja Denominación de Origen regulatory council is conducting a compliance audit — barrel aging minimums, varietal composition, and cellar records.",
+    body: "The Rioja Denominación de Origen regulatory council is conducting a compliance audit: barrel aging minimums, varietal composition, and cellar records.",
     condition: s => s.region === "rioja",
     choices: [
       { label: "Open the books and cellar",
@@ -1703,6 +1860,720 @@ const EVENT_DECK = [
       { label: "Focus domestic for now",
         hint: "Demand +3.",
         effect: s => { s.demand += 3; } }
+    ]
+  },
+
+  // ── New universal events ──────────────────────────────────────
+  {
+    id: "barrel-taint",
+    title: "Corked Barrel Lot",
+    body: "A buyer alerted you after smelling must on a recent barrel sample. A TCA-positive stave may have contaminated an entire batch. You need to decide quickly before more wine absorbs the taint.",
+    choices: [
+      { label: "Isolate, strip, and reblend", cost: 8000,
+        hint: "Saves most of the lot — Quality −3, flaw risk on affected lots −12.",
+        effect: s => {
+          s.quality -= 3;
+          (s.vintages || []).filter(v => v.bulkWine > 0).forEach(v => { v.flawRisk = Math.max(1, (v.flawRisk || 30) - 12); });
+          log(s, "Tainted staves isolated and the lot reblended. Wine recovered, with modest quality cost.");
+        }},
+      { label: "Wait and monitor",
+        hint: "40% chance it clears. Otherwise Quality −8, flaw risk +16 on active lots.",
+        effect: s => {
+          if (rand() < 0.4) { log(s, "The barrel sample was a false alarm — the rest of the lot is clean."); return; }
+          s.quality -= 8;
+          (s.vintages || []).filter(v => v.bulkWine > 0).forEach(v => { v.flawRisk = clamp((v.flawRisk || 30) + 16, 1, 95); });
+          log(s, "TCA spread through the batch. The affected wine is compromised and flaw risk climbed.");
+        }}
+    ]
+  },
+  {
+    id: "staff-poaching",
+    title: "Headhunter Call",
+    body: "One of your people has been approached by a larger operation offering a meaningful raise. They're loyal, but they're asking you to match within the month.",
+    condition: s => s.staff.length >= 2,
+    choices: [
+      { label: "Match the offer", cost: 0,
+        hint: "Costs 3 months of the target's salary. Staff retained, Morale +6.",
+        effect: s => {
+          const targetId = [...s.staff].sort((a, b) => {
+            const pa = STAFF_POOL.find(p => p.id === a)?.salary || 0;
+            const pb = STAFF_POOL.find(p => p.id === b)?.salary || 0;
+            return pb - pa;
+          })[0];
+          const person = STAFF_POOL.find(p => p.id === targetId);
+          const cost = (person?.salary || 5000) * 3;
+          s.cash -= cost;
+          s.morale += 6;
+          log(s, `${person?.name.split(" ")[0] || "They"} accepted the retention offer. Morale lifted. Cost: ${money(cost)}.`);
+        }},
+      { label: "Let them walk",
+        hint: "Staff member leaves. Morale −10, Quality −3.",
+        effect: s => {
+          const targetId = [...s.staff].sort((a, b) => {
+            const pa = STAFF_POOL.find(p => p.id === a)?.salary || 0;
+            const pb = STAFF_POOL.find(p => p.id === b)?.salary || 0;
+            return pb - pa;
+          })[0];
+          const person = STAFF_POOL.find(p => p.id === targetId);
+          s.staff = s.staff.filter(id => id !== targetId);
+          if (!s.staffMarket.includes(targetId)) s.staffMarket.push(targetId);
+          s.morale -= 10;
+          s.quality -= 3;
+          log(s, `${person?.name || "A key hire"} accepted the outside offer and left. The team felt it.`);
+        }}
+    ]
+  },
+  {
+    id: "organic-cert",
+    title: "Organic Certification Opportunity",
+    body: "A certification body is running an accelerated audit for estates with documented spray records and a clean growing season. Organic status is a genuine signal to the buyers who care about it.",
+    minMonth: 12,
+    condition: s => !s.classification?.organic,
+    choices: [
+      { label: "Pursue certification", cost: 12000,
+        hint: "Prestige +6, House Style more artisan, adds a collector order. Estate marked certified.",
+        effect: s => {
+          s.prestige += 6;
+          s.profile = clamp((s.profile ?? 50) + 6, 0, 100);
+          s.classification = s.classification || {};
+          s.classification.organic = "granted";
+          addOrder(s, "collector");
+          log(s, "Organic certification granted. The credential opened new doors with collectors and natural wine channels.");
+        }},
+      { label: "Not the right time",
+        hint: "Prestige +1.",
+        effect: s => { s.prestige += 1; log(s, "Certification deferred. The documentation trail is there when the timing is better."); } }
+    ]
+  },
+  {
+    id: "equipment-fault",
+    title: "Bottling Line Failure",
+    body: "A seal failure mid-run halted the bottling line. Wine oxidised in the exposed section and the conveyor jammed. The repair needs to happen before the next run.",
+    choices: [
+      { label: "Emergency repair team", cost: 7500,
+        hint: "Line restored immediately. Morale +2.",
+        effect: s => { s.morale += 2; log(s, "Repair crew fixed the seal overnight. The line is back up."); } },
+      { label: "Patch it in-house",
+        hint: "Fatigue +7, Morale −3. 45% chance it fails again next bottling — Quality −4.",
+        effect: s => {
+          s.fatigue = clamp((s.fatigue || 0) + 7, 0, 100);
+          s.morale -= 3;
+          s.marketMods = s.marketMods || {};
+          if (rand() < 0.45) s.marketMods.lineFault = true;
+          log(s, "Patched in-house. It's running, but the fix is marginal.");
+        }}
+    ]
+  },
+  {
+    id: "harvest-labor",
+    title: "Harvest Labor Shortage",
+    body: "Labor contractors are overbooked across the region. You can source day workers at a significant premium, or push your own crew through extended shifts before the fruit drops.",
+    condition: s => ["Harvest", "Veraison"].includes(s.season),
+    choices: [
+      { label: "Pay premium day labor", cost: 9000,
+        hint: "Harvest yield +12%, Morale +2.",
+        effect: s => { s.marketMods = s.marketMods || {}; s.marketMods.harvestCrew = true; s.morale += 2; log(s, "Premium crews on. The harvest will come in clean and complete."); } },
+      { label: "Push the crew",
+        hint: "Fatigue +10, Morale −5. Yield unaffected, but the team will feel the month.",
+        effect: s => {
+          s.fatigue = clamp((s.fatigue || 0) + 10, 0, 100);
+          s.morale -= 5;
+          log(s, "The estate crew stretched to cover harvest. The fruit is in, but everyone is exhausted.");
+        }}
+    ]
+  },
+  {
+    id: "prestige-dinner",
+    title: "Charity Wine Dinner",
+    body: "A regional foundation is hosting a collector dinner and wants your estate to headline the wine program. Twenty seats, serious buyers, wine media in attendance — exactly the right crowd.",
+    minMonth: 8,
+    condition: s => s.prestige >= 45,
+    choices: [
+      { label: "Pour the flagship", cost: 4000,
+        hint: "Prestige +8, Demand +6, Morale +4, adds a collector order.",
+        effect: s => { s.prestige += 8; s.demand += 6; s.morale += 4; addOrder(s, "collector"); log(s, "The dinner was exceptional. Three collectors reached out directly for allocation."); } },
+      { label: "Donate bottles instead",
+        hint: "Prestige +3, Morale +2.",
+        effect: s => { s.prestige += 3; s.morale += 2; log(s, "A generous donation. The foundation acknowledged the gift publicly."); } }
+    ]
+  },
+  {
+    id: "cellar-heat",
+    title: "Fermentation Temperature Spike",
+    body: "A heat wave pushed the cellar above optimal for three consecutive days. Active fermentations may have run too fast and hot — volatile acidity and off-aromas develop quickly in these conditions.",
+    condition: s => (s.vintages || []).some(v => v.grapes > 0 || (v.bulkWine > 0 && (v.agingMonths || 0) < 3)),
+    choices: [
+      { label: "Emergency cooling and enzyme addition", cost: 6500,
+        hint: "No quality damage. Morale +1.",
+        effect: s => { s.morale += 1; log(s, "Cooling held the fermentation steady. No flaw development detected."); } },
+      { label: "Monitor and adjust manually",
+        hint: "50% chance: Quality −4, flaw risk +12 on active lots. 50%: fine.",
+        effect: s => {
+          if (rand() < 0.5) {
+            s.quality -= 4;
+            (s.vintages || []).filter(v => v.bulkWine > 0 && (v.agingMonths || 0) < 3).forEach(v => { v.flawRisk = clamp((v.flawRisk || 25) + 12, 1, 95); });
+            log(s, "The heat got into the must. Flaw risk on young lots is elevated.");
+          } else {
+            log(s, "Fermentations ran warm but stayed clean. A close call.");
+          }
+        }}
+    ]
+  },
+  {
+    id: "used-barrels",
+    title: "Second-Hand Barrel Lot",
+    body: "A retiring winemaker is liquidating their cellar program — quality French oak, two to three years old, at roughly 60% of new price. These would add genuine barrel capacity immediately.",
+    condition: s => (s.buildings.barrel || 0) < 4,
+    choices: [
+      { label: "Buy the lot", cost: 11000,
+        hint: "Barrel level +1, Prestige +2.",
+        effect: s => { s.buildings.barrel = (s.buildings.barrel || 0) + 1; s.prestige += 2; log(s, "The used oak joined the cellar. Solid barrels at a fraction of replacement cost."); } },
+      { label: "Pass — new wood only",
+        hint: "No effect.",
+        effect: s => { log(s, "Passed on the offer. The program will stay with new wood on its own timeline."); } }
+    ]
+  },
+  {
+    id: "cork-tca",
+    title: "Corked Bottle Complaint",
+    body: "A restaurant buyer reported four corked bottles from the last allocation — musty, undrinkable. The claim is credible and the buyer is waiting to see how you respond.",
+    minMonth: 8,
+    condition: s => s.inventory.cases > 30,
+    choices: [
+      { label: "Replace and credit immediately", cost: 3500,
+        hint: "Morale +4, Demand +2. Relationship preserved.",
+        effect: s => { s.morale += 4; s.demand += 2; log(s, "Replacement cases delivered with a handwritten note. The buyer called it handled."); } },
+      { label: "Dispute the claim",
+        hint: "Demand −5, Prestige −3. Buyer trust damaged.",
+        effect: s => { s.demand -= 5; s.prestige -= 3; addChannelTrust(s, "restaurant", -8); log(s, "The buyer didn't appreciate the pushback. The relationship cooled significantly."); } }
+    ]
+  },
+  {
+    id: "expansion-loan",
+    title: "Agricultural Bank Offer",
+    body: "The estate's track record has attracted a favorable capital offer from an agricultural bank — a low-rate infrastructure line specifically for winery expansion. The terms are genuine.",
+    minMonth: 10,
+    condition: s => (s.debt || 0) < 40000 && s.prestige >= 35,
+    choices: [
+      { label: "Draw $40,000 at favorable terms",
+        hint: "Cash +$40,000, Debt +$40,000, Influence +2.",
+        effect: s => { s.cash += 40000; s.debt = (s.debt || 0) + 40000; s.influence += 2; log(s, "Capital drawn. Favorable terms and a bank relationship that reflects the estate's standing."); } },
+      { label: "Stay debt-free",
+        hint: "Prestige +2, Morale +2.",
+        effect: s => { s.prestige += 2; s.morale += 2; log(s, "Declined the offer. Remaining debt-free keeps the balance sheet clean and the team motivated."); } }
+    ]
+  },
+
+  // ── New regional events ───────────────────────────────────────
+  {
+    id: "fingerlakes-comp",
+    title: "Great Lakes Wine Challenge",
+    body: "The Great Lakes regional competition is the most prominent event in the eastern US wine calendar. Judges from New York and Toronto are attending; press coverage is serious.",
+    condition: s => s.region === "fingerlakes",
+    choices: [
+      { label: "Enter and pour", cost: 3500,
+        hint: "Prestige +7, Demand +8 if quality is strong; Prestige +3, Demand +3 otherwise.",
+        effect: s => {
+          if (s.quality >= 78) {
+            s.prestige += 7; s.demand += 8;
+            log(s, "Strong showing at the Great Lakes Challenge. The judges noted the mineral precision — recognition followed.");
+          } else {
+            s.prestige += 3; s.demand += 3;
+            log(s, "A respectable entry. The competition raised the estate's regional profile.");
+          }
+        }},
+      { label: "Skip this year",
+        hint: "Demand +1.",
+        effect: s => { s.demand += 1; log(s, "Stayed out of the competition this cycle. The estate's focus remained on the vineyard."); } }
+    ]
+  },
+  {
+    id: "napa-earthquake",
+    title: "Minor Earthquake Tremors",
+    body: "A 3.8-magnitude tremor rattled the valley overnight. Some tanks shifted and the cellar structure needs inspection before the next bottling run.",
+    condition: s => s.region === "napa",
+    choices: [
+      { label: "Full structural inspection and refit", cost: 8500,
+        hint: "No damage, Morale +2.",
+        effect: s => { s.morale += 2; log(s, "Inspection came back clean. Refit completed and the team was relieved."); } },
+      { label: "Visual check only",
+        hint: "40% chance of barrel damage — flaw risk +10 on active lots. 60%: fine.",
+        effect: s => {
+          if (rand() < 0.4) {
+            (s.vintages || []).filter(v => v.bulkWine > 0).forEach(v => { v.flawRisk = clamp((v.flawRisk || 25) + 10, 1, 95); });
+            log(s, "A cracked stave was found weeks later. Flaw risk ticked up on the affected lots.");
+          } else {
+            log(s, "Visual check passed. The cellar came through the tremor intact.");
+          }
+        }}
+    ]
+  },
+  {
+    id: "rioja-pavilion",
+    title: "Madrid & Beyond Pavilion",
+    body: "Spain's wine export body is organizing a premium pavilion at a major London trade show and offering Rioja producers with solid export records a subsidized spot. The audience is exactly the buyers you want.",
+    condition: s => s.region === "rioja",
+    minMonth: 6,
+    choices: [
+      { label: "Join the pavilion", cost: 5500,
+        hint: "Demand +8, Prestige +5, Influence +4, adds an export order.",
+        effect: s => { s.demand += 8; s.prestige += 5; s.influence += 4; addOrder(s, "export"); log(s, "The pavilion generated serious interest. Three export inquiries arrived within the week."); } },
+      { label: "Skip — domestic priority",
+        hint: "Demand +2.",
+        effect: s => { s.demand += 2; log(s, "Skipped the pavilion. The domestic channel remained the focus this season."); } }
+    ]
+  },
+
+  // ── Prestige-tier events (the top-end world) ──────────────────
+  {
+    id: "critic-pilgrimage",
+    title: "A Legend Visits the Estate",
+    body: "The most influential wine critic in the world has reached out directly to schedule a private vertical tasting at the estate. This is not a routine visit — estates at your level get one or two of these in a generation.",
+    minMonth: 18,
+    condition: s => s.prestige >= 88 && s.quality >= 86,
+    choices: [
+      { label: "Host a full vertical tasting", cost: 12000,
+        hint: "Outcome scales with your track record. Consistent 90+ averages: Prestige +14, Demand +12, major collector surge. Lower averages: Prestige +5.",
+        effect: s => {
+          const mem = archiveMemory(s);
+          if (mem.avgScore >= 90) {
+            s.prestige += 14; s.demand += 12;
+            addChannelTrust(s, "collector", 18); addChannelTrust(s, "restaurant", 10);
+            addOrder(s, "collector"); addOrder(s, "collector");
+            log(s, "The vertical was extraordinary. The critic's notes will be quoted for years. Collector demand surged overnight.");
+          } else if (mem.avgScore >= 86) {
+            s.prestige += 8; s.demand += 7;
+            addChannelTrust(s, "collector", 10);
+            addOrder(s, "collector");
+            log(s, "A strong showing. The critic was impressed and said so publicly. Real momentum followed.");
+          } else {
+            s.prestige += 5; s.demand += 3;
+            log(s, "The visit went well but the vertical showed the estate's inconsistency. Solid coverage, not legendary.");
+          }
+        }},
+      { label: "Pour the current vintage only",
+        hint: "Prestige +5, Demand +6. Safer, but a missed opportunity.",
+        effect: s => { s.prestige += 5; s.demand += 6; addOrder(s, "collector"); log(s, "A focused tasting. The critic tasted the current release and wrote warmly. The door is open for a deeper visit later."); } }
+    ]
+  },
+  {
+    id: "auction-house",
+    title: "Auction House Consignment",
+    body: "Christie's Fine Wine division has approached you about featuring a vertical of your estate in their next major sale. The secondary market exposure is extraordinary — but consigning removes those bottles from your direct allocation.",
+    minMonth: 20,
+    condition: s => s.prestige >= 90 && (s.archive || []).filter(e => e.casesProduced > 0).length >= 3,
+    choices: [
+      { label: "Consign 30 bottles", cost: 0,
+        hint: "Cash +$45,000–75,000 (scales with prestige), Prestige +10, major demand surge. Removes 30 cases from inventory.",
+        effect: s => {
+          const bottles = Math.min(30, s.inventory.cases);
+          s.inventory.cases -= bottles;
+          const proceeds = Math.round(35000 + (s.prestige - 90) * 3500);
+          s.cash += proceeds;
+          s.prestige += 10;
+          addChannelDemand(s, ["collector", "club", "restaurant"], 8);
+          addChannelTrust(s, "collector", 12);
+          addOrder(s, "collector");
+          log(s, `The Christie's sale hammered at ${money(proceeds)}. Every collector who missed the live auction is now on the mailing list.`);
+        }},
+      { label: "Decline — allocation stays with buyers",
+        hint: "Prestige +6, Collector trust +10. Mystique preserved.",
+        effect: s => { s.prestige += 6; addChannelTrust(s, "collector", 10); log(s, "Declining the consignment reinforced the estate's image as impossible to obtain through secondary channels. Collectors value that."); } }
+    ]
+  },
+  {
+    id: "three-star-placement",
+    title: "Three-Star Restaurant Placement",
+    body: "The head sommelier at a Michelin three-star restaurant has been quietly allocating your bottles for two years and wants to put you on the permanent wine list. This is the most prestigious restaurant placement possible — and a long-term commitment.",
+    minMonth: 15,
+    condition: s => s.prestige >= 87 && s.quality >= 86 && !s.classification?.threeStar,
+    choices: [
+      { label: "Accept and commit 24 cases per year",
+        hint: "Permanent restaurant demand +8, Prestige +9, Restaurant trust +14. Estate marked as three-star listed.",
+        effect: s => {
+          s.prestige += 9;
+          addChannelDemand(s, ["restaurant"], 8);
+          addChannelTrust(s, "restaurant", 14);
+          s.classification = s.classification || {};
+          s.classification.threeStar = true;
+          addOrder(s, "restaurant"); addOrder(s, "restaurant");
+          log(s, "The placement is confirmed. Your label will appear on the same list as DRC and Chave. That context changes every conversation.");
+        }},
+      { label: "Decline — protect direct allocation",
+        hint: "Collector demand +5, Prestige +5. Positions the estate as impossible to find through restaurants.",
+        effect: s => { s.prestige += 5; addChannelDemand(s, ["collector"], 5); addChannelTrust(s, "collector", 8); log(s, "A polite decline. The sommelier respected it. Word that you turned down a three-star placement traveled fast."); } }
+    ]
+  },
+  {
+    id: "cult-phenomenon",
+    title: "Cult Wine",
+    body: "A brief mention in a private newsletter read by the right 400 people has turned your allocation into the most sought-after in the region overnight. You didn't engineer this — it happened. Your phone has not stopped.",
+    minMonth: 24,
+    condition: s => s.prestige >= 93,
+    choices: [
+      { label: "Raise price to reflect the tier",
+        hint: "Demand +14, Prestige +8, price ceiling raised significantly. Collector orders flood in.",
+        effect: s => {
+          s.prestige += 8; s.demand += 14;
+          s.profile = clamp((s.profile ?? 50) + 8, 0, 100);
+          addChannelTrust(s, "collector", 15); addChannelTrust(s, "club", 10);
+          addOrder(s, "collector"); addOrder(s, "collector"); addOrder(s, "collector");
+          s.price = Math.min(profilePriceCeil(s), s.price + 8);
+          log(s, "The price signal landed perfectly. Raising it accelerated demand. The estate is now in a category with very few others.");
+        }},
+      { label: "Hold price — let the wine speak",
+        hint: "Prestige +16, Demand +8. Positions the estate as principled, not commercial. Enormous collector trust.",
+        effect: s => {
+          s.prestige += 16; s.demand += 8;
+          addChannelTrust(s, "collector", 20); addChannelTrust(s, "club", 14);
+          addOrder(s, "collector"); addOrder(s, "collector");
+          log(s, "Not raising price during a cult moment was the move. The collectors who got allocation feel they're part of something that money alone can't buy.");
+        }}
+    ]
+  },
+  {
+    id: "vertical-collector",
+    title: "Collector's Vertical Dinner",
+    body: "A longtime allocation customer has assembled every vintage you've produced and is hosting a private dinner for 20 collectors and two critics. They've asked you to attend and present. The room will contain people who influence where serious money goes.",
+    minMonth: 24,
+    condition: s => s.prestige >= 82 && (s.archive || []).filter(e => e.casesProduced > 0).length >= 3,
+    choices: [
+      { label: "Attend and present", cost: 4000,
+        hint: "Outcome scales with consistency. Strong track record: Prestige +10, Demand +8, two collector orders. Inconsistent: Prestige +4, Demand +3.",
+        effect: s => {
+          const mem = archiveMemory(s);
+          if (mem.avgScore >= 88 && mem.consistency >= 3) {
+            s.prestige += 10; s.demand += 8;
+            addChannelTrust(s, "collector", 12);
+            addOrder(s, "collector"); addOrder(s, "collector");
+            log(s, "The vertical told a coherent, compelling story. The critics in the room wrote about it. Two collectors reached out about direct allocation.");
+          } else {
+            s.prestige += 4; s.demand += 3;
+            addChannelTrust(s, "collector", 4);
+            log(s, "A good evening. The vertical showed an estate still finding its voice. The collectors were interested, not converted.");
+          }
+        }},
+      { label: "Send bottles with personal notes",
+        hint: "Prestige +4, Demand +3. Thoughtful but lower impact.",
+        effect: s => { s.prestige += 4; s.demand += 3; log(s, "The dinner went ahead with your bottles and handwritten notes on each. A warm gesture that was appreciated without the full impact of your presence."); } }
+    ]
+  },
+  {
+    id: "secondary-market-record",
+    title: "Auction Record",
+    body: "A bottle from one of your sold-out vintages just set a new regional auction record. The hammer price was several times your original release price. Secondary market heat like this changes how buyers think about getting allocation.",
+    condition: s => s.prestige >= 94 && archiveMemory(s).soldOutPrestige >= 1,
+    choices: [
+      { label: "Release a statement welcoming the recognition",
+        hint: "Prestige +6, Demand +9, one new collector order.",
+        effect: s => { s.prestige += 6; s.demand += 9; addOrder(s, "collector"); addChannelTrust(s, "collector", 8); log(s, "The statement ran in three publications. Every collector who's been watching from the sidelines is now inquiring about allocation."); } },
+      { label: "Say nothing — let the market speak",
+        hint: "Prestige +11. Silence signals the ultimate confidence.",
+        effect: s => { s.prestige += 11; addChannelTrust(s, "collector", 14); log(s, "No comment from the estate. The silence traveled further than any press release could have."); } }
+    ]
+  },
+
+  // ── Cellar fault events ───────────────────────────────────────
+  {
+    id: "mouse-taint",
+    title: "Mouse Taint in the Cellar",
+    body: "Your cellar hand caught something during routine barrel tasting: a mousey, biscuity off-character spreading through one of the active lots. Spoilage organism — almost certainly Lactobacillus or Brettanomyces working without the protection of sulfites. Caught early, but the window to act is short and none of the options are comfortable.",
+    condition: s => (s.profile ?? 50) >= 55 && (s.vintages || []).some(v => v.bulkWine > 50),
+    choices: [
+      { label: "Pull and dump the affected portion",
+        hint: "Lose 38% of the largest active bulk lot. Morale −5, Prestige −2. Reputation intact.",
+        effect: s => {
+          const lot = [...(s.vintages || [])].filter(v => v.bulkWine > 0).sort((a, b) => b.bulkWine - a.bulkWine)[0];
+          if (lot) {
+            const lost = Math.round(lot.bulkWine * 0.38);
+            lot.bulkWine = Math.max(0, lot.bulkWine - lost);
+            log(s, `${lost} CE of ${lot.label} poured out. Painful and expensive, but nothing mousey leaves this cellar.`);
+          }
+          s.morale -= 5; s.prestige -= 2;
+        }},
+      { label: "Emergency SO₂ addition to rescue the wine", cost: 4500,
+        hint: "Wine largely saved (5% loss). House Style shifts commercial −12. Prestige −5. Collector trust −8 if you're a known natural producer.",
+        effect: s => {
+          const lot = [...(s.vintages || [])].filter(v => v.bulkWine > 0).sort((a, b) => b.bulkWine - a.bulkWine)[0];
+          if (lot) {
+            lot.bulkWine = Math.max(0, Math.round(lot.bulkWine * 0.95));
+            lot.flawRisk = Math.max((lot.flawRisk || 25) - 8, 3);
+          }
+          const isNatural = (s.profile ?? 50) >= 65;
+          s.prestige -= isNatural ? 10 : 5;
+          s.profile = clamp((s.profile ?? 50) - 12, 0, 100);
+          if (isNatural) {
+            addChannelTrust(s, "collector", -10); addChannelTrust(s, "club", -6);
+            log(s, "The SO₂ addition suppressed the spoilage. Most of the wine was saved — but word travels fast in natural wine circles. Collectors who trusted your no-intervention commitment are asking questions.");
+          } else {
+            log(s, "Sulfites suppressed the organism and the wine was largely recovered. A prestige cost, but manageable. The house style shifted a little more conventional.");
+          }
+        }},
+      { label: "Release it — call it a living wine",
+        hint: "No cost. For natural estates (profile ≥ 65): 55% chance collectors accept it. Otherwise, or on failure: Prestige −9, Demand −10, Collector trust −16.",
+        effect: s => {
+          const isNatural = (s.profile ?? 50) >= 65;
+          if (isNatural && rand() < 0.55) {
+            s.prestige -= 3;
+            addChannelTrust(s, "collector", -3);
+            log(s, "The release divided opinion. Most of your natural wine buyers accepted the character as honest expression. A vocal minority disagreed loudly. The estate said nothing and moved on.");
+          } else {
+            s.prestige -= 9; s.demand -= 10;
+            addChannelTrust(s, "collector", -16); addChannelTrust(s, "restaurant", -10);
+            const lot = [...(s.vintages || [])].filter(v => v.bulkWine > 0).sort((a, b) => b.bulkWine - a.bulkWine)[0];
+            if (lot) lot.flawRisk = clamp((lot.flawRisk || 25) + 20, 1, 95);
+            log(s, `The mousey character was unmistakable. Critics called it a fault. Several buyers returned cases. ${isNatural ? "Even sympathetic natural wine drinkers couldn't defend it." : "There was no charitable reading available."}`);
+          }
+        }}
+    ]
+  },
+
+  // ── Commercial-end pressure events ───────────────────────────
+  {
+    id: "supermarket-renegotiation",
+    title: "Supermarket Annual Review",
+    body: "Your main grocery chain listing is up for renewal. The buyer wants a 12% price reduction or they'll cut your facing from four bottles to one — effectively a delist on a slow timeline. Volume brands live and die by these conversations.",
+    condition: s => (s.profile ?? 50) <= 45 && s.channelDemand?.supermarket > 55,
+    choices: [
+      { label: "Accept the price reduction",
+        hint: "Listing maintained. Revenue per case down ~12% via price pressure flag for 6 months.",
+        effect: s => {
+          s.marketMods.priceSqueeze = 6;
+          addChannelTrust(s, "supermarket", 4);
+          log(s, "Price concession accepted. The listing is safe for another year, but margins are thinner.");
+        }},
+      { label: "Hold price — they need a brand like yours",
+        hint: "50% chance they accept. 50% chance: supermarket demand −18, trust −12.",
+        effect: s => {
+          if (rand() < 0.5) {
+            addChannelTrust(s, "supermarket", 2);
+            log(s, "They blinked. The listing held at your price. It won't always work.");
+          } else {
+            addChannelDemand(s, ["supermarket"], -18);
+            addChannelTrust(s, "supermarket", -12);
+            log(s, "The buyer went with a competitor. Supermarket facing cut to one bottle. That's a slow delist.");
+          }
+        }},
+      { label: "Walk away from the channel",
+        hint: "Supermarket demand reset to 0. Prestige +4, House Style more artisan.",
+        effect: s => {
+          s.channelDemand.supermarket = 0; s.channelTrust.supermarket = 20;
+          s.prestige += 4; s.profile = clamp((s.profile ?? 50) + 6, 0, 100);
+          log(s, "Walking away from the supermarket channel repositioned the brand. The trade noticed.");
+        }}
+    ]
+  },
+  {
+    id: "distributor-ultimatum",
+    title: "Distributor Wants Exclusivity",
+    body: "Your largest distributor is threatening to drop your line unless you grant them regional exclusivity. They move serious volume — but exclusivity locks out smaller buyers and removes any leverage you have on price.",
+    condition: s => (s.profile ?? 50) <= 55 && s.channelDemand?.distributor > 60 && s.month >= 8,
+    choices: [
+      { label: "Grant exclusivity",
+        hint: "Distributor trust +14, demand +6 from their push. But export and restaurant channels lose some access.",
+        effect: s => {
+          addChannelTrust(s, "distributor", 14); addChannelDemand(s, ["distributor"], 6);
+          addChannelDemand(s, ["export", "restaurant"], -4);
+          s.marketMods.distributorExclusive = 12;
+          log(s, "Exclusivity granted. They'll push hard, but you've handed them the leverage in every future conversation.");
+        }},
+      { label: "Decline and diversify",
+        hint: "Distributor trust −10, demand −6. But you keep channel optionality.",
+        effect: s => {
+          addChannelTrust(s, "distributor", -10); addChannelDemand(s, ["distributor"], -6);
+          addChannelDemand(s, ["export", "cellarDoor"], 4);
+          log(s, "They cut the priority allocation. Painful now, but the channel mix stays yours to manage.");
+        }}
+    ]
+  },
+  {
+    id: "brand-fatigue",
+    title: "Brand Fatigue",
+    body: "Your label has been on the same shelves in the same position for three years. A buyer research report landed in your inbox: 'familiar but uninspiring.' Consumers aren't switching away — they're just not excited.",
+    condition: s => (s.profile ?? 50) <= 50 && s.month >= 24 && s.demand >= 70 && s.prestige < 60,
+    choices: [
+      { label: "Invest in a brand refresh", cost: 14000,
+        hint: "Demand +10, Prestige +4. Resets commercial channel fatigue.",
+        effect: s => {
+          s.demand += 10; s.prestige += 4;
+          addChannelDemand(s, ["distributor", "supermarket", "cellarDoor"], 6);
+          addChannelTrust(s, "distributor", 5); addChannelTrust(s, "supermarket", 5);
+          log(s, "New label, refreshed positioning, a short trade press hit. The shelves look different and buyers noticed.");
+        }},
+      { label: "Double down on price promotions", cost: 6000,
+        hint: "Demand +6 short-term. House Style more commercial. Prestige −2.",
+        effect: s => {
+          s.demand += 6; s.prestige -= 2;
+          s.profile = clamp((s.profile ?? 50) - 5, 0, 100);
+          addChannelDemand(s, ["supermarket", "distributor"], 5);
+          log(s, "The promo worked. Volume is up. But discounting trained buyers to wait for the deal.");
+        }},
+      { label: "Stay the course",
+        hint: "Demand −4 over the next 3 months as fatigue compounds.",
+        effect: s => {
+          s.marketMods.brandFatigue = 3;
+          log(s, "No change. The brand stays where it is. So does the fatigue.");
+        }}
+    ]
+  },
+
+  // ── Fall-from-grace consequences ──────────────────────────────
+  {
+    id: "three-star-delisting",
+    title: "Three-Star Restaurant Reconsidering",
+    body: "The head sommelier at the three-star restaurant where you're listed has reached out quietly. Recent vintages haven't met the standard they promised their guests. The placement is under review and they need an answer before the new season's list is printed.",
+    condition: s => !!(s.classification?.threeStar) && s.quality < 82 && s.prestige < 80,
+    choices: [
+      { label: "Offer a private barrel tasting", cost: 6000,
+        hint: "If quality is recovering (≥78): placement saved, Prestige +3. Otherwise: placement lost, Prestige −5.",
+        effect: s => {
+          if (s.quality >= 78) {
+            s.prestige += 3; addChannelTrust(s, "restaurant", 6);
+            log(s, "The barrel samples impressed them. The placement survives for now — but they'll be watching the next release.");
+          } else {
+            s.classification.threeStar = false;
+            s.prestige -= 5; addChannelTrust(s, "restaurant", -12); addChannelDemand(s, ["restaurant"], -6);
+            log(s, "The sommelier was apologetic but firm. The listing has been removed. Word will travel.");
+          }
+        }},
+      { label: "Accept the decision gracefully",
+        hint: "Placement lost. Prestige −3. But no further trust damage.",
+        effect: s => {
+          s.classification.threeStar = false;
+          s.prestige -= 3; addChannelDemand(s, ["restaurant"], -4);
+          log(s, "A graceful exit. The restaurant will remember that. The listing is gone, but the relationship isn't burned.");
+        }}
+    ]
+  },
+  {
+    id: "fall-from-grace",
+    title: "Questions About the Estate",
+    body: "A prominent wine publication has run a piece asking whether the estate has lost its way. The article references your high-water mark vintage by name and compares the trajectory unfavorably to the last two releases. The trade has noticed.",
+    condition: s => (s.legacyPressureMonths || 0) >= 4 && archiveMemory(s).bestScore >= 92,
+    choices: [
+      { label: "Give a candid interview about the difficult vintages",
+        hint: "Prestige −3 short-term, but Collector trust +8 and Legacy pressure −3. Honesty builds long-term loyalty.",
+        effect: s => {
+          s.prestige -= 3; addChannelTrust(s, "collector", 8); addChannelTrust(s, "club", 5);
+          s.legacyPressureMonths = Math.max(0, (s.legacyPressureMonths || 0) - 3);
+          log(s, "The interview landed well. Admitting difficulty without excuses is rare in this industry. Collectors respected it.");
+        }},
+      { label: "Say nothing and let the wine answer",
+        hint: "No immediate change. Legacy pressure continues — but if the next vintage scores 90+, it resets everything.",
+        effect: s => {
+          log(s, "No comment from the estate. The article ran. The industry is watching the next release.");
+        }},
+      { label: "Shift focus to hospitality and direct sales",
+        hint: "Demand +5 from tasting room push. Prestige −2 (perceived retreat). Buys time.",
+        effect: s => {
+          s.demand += 5; s.prestige -= 2;
+          addChannelDemand(s, ["cellarDoor"], 6); addChannelTrust(s, "cellarDoor", 6);
+          log(s, "A pivot toward direct-to-consumer and hospitality. Smart commercially, but critics read it as an admission.");
+        }}
+    ]
+  },
+
+  // ── Vine disease ──────────────────────────────────────────────────────────
+  {
+    id: "vine-disease",
+    title: "Trunk Disease in the Vineyard",
+    body: "Your vineyard manager has confirmed it: esca or eutypa trunk disease is progressing through multiple blocks. The fungus travels through old pruning wounds and will slowly hollow out the wood. Every option is expensive in its own way.",
+    minMonth: 18,
+    condition: s => s.rows.length >= 2,
+    choices: [
+      { label: "Cut back infected wood aggressively",
+        hint: "Surgical removal. Affected blocks lose 30-40 health and will need seasons to recover. Profile +3.",
+        effect: s => {
+          const count = Math.min(Math.ceil(s.rows.length * 0.45), s.rows.length);
+          const worst = [...s.rows].sort((a, b) => a.health - b.health).slice(0, count);
+          worst.forEach(r => { r.health = clamp(r.health - randint(30, 40), 10, 55); r.disease = clamp(r.disease + 8, 0, 75); });
+          s.profile = clamp((s.profile ?? 50) + 3, 0, 100);
+          log(s, `Trunk surgery completed on ${count} block${count > 1 ? "s" : ""}. The wood is clean but recovery will take several seasons.`);
+        }},
+      { label: "Apply a systemic fungicide program", cost: 14000,
+        hint: "Disease pressure cut across all blocks. No block damage. Quality -3, Profile -4.",
+        effect: s => {
+          s.rows.forEach(r => { r.disease = Math.max(r.disease - randint(10, 16), 5); });
+          s.quality -= 3;
+          s.profile = clamp((s.profile ?? 50) - 4, 0, 100);
+          log(s, "The fungicide program stabilized the spread. The disease is managed, not cured.");
+        }},
+      { label: "Rogue out the worst blocks and replant", cost: 20000,
+        hint: "1-2 worst blocks removed and replanted. Young vines will not harvest for 3 seasons. Prestige +4.",
+        effect: s => {
+          const count = Math.min(Math.max(1, Math.floor(s.rows.length * 0.3)), 2);
+          const worst = [...s.rows].sort((a, b) => a.health - b.health).slice(0, count);
+          worst.forEach(r => { r.health = 30; r.disease = 4; r.matureMonth = s.month + 36; });
+          s.prestige += 4;
+          log(s, `${count} block${count > 1 ? "s" : ""} pulled and replanted with resistant rootstock. Young vines take 3 seasons to bear. The estate is investing in the next decade.`);
+        }}
+    ]
+  },
+
+  // ── Finger Lakes ice wine ─────────────────────────────────────────────────
+  {
+    id: "fingerlakes-icewine",
+    title: "Arctic Blast: Ice Wine Window",
+    body: "A genuine freeze event is developing over the Finger Lakes. Temperatures are forecast to hit -10 C by dawn. Some clusters are still on vine, a deliberate late-harvest gamble. Ice wine requires picking frozen fruit and pressing it at below-zero temperatures, accepting a fraction of normal yield for extraordinary concentration.",
+    condition: s => s.region === "fingerlakes" && s.season === "Harvest",
+    choices: [
+      { label: "Push for ice wine, pick at first freeze",
+        hint: "55% chance: Prestige +12, Quality +8, Collector trust +6, cash +$18k. 45% chance: partial freeze. Quality -5, Morale -3.",
+        effect: s => {
+          if (rand() < 0.55) {
+            s.prestige += 12;
+            s.quality += 8;
+            s.cash += 18000;
+            addChannelTrust(s, "collector", 6); addChannelTrust(s, "restaurant", 4);
+            log(s, "Frozen clusters pressed through the night. A true Eiswein-style release: tiny volume, extraordinary concentration. Collectors will pay serious money for it.");
+          } else {
+            s.quality -= 5;
+            s.morale -= 3;
+            log(s, "The freeze was partial. Clusters froze unevenly and concentration was inconsistent. An interesting wine, not the transcendent result the gamble needed.");
+          }
+        }},
+      { label: "Pick now and protect the vintage",
+        hint: "Normal harvest. No risk, no ice wine upside.",
+        effect: s => {
+          s.morale += 1;
+          log(s, "A safe pick. The crew appreciated the call. Clean fruit, honest vintage.");
+        }}
+    ]
+  },
+
+  // ── Mendoza peso crisis ───────────────────────────────────────────────────
+  {
+    id: "mendoza-inflacion",
+    title: "Peso Crisis: Export Window",
+    body: "Argentina's peso has devalued sharply again. Your wine now costs 30% less in hard currency overnight. Export inquiries are flooding in from US and European importers who see an opening. The catch: imported French barrels and supplies are now priced in dollars, and local costs will follow.",
+    condition: s => s.region === "mendoza",
+    choices: [
+      { label: "Ride the export surge, fill every order",
+        hint: "Export demand +14, Trust +6, Cash +$9k from rushed forward contracts. Quality -2 from volume pressure.",
+        effect: s => {
+          addChannelDemand(s, ["export"], 14);
+          addChannelTrust(s, "export", 6);
+          s.cash += 9000;
+          s.quality -= 2;
+          addOrder(s, "export");
+          log(s, "Orders from US and European importers arrived in a wave. Volume will stretch the cellar, but the dollars are real.");
+        }},
+      { label: "Lock in dollar-denominated contracts", cost: 8000,
+        hint: "Export order added. Export trust +10. Prestige +4. Protected from future devaluation.",
+        effect: s => {
+          addOrder(s, "export");
+          addChannelTrust(s, "export", 10);
+          s.prestige += 4;
+          log(s, "Forward contracts signed in USD. The terms are fixed regardless of where the peso goes from here. The estate now has serious international standing.");
+        }},
+      { label: "Pivot to native oak, cut imported barrel costs",
+        hint: "French barrel costs avoided. Profile +5, Quality +2, Cash +$4k saved. No export windfall.",
+        effect: s => {
+          s.quality += 2;
+          s.profile = clamp((s.profile ?? 50) + 5, 0, 100);
+          s.cash += 4000;
+          log(s, "Quebracho and native-oak alternatives sourced locally. Less French, more Argentine. The wine will taste like where it comes from.");
+        }}
     ]
   }
 ];
@@ -1817,7 +2688,12 @@ const ACTIONS = [
     cost: 2400,
     apply: s => {
       const glassPenalty = s.marketMods.glassShortage ? 0.72 : 1;
-      const capacity = Math.floor((280 + s.buildings.line * 170 + staffBonus(s, "bottling") * 95) * glassPenalty);
+      if (s.marketMods.lineFault) {
+        log(s, "The patched bottling line seized mid-run. Capacity halved this month.");
+        delete s.marketMods.lineFault;
+      }
+      const lineFaultPenalty = s.marketMods.lineFault ? 0.5 : 1;
+      const capacity = Math.floor((280 + s.buildings.line * 170 + staffBonus(s, "bottling") * 95) * glassPenalty * lineFaultPenalty);
       const ready = readyVintages(s);
       if (!ready.length) { log(s, "No wine has finished aging yet."); return; }
       const lot = ready[0];
@@ -1875,12 +2751,12 @@ const ACTIONS = [
   {
     id: "hospitality",
     name: "Run Hospitality",
-    detail: "Open the tasting room when tourism and allocations matter.",
-    seasons: ["Budbreak", "Flowering", "Veraison", "Harvest", "Cellar"],
+    detail: "Open the tasting room. Visitor numbers peak in harvest season and dip in winter, but you can always open the door.",
     consequence: "Sells premium cases, raises demand, prestige, and morale.",
     cost: 1600,
     apply: s => {
-      const visits = Math.floor((80 + s.buildings.room * 70) * (0.7 + s.demand / 130));
+      const visitorSeasonMod = { Dormant: 0.55, Budbreak: 0.8, Flowering: 0.9, Veraison: 1.0, Harvest: 1.15, Cellar: 0.7 }[s.season] ?? 1.0;
+      const visits = Math.floor((80 + s.buildings.room * 70) * (0.7 + s.demand / 130) * visitorSeasonMod);
       const cases = Math.min(availableCases(s), Math.floor(visits / 8));
       const revenue = cases * Math.round(s.price * 12 * 1.35);
       s.inventory.cases -= cases;
@@ -1898,16 +2774,16 @@ const ACTIONS = [
         addChannelTrust(s, "club", -1);
       }
       s.fatigue += Math.max(1, Math.round(visits / 120) - staffBonus(s, "hospitality"));
+      const quietNote = s.season === "Dormant" ? " (quiet season)" : "";
       log(s, cases > 0
-        ? `Hospitality hosted ${visits} guests and sold ${cases} premium cases.`
-        : `Hospitality hosted ${visits} guests, but there was no allocation to sell. Interest rose a little; club patience slipped.`);
+        ? `Hospitality hosted ${visits} guests${quietNote} and sold ${cases} premium cases.`
+        : `Hospitality hosted ${visits} guests${quietNote}, but there was no allocation to sell. Interest rose a little; club patience slipped.`);
     }
   },
   {
     id: "finance",
     name: "Negotiate and Hedge",
     detail: "Talk to banks, suppliers, landlords, and grant programs.",
-    seasons: ["Dormant", "Budbreak", "Flowering", "Cellar"],
     consequence: "Adds cash and influence, but cools demand slightly.",
     cost: 800,
     apply: s => {
@@ -1975,7 +2851,7 @@ const ACTIONS = [
         s.rows.forEach(row => {
           ensureRowFields(row);
           row.disease = clamp(row.disease - (20 + randint(0, 6)), 0, 100);
-          row.water   = clamp(row.water + (row.water < 45 ? 6 : -4), 0, 100);
+          row.water   = clamp(row.water + (row.water < (VARIETALS[s.varietal]?.optimalWater ?? 45) ? 5 : -5), 0, 100);
           row.threat  = Math.round(row.disease / 11);
           row.pressure = "canopy thinned";
         });
@@ -2013,7 +2889,7 @@ const ACTIONS = [
           });
           s.quality += 1;
           s.fatigue += 1;
-          log(s, "Post-harvest vineyard walk — disease pressure eased.");
+          log(s, "Post-harvest vineyard walk: disease pressure eased.");
         }
       } else if (s.season === "Cellar") {
         const ready = readyVintages(s);
@@ -2037,7 +2913,7 @@ const ACTIONS = [
         s.rows.forEach(row => {
           ensureRowFields(row);
           row.health  = clamp(row.health + 6, 20, 100);
-          row.water   = clamp(row.water + (row.water < 50 ? 8 : -4), 20, 80);
+          row.water   = clamp(row.water + (row.water < (VARIETALS[s.varietal]?.optimalWater ?? 50) ? 8 : -4), 20, 80);
           row.disease = clamp(row.disease - 8, 0, 100);
           row.threat  = Math.round(row.disease / 11);
           row.pressure = "pruned";
@@ -2076,8 +2952,10 @@ const app = document.getElementById("app");
 let state = null;
 let setup = { region: "napa", varietal: "cabernet", philosophy: "classic", difficulty: "estate", wineryName: "" };
 let setupStep = 0;
+let setupMode = "start"; // "start" | "custom"
 let activeTab = "overview";
 let helpOpen = true;
+let guideStep = null;
 
 const SETUP_STEPS = [
   { key: "region", title: "Choose Region", kicker: "Where the estate lives shapes weather, prestige, land cost, and grape options." },
@@ -2163,10 +3041,38 @@ const SEASONAL_ACTIONS = {
 
 // Named-release name pools keyed by profile tier
 const VINTAGE_NAMES = {
-  cult:       ["Clos", "Sans Soufre", "Sauvage", "Libre", "Primitif"],
-  artisan:    ["Reserve", "Old Block", "Heritage Cuvée", "Barrel Select", "Lieu-Dit"],
-  classic:    ["Estate Selection", "Grand Reserve", "Prestige Cuvée", "Flagship", "Anniversary"],
-  commercial: ["Signature", "House Select", "Proprietor's", "Classic Reserve", "Celebracion"]
+  cult: [
+    "Clos", "Sans Soufre", "Sauvage", "Libre", "Primitif",
+    "Amphorae", "Vivant", "Natif", "Brut Nature", "Mémoire",
+    "Terroir Pur", "Vrai", "Instinct", "Organique", "Unfiltered"
+  ],
+  artisan: [
+    "Reserve", "Old Block", "Heritage Cuvée", "Barrel Select", "Lieu-Dit",
+    "Single Vineyard", "Vieilles Vignes", "Old Vine", "Estate Select",
+    "Clos Select", "Parcelle", "Block Reserve", "Monopole", "Cru Select", "Terroir"
+  ],
+  classic: [
+    "Estate Selection", "Grand Reserve", "Prestige Cuvée", "Flagship", "Anniversary",
+    "Premier Cuvée", "Grand Millésime", "Proprietor's Reserve", "Winemaker's Selection",
+    "Signature Reserve", "Exceptional Harvest", "Prestige", "Heritage", "Legacy", "Distinction"
+  ],
+  commercial: [
+    "Signature", "House Select", "Proprietor's", "Classic Reserve", "Celebracion",
+    "Estate Classic", "Valley Selection", "Heritage Reserve", "Special Edition",
+    "Founder's Reserve", "Vintner's Select", "Seasonal Pick", "Winemaker's Touch"
+  ]
+};
+
+const REGIONAL_VINTAGE_NAMES = {
+  napa:       ["Mountain Block", "Oakville Select", "Stag's Flight", "Rutherford Bench", "Hillside Reserve"],
+  bordeaux:   ["Millésime", "Réserve du Château", "Grand Vin", "Cuvée Principale", "Exception"],
+  burgundy:   ["Premier Cru", "Climat", "Clos du Domaine", "Vieilles Parcelles", "Monopole"],
+  mosel:      ["Spätlese", "Grosse Lage", "Alte Reben", "Erste Lage", "Goldkapsel"],
+  barossa:    ["Ancestor Vine", "Ironbark", "Greenock Block", "Centenarian", "Old Pressings"],
+  mendoza:    ["Gran Reserva", "Alto Block", "Finca Select", "Terruño", "Piedra Negra"],
+  piedmont:   ["Riserva", "Sorì", "Vigna Speciale", "Bricco Select", "Cru Storico"],
+  rioja:      ["Gran Reserva", "Vendimia Seleccionada", "Finca Select", "Pagos", "Sierra Select"],
+  fingerlakes: ["Lake Effect", "Schist Block", "Seneca Reserve", "Glacial Till", "North Shore"],
 };
 
 const AGING_TARGETS = {
@@ -2195,9 +3101,26 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function money(value) {
   const sign = value < 0 ? "-" : "";
   return `${sign}$${Math.abs(Math.round(value)).toLocaleString()}`;
+}
+
+function shortMoney(v) {
+  const sign = v < 0 ? "-" : "";
+  const abs = Math.abs(v);
+  if (abs >= 1000000) return `${sign}$${(abs / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (abs >= 1000) return `${sign}$${Math.round(abs / 1000)}k`;
+  return `${sign}$${Math.round(abs)}`;
 }
 
 function currentDateLabel(s = state) {
@@ -2353,10 +3276,10 @@ function createState() {
     capacityMonth: 1,
     staff: [],
     staffProgress: {},
-    staffMarket: STAFF_POOL.map(p => p.id),
+    staffMarket: shuffle(STAFF_POOL.map(p => p.id)),
     staffTraits: {},
     buildings: { block: 0, tank: 1, barrel: 1, line: 0, room: 0, lab: 0 },
-    rows: makeRows(d.rows),
+    rows: makeRows(d.rows, { varietal: setup.varietal, region: setup.region }),
     inventory: {
       cases: Math.round(360 * inventoryMod),
       glass: Math.round(1600 * inventoryMod),
@@ -2411,12 +3334,15 @@ function createState() {
 
 function makeRows(count, options = {}) {
   const names = ["North Slope", "River Bench", "Old Block", "Stone Terrace", "Hill Parcel", "Windbreak", "Village Edge", "Reservoir Row"];
+  const optW = VARIETALS[options.varietal]?.optimalWater ?? 50;
+  const humidity = REGION_CLIMATE[options.region]?.humidity ?? 0.55;
+  const humidityBias = Math.round((humidity - 0.55) * 15);
   return Array.from({ length: count }, (_, i) => ({
     id: i + 1,
     name: names[i],
     health: 82 + randint(-4, 6),
     disease: randint(5, 18),
-    water: 52 + randint(-8, 8),
+    water: clamp(optW + humidityBias + randint(-8, 8), 15, 82),
     pressure: "weeds",
     plantedMonth: options.plantedMonth || -96,
     matureMonth: options.matureMonth || 1
@@ -2432,8 +3358,10 @@ function startGame() {
   state = createState();
   ensureEconomy(state);
   setupStep = 0;
+  setupMode = "start";
   activeTab = "overview";
   helpOpen = true;
+  guideStep = 0;
   addOrder(state, "distributor");
   addOrder(state, "restaurant");
   resetActionBudgets(state);
@@ -2450,6 +3378,265 @@ function randomStart() {
   setup.difficulty = DIFFICULTIES[randint(0, DIFFICULTIES.length - 1)].id;
   setup.wineryName = RANDOM_WINERY_NAMES[randint(0, RANDOM_WINERY_NAMES.length - 1)];
   startGame();
+}
+
+function applySuggestedStart(index) {
+  const s = SUGGESTED_STARTS[index];
+  setup.region = s.region;
+  setup.varietal = s.varietal;
+  setup.philosophy = s.philosophy;
+  setup.difficulty = s.difficulty;
+  if (!setup.wineryName) setup.wineryName = s.wineryName;
+  startGame();
+}
+
+function setSetupMode(mode) {
+  setupMode = mode;
+  render();
+}
+
+const GUIDE_PAGES = [
+  {
+    title: "The Life of a Vintage",
+    subtitle: "Every year follows the same rhythm: six seasons, each with a job to do."
+  },
+  {
+    title: "Vines, Disease & Weather",
+    subtitle: "What grows in your blocks, and what threatens it."
+  },
+  {
+    title: "Wine Quality & Scoring",
+    subtitle: "What makes a great vintage, and what your quality score is actually worth."
+  },
+  {
+    title: "Running the Business",
+    subtitle: "Cash, channels, and what to do when money runs short."
+  },
+  {
+    title: "Your Team",
+    subtitle: "Staff capacity, morale, virtues, vices, and the friction between them."
+  }
+];
+
+function guidePageBody(step) {
+  if (step === 0) {
+    return `
+      <div class="guide-season-grid">
+        <div class="guide-season">
+          <span class="guide-season-label">Dormant</span>
+          <span class="guide-season-window">Dec – Feb</span>
+          <p>Prune vines, plan the year ahead, let crews recover. The winter planning action restores vine health and reduces operational fatigue.</p>
+        </div>
+        <div class="guide-season">
+          <span class="guide-season-label">Budbreak</span>
+          <span class="guide-season-window">Mar – Apr</span>
+          <p>New growth emerges. Run the spray program now to suppress early fungal pressure before disease gains a foothold on young shoots.</p>
+        </div>
+        <div class="guide-season">
+          <span class="guide-season-label">Flowering</span>
+          <span class="guide-season-window">May – Jun</span>
+          <p>Fruit sets. Canopy thinning opens airflow through the fruit zone, cutting disease risk and raising wine quality.</p>
+        </div>
+        <div class="guide-season">
+          <span class="guide-season-label">Veraison</span>
+          <span class="guide-season-window">Jul – Aug</span>
+          <p>Grapes change color and begin ripening. Green harvest (dropping 20% of the crop) concentrates flavor and sugar in what remains.</p>
+        </div>
+        <div class="guide-season">
+          <span class="guide-season-label">Harvest</span>
+          <span class="guide-season-window">Sep – Oct</span>
+          <p>Pick the fruit. Selective picking improves capture rate and quality. Disease above 40 at harvest will tank your vintage score.</p>
+        </div>
+        <div class="guide-season">
+          <span class="guide-season-label">Cellar</span>
+          <span class="guide-season-window">Nov – Feb</span>
+          <p>Fermentation begins and cellar work starts: racking lots, topping barrels, moving ready wine forward. This is where the pipeline starts, not ends.</p>
+        </div>
+      </div>
+      <p class="guide-note">The pipeline: <strong>harvested grapes → bulk wine in tanks → barrels → bottled cases → revenue.</strong> Bottling happens when the wine is ready, which can be any season. Long-aging varietals (Nebbiolo, Cabernet Sauvignon) can spend a year or more in barrel across multiple seasons before release.</p>
+    `;
+  }
+  if (step === 1) {
+    return `
+      <div class="guide-two-col">
+        <div>
+          <div class="guide-section-head">Vineyard Health</div>
+          <p>Each block tracks three numbers: <strong>health</strong> (vine vigor), <strong>disease</strong> (fungal and pest pressure), and <strong>water</strong> (soil moisture). Healthy vines produce better fruit. Disease above 40 at harvest noticeably degrades vintage quality.</p>
+          <div class="guide-section-head">Disease Management</div>
+          <p>Disease accumulates through spring and summer. Seasonal actions (spray programs in Budbreak, canopy thinning in Flowering) cut it back significantly. Neglect the early months and you enter harvest already compromised.</p>
+          <div class="guide-section-head">Water & Drought</div>
+          <p>Each grape has an optimal water level. Too little stresses vines; too much promotes disease. Drought-tolerant varieties handle dry seasons far better than water-hungry ones.</p>
+        </div>
+        <div>
+          <div class="guide-section-head">A Few Varietals</div>
+          <p>The game includes twelve grapes, roughly from forgiving to demanding:</p>
+          <ul class="guide-ul">
+            <li><strong>Shiraz, Malbec, Tempranillo, Gamay</strong>: heat-tolerant, drought-hardy, lower disease risk. Forgiving for beginners.</li>
+            <li><strong>Merlot, Sauvignon Blanc, Cabernet Franc</strong>: reliable mid-tier; modest disease risk, reasonable yield.</li>
+            <li><strong>Chardonnay, Cabernet Sauvignon</strong>: flexible but disease-sensitive; Cab demands long aging and rewards patience.</li>
+            <li><strong>Pinot Noir, Riesling</strong>: fragile and disease-prone; high quality ceiling if you protect them.</li>
+            <li><strong>Nebbiolo</strong>: the hardest grape, with low yield, very long barrel time, and an unmatched prestige ceiling.</li>
+          </ul>
+          <div class="guide-section-head">Weather Events</div>
+          <p>Heat spikes, frost, and drought hit without warning. The spring spray program builds frost defenses. Crop insurance is available once cash allows. Mosel and Finger Lakes carry the most weather risk; Barossa and Mendoza the most drought.</p>
+        </div>
+      </div>
+    `;
+  }
+  if (step === 2) {
+    return `
+      <div class="guide-two-col">
+        <div>
+          <div class="guide-section-head">What Makes a Good Vintage</div>
+          <p>In real winemaking, vintage quality emerges from a combination of growing conditions, canopy management, harvest timing, and cellar craft. The game models the same chain: disease-free vines, careful seasonal work, and attentive cellaring produce better wine.</p>
+          <p>Three things matter most: <strong>disease pressure at harvest</strong> (keep blocks below 40; below 25 is safe), <strong>weather events</strong> during the season (heat waves, frost, and drought all carry quality penalties if unmanaged), and <strong>cellar work</strong> (barrel aging and racking add complexity and quality over time).</p>
+          <div class="guide-section-head">Vintage Score</div>
+          <p>Each harvest produces a rating based on conditions that year. The score affects pricing, which buyers want your wine, and your prestige trajectory:</p>
+          <div class="guide-score-table">
+            <div><span>★☆☆☆☆</span><strong>Poor</strong><em>Deep discount; hard to move at any price</em></div>
+            <div><span>★★☆☆☆</span><strong>Below Average</strong><em>Below-market pricing; move volume fast</em></div>
+            <div><span>★★★☆☆</span><strong>Average</strong><em>Standard trade pricing; steady demand</em></div>
+            <div><span>★★★★☆</span><strong>Good</strong><em>Premium tier; restaurant buyers engage</em></div>
+            <div><span>★★★★★</span><strong>Exceptional</strong><em>Collector demand; allocation list opens</em></div>
+          </div>
+        </div>
+        <div>
+          <div class="guide-section-head">House Quality</div>
+          <p>Separate from any single vintage, your <strong>Quality</strong> stat (shown in the topbar, 0–120) reflects your estate's current production standard. Think of it as your cellar's reputation for consistency: it affects your price ceiling, shapes prestige, and influences how buyers think of new releases.</p>
+          <p>Quality decays slightly each month without investment and decays faster above 85, where maintaining excellence is genuinely hard. Cellar actions, barrel programs, and good vineyard work all push it upward.</p>
+          <div class="guide-section-head">Wine Style & Profile</div>
+          <p>Every winery sits on a spectrum from commercial to artisan, shown as your <strong>Profile</strong> (0–100). It shifts based on your decisions and starting philosophy.</p>
+          <ul class="guide-ul">
+            <li><strong>Commercial end (low profile)</strong>: higher demand volume, wider market access, lower price ceiling. Mass market and export buyers respond here. Scaled Commercial philosophy starts you here.</li>
+            <li><strong>Artisan end (high profile)</strong>: narrower demand but higher price ceiling; collector and critic appeal. Natural philosophy and low-intervention decisions push in this direction.</li>
+          </ul>
+          <p>Neither end is correct; the strategy is committing to a position and building the right channels around it.</p>
+        </div>
+      </div>
+    `;
+  }
+  if (step === 3) {
+    return `
+      <div class="guide-two-col">
+        <div>
+          <div class="guide-section-head">Monthly Fixed Costs</div>
+          <p>Every month you pay <strong>lease</strong>, <strong>staff salaries</strong>, <strong>operating costs</strong>, and <strong>debt interest</strong>, before any revenue arrives. Know your burn rate; it arrives before sales do.</p>
+          <div class="guide-section-head">When Cash Is Tight</div>
+          <ul class="guide-ul">
+            <li>Draw from your <strong>credit line</strong>; it carries monthly interest, so repay it quickly</li>
+            <li><strong>Sell bulk grapes</strong> on the open market for quick cash, at the cost of a vintage</li>
+            <li><strong>Release early</strong>: sell a bottled vintage before its ideal window, at a discount</li>
+            <li><strong>Buy grapes</strong> to fill a revenue gap when your harvest falls short</li>
+          </ul>
+          <div class="guide-section-head">Practical Tips</div>
+          <ul class="guide-ul">
+            <li>Price to your vintage score; a ★★★ wine at ★★★★★ pricing stalls on the shelf</li>
+            <li>Watch inbound orders; they expire and missed ones hurt your standing with buyers</li>
+            <li>Wine club members are loyal and recurring; grow the club early</li>
+            <li>Hospitality actions build both demand and morale at the same time</li>
+          </ul>
+        </div>
+        <div>
+          <div class="guide-section-head">Sales Channels</div>
+          <div class="guide-channel-list">
+            <div><span>Collectors</span><span class="guide-channel-pct">108%</span><em>highest margin; prestige required</em></div>
+            <div><span>Cellar Door</span><span class="guide-channel-pct">100%</span><em>best direct-to-consumer margin</em></div>
+            <div><span>Wine Club</span><span class="guide-channel-pct">90%</span><em>loyal members, recurring orders</em></div>
+            <div><span>Restaurants</span><span class="guide-channel-pct">62%</span><em>relationship-driven, reputation-building</em></div>
+            <div><span>Distribution</span><span class="guide-channel-pct">52%</span><em>steady volume, thin margin</em></div>
+            <div><span>Export</span><span class="guide-channel-pct">45%</span><em>volume play, limited prestige lift</em></div>
+            <div><span>Mass Market</span><span class="guide-channel-pct">38%</span><em>supermarket volume; prestige risk</em></div>
+          </div>
+          <div class="guide-section-head" style="margin-top:10px">Demand & Prestige</div>
+          <p>Demand drives how many cases buyers want. Prestige unlocks premium channels and justifies higher prices. Both decay slowly if you're not actively investing; don't let them coast.</p>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="guide-two-col">
+      <div>
+        <div class="guide-section-head">What Staff Do</div>
+        <p>Each hire adds action capacity in their department: vineyard, cellar, sales, hospitality, or finance. Without staff, the estate runs on a bare action budget. Actions are how you actually move the estate forward each month: spraying vines, racking barrels, running hospitality, closing deals. Hire early; staff also earn XP and unlock perks over time.</p>
+        <div class="guide-section-head">Agendas & Morale</div>
+        <p>Every person has an agenda: a set of priorities they care about and watch you for. Your vineyard manager wants healthy blocks and no shortcut harvests. Your sales director wants no broken promises to buyers. Consistently overriding someone's agenda erodes morale. <strong>Below 20 morale you lose an action per month; at 0 the run ends.</strong></p>
+        <div class="guide-section-head">On Player Virtue</div>
+        <p>Running an estate well rewards steady judgment: plan ahead, honor commitments, don't overextend, weather setbacks without panic. No single brilliant move wins; consistency does. This maps roughly to what classical virtue ethics calls the cardinal virtues: prudence, justice, temperance, and fortitude.</p>
+      </div>
+      <div>
+        <div class="guide-section-head">On Staff Virtue</div>
+        <p>Every staff member carries <strong>one random virtue and one random vice</strong>, visible to you in the hiring pool before you commit. You don't choose; you observe and manage. A virtue improves performance or the team's environment. A vice creates friction, costs, or risk.</p>
+        <p>Some traits <strong>clash</strong>: two Proud colleagues bristle at each other; a Just person conflicts with a Merciful one (rule-following vs. case-by-case compassion); a Wrathful person collides with anyone Proud. Each conflicting pair drains −1 morale per month. As the team grows, compatibility matters.</p>
+        <div class="guide-trait-grid">
+          <div class="guide-trait virtue"><span>Diligent</span><em>XP 50% faster</em></div>
+          <div class="guide-trait virtue"><span>Prudent</span><em>Fewer bad events</em></div>
+          <div class="guide-trait virtue"><span>Magnanimous</span><em>+2 team morale/mo</em></div>
+          <div class="guide-trait virtue"><span>Temperate</span><em>Morale floor at 10</em></div>
+          <div class="guide-trait virtue"><span>Stout-hearted</span><em>Softer crisis damage</em></div>
+          <div class="guide-trait virtue"><span>Sanguine</span><em>+2 demand/mo</em></div>
+          <div class="guide-trait virtue"><span>Humble</span><em>Salary −10%, no friction</em></div>
+          <div class="guide-trait virtue"><span>Merciful</span><em>+2 morale when &lt;40</em></div>
+          <div class="guide-trait virtue"><span>Just</span><em>+1 team morale/mo</em></div>
+          <div class="guide-trait virtue"><span>Faithful</span><em>+2 team morale/mo</em></div>
+          <div class="guide-trait vice"><span>Slothful</span><em>XP 40% slower</em></div>
+          <div class="guide-trait vice"><span>Proud</span><em>Salary +10%, clashes</em></div>
+          <div class="guide-trait vice"><span>Wrathful</span><em>Volatile; crisis upside</em></div>
+          <div class="guide-trait vice"><span>Avaricious</span><em>Cheap; −2 team morale</em></div>
+          <div class="guide-trait vice"><span>Melancholic</span><em>−1 morale; solo upside</em></div>
+          <div class="guide-trait vice"><span>Lustful</span><em>+2 demand; salary +8%</em></div>
+          <div class="guide-trait vice"><span>Gluttonous</span><em>+1 demand; inventory leak</em></div>
+          <div class="guide-trait vice"><span>Crafty</span><em>+1 demand; −1 morale; event risk +15%</em></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function guideModal() {
+  const page = GUIDE_PAGES[guideStep];
+  const isLast = guideStep === GUIDE_PAGES.length - 1;
+  const dots = GUIDE_PAGES.map((_, i) =>
+    `<span class="guide-dot${i === guideStep ? " active" : ""}"></span>`
+  ).join("");
+  return `
+    <div class="modal">
+      <div class="modal-card guide-modal-card">
+        <div class="guide-header">
+          <div>
+            <h2>${page.title}</h2>
+            <p class="guide-subtitle">${page.subtitle}</p>
+          </div>
+          <span class="guide-page-counter">${guideStep + 1} / ${GUIDE_PAGES.length}</span>
+        </div>
+        <div class="guide-body">
+          ${guidePageBody(guideStep)}
+        </div>
+        <div class="guide-footer">
+          <div class="guide-dots">${dots}</div>
+          <div class="top-actions">
+            <button class="ghost" onclick="retreatGuide()" ${guideStep === 0 ? "disabled" : ""}>← Previous</button>
+            <button class="ghost" onclick="skipGuide()">Skip guide</button>
+            <button class="primary" onclick="advanceGuide()">${isLast ? "Start playing" : "Next →"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function advanceGuide() {
+  guideStep = (guideStep ?? 0) + 1;
+  render();
+}
+
+function retreatGuide() {
+  guideStep = Math.max(0, (guideStep ?? 1) - 1);
+  render();
+}
+
+function skipGuide() {
+  guideStep = GUIDE_PAGES.length;
+  render();
 }
 
 function saveGame() {
@@ -2491,7 +3678,7 @@ function ensureEconomy(s) {
   if (!('naturalCellarUsedMonth' in s)) s.naturalCellarUsedMonth = -1;
   if (!s.insurance) s.insurance = { crop: false };
   if (s.inventory && !('stash' in s.inventory)) s.inventory.stash = 0;
-  s.staffMarket = STAFF_POOL.map(p => p.id).filter(staffId => !(s.staff || []).includes(staffId));
+  s.staffMarket = shuffle(STAFF_POOL.map(p => p.id).filter(staffId => !(s.staff || []).includes(staffId)));
   ensureStaffTraits(s);
   ensureActionBudgets(s);
   ensureChannels(s);
@@ -2507,6 +3694,7 @@ function resetGame() {
   localStorage.removeItem("cellar-baron-save");
   state = null;
   setupStep = 0;
+  setupMode = "start";
   activeTab = "overview";
   helpOpen = true;
   render();
@@ -2541,6 +3729,10 @@ function staffCostMod(s) {
     return mod * (person?.effects.costCut || 1);
   }, 1);
   return base * staffPerkProduct(s, "costCut");
+}
+
+function staffYieldMod(s) {
+  return 1 + staffBonus(s, "yieldBonus");
 }
 
 function buildDiscountMod(s) {
@@ -2841,6 +4033,9 @@ function marketDemandCeiling(s, channel) {
 function applyChannelDemandDrift(s, monthlyCasesSold) {
   ensureChannels(s);
   const score = currentReleaseScore(s);
+  const globalDemand = channelHeadlineDemand(s);
+  // High demand is harder to maintain: each tier above 80 adds extra monthly gravity
+  const demandGravity = globalDemand >= 110 ? 2 : globalDemand >= 95 ? 1 : 0;
   Object.keys(CHANNELS).forEach(key => {
     const cap = marketDemandCeiling(s, key);
     if (s.channelDemand[key] > cap) {
@@ -2854,6 +4049,21 @@ function applyChannelDemandDrift(s, monthlyCasesSold) {
       s.channelDemand[key] -= 1;
     }
     if (score < 86 && ["collector", "restaurant", "club"].includes(key)) s.channelDemand[key] -= 1;
+    // Artisan gravity: high demand on prestige channels erodes without constant critic re-validation
+    if (demandGravity > 0 && ["collector", "restaurant", "club"].includes(key)) {
+      s.channelDemand[key] -= demandGravity;
+    }
+    // Commercial gravity: high demand on volume channels erodes from shelf rotation, competing brands, promo fatigue
+    const profile = s.profile ?? 50;
+    if (profile <= 40 && globalDemand >= 88 && ["distributor", "supermarket", "export"].includes(key)) {
+      const commercialGravity = globalDemand >= 105 ? 2 : 1;
+      s.channelDemand[key] -= commercialGravity;
+    }
+    // Volume channels punish low case throughput hard — distributors drop slow brands
+    if (["distributor", "supermarket"].includes(key) && monthlyCasesSold < 15 && s.channelDemand[key] > 60) {
+      s.channelDemand[key] -= 1;
+      s.channelTrust[key] -= 1;
+    }
     s.channelDemand[key] = clamp(Math.round(s.channelDemand[key]), 0, 130);
     s.channelTrust[key] = clamp(Math.round(s.channelTrust[key]), 0, 100);
   });
@@ -3018,14 +4228,18 @@ function directSales(s) {
   const qualitySignal = (s.prestige * 0.8 + s.quality * 0.7 + s.marketHeat * 0.6) / 3;
   const demandScale = clamp(directDemand * demandMod / 65, 0.05, 2.2);
   const desirability = qualitySignal * demandScale;
-  const priceResistance = Math.pow(s.price / 28, 1.55);
+  // Veblen pricing: at prestige 92+ raising price signals exclusivity rather than limiting volume
+  const veblenFactor = s.prestige >= 92 ? clamp(1 - (s.prestige - 92) * 0.075, 0.18, 1) : 1;
+  const priceResistance = Math.pow(s.price / 28, 1.55 * veblenFactor);
+  // Price squeeze: supermarket renegotiation knocked revenue per case down
+  const squeezeMod = s.marketMods?.priceSqueeze ? 0.88 : 1;
   const capacity = (70 + s.buildings.room * 80 + staffBonus(s, "sales") * 45 + staffBonus(s, "brand") * 55) * clamp(directTrust, 0.65, 1.35);
   const rawCases = Math.max(0, Math.floor((capacity * desirability) / (65 * priceResistance)));
   const salesCeiling = 35 + s.buildings.room * 50 + staffBonus(s, "sales") * 20 + staffBonus(s, "brand") * 15;
   const cases = Math.min(availableCases(s), rawCases, salesCeiling);
   const premium = 1 + Math.max(0, s.prestige - 45) / 210 + staffBonus(s, "brand") * 0.06;
   const vintageMod = vintageScoreMultiplier(s.currentVintageScore || 3);
-  const revenue = Math.round(cases * s.price * 12 * premium * vintageMod);
+  const revenue = Math.round(cases * s.price * 12 * premium * vintageMod * squeezeMod);
   return { cases, revenue, channel: "cellarDoor" };
 }
 
@@ -3100,14 +4314,112 @@ function recordArchiveSale(s, cases, revenue, channel = "cellarDoor") {
 
 function tastingNote(s, lot) {
   const tier = profileTier(s.profile ?? 50);
-  const grape = VARIETALS[s.varietal]?.name || "Estate Red";
   const quality = lot.criticScore || calcCriticScore(lot.score || 3, s.quality);
-  const body = quality >= 94 ? "layered and cellar-worthy" : quality >= 90 ? "polished and expressive" : quality >= 86 ? "honest and balanced" : "simple and early-drinking";
-  const style = tier === "cult" ? "wild herb, lifted fruit, and a savory edge" :
-    tier === "artisan" ? "red fruit, mineral tension, and careful oak" :
-    tier === "commercial" || tier === "classic" ? "ripe fruit, clean structure, and a steady finish" :
-    "soft fruit and broad appeal";
-  return `${grape} showing ${style}; ${body}.`;
+  const v = s.varietal;
+  const reg = s.region;
+
+  const varietalNotes = {
+    nebbiolo: [
+      "dried rose, iron, and tar; a wine that demands time",
+      "violet, red cherry, and forest floor; built for the cellar",
+      "ripe fruit beneath austere tannin; classic Langhe structure",
+      "compressed fruit, fine acid, and the promise of something longer"
+    ],
+    shiraz: [
+      "blackberry, smoked meat, and cracked pepper; warm-climate and full-bodied",
+      "dark plum, olive tapenade, and iron; bold and structured",
+      "inky fruit, licorice, and fine tannin; rich and long",
+      "ripe fruit, leather, and a savory mineral close"
+    ],
+    tempranillo: [
+      "ripe cherry, dried herbs, and vanilla oak; classic Mediterranean warmth",
+      "dark plum, leather, and tobacco; long barrel aging on display",
+      "fig, cedar, and structured fruit; traditional and cellar-worthy",
+      "warm fruit, red berries, and integrated wood spice"
+    ],
+    malbec: [
+      "juicy plum, mocha, and violets; Mendoza in its most generous form",
+      "dark cherry, chocolate, and velvety tannin; ripe and approachable",
+      "ripe fruit, coffee, and leather; altitude fruit with broad appeal",
+      "concentrated dark berry, lavender, and a smooth, generous finish"
+    ],
+    cabernet: [
+      "blackcurrant, cedar, and fine tannin; restrained and long",
+      "cassis, graphite, and dried herb; classic structure and precision",
+      "dark fruit, tobacco, and new oak; power tempered by careful extraction",
+      "firm tannin, dark cherry, and pencil lead; classic and cellar-worthy"
+    ],
+    merlot: [
+      "plum, soft tannin, and dark chocolate; early appeal with genuine depth",
+      "red cherry, velvet texture, and bay leaf; plush and food-friendly",
+      "approachable fruit, gentle oak, and a smooth, persistent finish",
+      "blueberry, mocha, and soft structure; generous and honest"
+    ],
+    chardonnay: [
+      "citrus, stone fruit, and integrated oak; precise and creamy",
+      "apple, cream, and toasty lees; well-structured and persistent",
+      "fresh acidity, pear, and subtle nuttiness; mineral-driven",
+      "peach, vanilla, and light toast; balanced and expressive"
+    ],
+    sauvignon: [
+      "grapefruit, freshly cut grass, and chalky minerality",
+      "citrus zest, white currant, and a saline edge; long and vibrant",
+      "lifted aromatics, passion fruit, and a textural mid-palate",
+      "gooseberry, green herb, and precise, focused acidity"
+    ],
+    riesling: [
+      "lime blossom, wet slate, and laser-precise acidity; crystalline",
+      "stone fruit, petrol note, and honeyed complexity; built for decades",
+      "off-dry balance, mandarin peel, and a steely backbone",
+      "white flowers, citrus oil, and a long mineral finish"
+    ],
+    pinot: [
+      "red fruit, forest floor, and silky tannin; elegant and site-expressive",
+      "dried cherry, earth, and subtle spice; Burgundian in weight and length",
+      "translucent fruit, iron minerality, and fine-grained structure",
+      "raspberry, violet, and a delicate, lingering finish"
+    ],
+    gamay: [
+      "bright cherry, violet, and fresh earthiness; light and immediately joyful",
+      "juicy red fruit, gentle grip, and a floral lift; drink young",
+      "fragrant, crunchy, and energetically fruited; honest and undemanding",
+      "red berries, pepper, and a lively, peppery close"
+    ],
+    cabfranc: [
+      "red pepper, blackcurrant leaf, and pencil shavings; precise and restrained",
+      "floral lift, dark fruit, and a mineral core; medium weight with length",
+      "graphite, raspberry, and fine tannin; elegant and true to type",
+      "herbs, dark cherry, and a long savory finish"
+    ],
+  };
+
+  const regionCtx = {
+    napa:       "California warmth and impressive concentration",
+    bordeaux:   "old-world structure and classical restraint",
+    burgundy:   "Burgundian subtlety and terroir fidelity",
+    mosel:      "Mosel precision and mineral tension",
+    mendoza:    "Andean altitude and generous, open-knit fruit",
+    barossa:    "Barossa richness and old-vine intensity",
+    piedmont:   "Piemontese austerity and long aging potential",
+    rioja:      "traditional oak integration and Rioja warmth",
+    fingerlakes: "cool-climate energy and tightly wound acidity",
+  };
+
+  const styleCtx = tier === "cult" ? "Minimal-intervention" :
+    tier === "artisan" ? "Thoughtfully crafted" :
+    tier === "commercial" ? "Reliably produced" : "Classically made";
+
+  const qualityTail = quality >= 94 ? "exceptional depth; will reward the cellar" :
+    quality >= 90 ? "real finesse and a long, rewarding finish" :
+    quality >= 86 ? "honest balance and good regional character" :
+    quality >= 82 ? "clean varietal expression and early appeal" :
+    "simple and best drunk young";
+
+  const notes = varietalNotes[v];
+  const note = notes ? notes[randint(0, notes.length - 1)] : "ripe fruit and clean structure";
+  const ctx = regionCtx[reg] || "regional character on display";
+
+  return `${styleCtx} ${VARIETALS[v]?.name || "wine"}: ${note}. ${ctx}; ${qualityTail}.`;
 }
 
 function archiveMemory(s) {
@@ -3216,21 +4528,42 @@ function flawRiskDrift(s, lot) {
 function applyReleaseExpectations(s, lot) {
   const memory = archiveMemory(s);
   const score = lot.criticScore || 0;
-  if (score >= 94) {
+  const drop = memory.bestScore - score;
+  const isElite = s.prestige >= 88 || memory.bestScore >= 94;
+
+  if (score >= 96) {
+    addChannelDemand(s, ["collector", "club", "restaurant"], 12);
+    addChannelTrust(s, "collector", 10); addChannelTrust(s, "restaurant", 6);
+    s.prestige += 8;
+    log(s, `${lot.label} is exceptional — critics are calling it a reference point for the estate. Demand is immediate.`);
+  } else if (score >= 94) {
     addChannelDemand(s, ["collector", "club", "restaurant"], 8);
-    addChannelTrust(s, "collector", 6);
-    addChannelTrust(s, "restaurant", 4);
+    addChannelTrust(s, "collector", 6); addChannelTrust(s, "restaurant", 4);
     s.prestige += 5;
     log(s, `${lot.label} became a breakout release. Future buyers will compare new vintages against it.`);
-  } else if (memory.bestScore >= 94 && score <= memory.bestScore - 5) {
-    addChannelTrust(s, "collector", -5);
-    addChannelTrust(s, "club", -3);
-    s.prestige -= 2;
-    log(s, `Buyers remember the ${memory.bestScore}-point high-water mark. ${lot.label} will need careful release management.`);
   } else if (score >= 90 && memory.avgScore >= 88) {
-    addChannelTrust(s, "restaurant", 2);
-    addChannelTrust(s, "club", 2);
+    addChannelTrust(s, "restaurant", 2); addChannelTrust(s, "club", 2);
     s.prestige += 1;
+  }
+
+  // Fall-from-grace: elite estates face severe consequences for underperforming
+  if (isElite && drop >= 10) {
+    addChannelTrust(s, "collector", -18); addChannelTrust(s, "club", -12); addChannelTrust(s, "restaurant", -10);
+    addChannelDemand(s, ["collector", "club"], -8);
+    s.prestige -= 10; s.demand -= 6;
+    s.legacyPressureMonths = (s.legacyPressureMonths || 0) + 8;
+    log(s, `A ${score}-point release from an estate with a ${memory.bestScore}-point high-water mark is a story. The press is not kind. Collector trust cratered.`);
+  } else if (isElite && drop >= 6) {
+    addChannelTrust(s, "collector", -10); addChannelTrust(s, "club", -6); addChannelTrust(s, "restaurant", -5);
+    addChannelDemand(s, ["collector"], -4);
+    s.prestige -= 5; s.demand -= 3;
+    s.legacyPressureMonths = (s.legacyPressureMonths || 0) + 4;
+    log(s, `Collectors remember the ${memory.bestScore}-point vintage. A ${score}-point release creates questions the estate will spend months answering.`);
+  } else if (isElite && drop >= 3 && score < 90) {
+    addChannelTrust(s, "collector", -5); addChannelTrust(s, "club", -3);
+    s.prestige -= 2;
+    s.legacyPressureMonths = (s.legacyPressureMonths || 0) + 2;
+    log(s, `A quiet release from a high-prestige estate. The trade will notice the step down from the ${memory.bestScore}-point benchmark.`);
   }
 }
 
@@ -3319,14 +4652,90 @@ function staffFrictionMorale(s) {
 }
 
 function staffTraitPassiveEffects(s) {
-  let morale = 0, demand = 0;
+  let morale = 0, demand = 0, inventoryLeak = 0;
   s.staff.forEach(id => {
     (s.staffTraits?.[id] || []).forEach(t => {
-      morale += PERSONALITY_TRAITS[t]?.teamMorale || 0;
-      demand += PERSONALITY_TRAITS[t]?.teamDemand || 0;
+      const trait = PERSONALITY_TRAITS[t];
+      if (!trait) return;
+      morale += trait.teamMorale || 0;
+      demand += trait.teamDemand || 0;
+      inventoryLeak += trait.inventoryLeak || 0;
+      if (trait.moraleWhenLow && s.morale < 40) morale += trait.moraleWhenLow;
     });
   });
-  return { morale, demand };
+  return { morale, demand, inventoryLeak };
+}
+
+function checkLustfulPair(s) {
+  if (rand() > 0.22) return;
+  const lustfulStaff = s.staff.filter(id => (s.staffTraits?.[id] || []).includes("lustful"));
+  if (lustfulStaff.length < 2) return;
+  const male = lustfulStaff.find(id => STAFF_POOL.find(p => p.id === id)?.gender === "m");
+  const female = lustfulStaff.find(id => STAFF_POOL.find(p => p.id === id)?.gender === "f");
+  if (!male || !female) return;
+  const mName = STAFF_POOL.find(p => p.id === male).name.split(" ")[0];
+  const fName = STAFF_POOL.find(p => p.id === female).name.split(" ")[0];
+  const messages = [
+    `A scheduling conflict had ${fName} and ${mName} sharing a cellar shift nobody else wanted. The door was closed for some time. Two cases are unaccounted for.`,
+    `The barrel room logs show ${mName} and ${fName} on a late evening shift together. No notes were filed. Inventory is slightly light.`,
+    `${mName} has been arriving with fresh espresso for ${fName} every morning. The rest of the team has noticed.`,
+    `An unscheduled site inspection involving ${fName} and ${mName} occupied most of a Tuesday afternoon. No report was submitted.`,
+    `${mName} and ${fName} requested the same three days off next month. The overlap appears to be entirely coincidental.`,
+    `Tasting notes for the new barrel lot were found in ${mName}'s handwriting, annotated in ${fName}'s. Neither mentioned it at the team meeting.`,
+  ];
+  const msg = messages[randint(0, messages.length - 1)];
+  const caseLeak = msg.includes("cases") || msg.includes("light") ? 2 : 0;
+  if (caseLeak > 0 && s.inventory.cases >= caseLeak) s.inventory.cases -= caseLeak;
+  s.morale = clamp(s.morale - 1, 0, 100);
+  log(s, msg);
+}
+
+function moraleBreakdownItems(s) {
+  const load = loadPressure(s);
+  const fatiguePenalty = -Math.floor((s.fatigue || 0) / 28);
+  const loadPenalty = -Math.floor(load / 9);
+  const cashBonus = Math.floor(s.cash / 160000);
+  const items = [];
+
+  items.push({ label: "Base decay", delta: -2 });
+  if (cashBonus !== 0) items.push({ label: "Cash buffer", delta: cashBonus });
+  if (fatiguePenalty !== 0) items.push({ label: "Fatigue", delta: fatiguePenalty });
+  if (loadPenalty !== 0) items.push({ label: "Overload", delta: loadPenalty });
+
+  s.staff.forEach(id => {
+    const person = STAFF_POOL.find(p => p.id === id);
+    const traits = s.staffTraits?.[id] || [];
+    let moraleEffect = 0;
+    const activeNames = [];
+    traits.forEach(t => {
+      const trait = PERSONALITY_TRAITS[t];
+      if (!trait) return;
+      const eff = (trait.teamMorale || 0) + (trait.moraleWhenLow && s.morale < 40 ? trait.moraleWhenLow : 0);
+      if (eff !== 0) { moraleEffect += eff; activeNames.push(trait.name); }
+    });
+    if (moraleEffect !== 0 && person) {
+      items.push({ label: `${person.name} (${activeNames.join(", ")})`, delta: moraleEffect });
+    }
+  });
+
+  for (let i = 0; i < s.staff.length; i++) {
+    for (let j = i + 1; j < s.staff.length; j++) {
+      const aId = s.staff[i], bId = s.staff[j];
+      const aTraits = s.staffTraits?.[aId] || [];
+      const bTraits = s.staffTraits?.[bId] || [];
+      const conflict =
+        aTraits.some(t => (PERSONALITY_TRAITS[t]?.friction || []).some(f => bTraits.includes(f))) ||
+        bTraits.some(t => (PERSONALITY_TRAITS[t]?.friction || []).some(f => aTraits.includes(f)));
+      if (conflict) {
+        const aName = STAFF_POOL.find(p => p.id === aId)?.name || aId;
+        const bName = STAFF_POOL.find(p => p.id === bId)?.name || bId;
+        items.push({ label: `Friction: ${aName} & ${bName}`, delta: -1 });
+      }
+    }
+  }
+
+  const net = items.reduce((sum, l) => sum + l.delta, 0);
+  return { items, net };
 }
 
 function effectiveSalary(s, person) {
@@ -3422,6 +4831,12 @@ function applyPassiveStaffEffects(s) {
     });
   }
 
+  // Logistics glass supply: passive monthly glass from supplier contracts
+  const glassMonthly = staffBonus(s, "glassMonthly");
+  if (glassMonthly > 0) {
+    s.inventory.glass += glassMonthly;
+  }
+
   // Profile drift from staff
   const profileDrift = staffBonus(s, "profileDrift");
   if (profileDrift !== 0) s.profile = (s.profile ?? 50) + profileDrift;
@@ -3448,7 +4863,17 @@ function applyPassiveStaffEffects(s) {
       s.prestige = Math.max(threshold, s.prestige - 1);
     }
   });
-  return { tourIncome, clubIncome };
+
+  // Secondary market: sold-out high-scoring vintages trade at auction — a passive prestige dividend
+  let auctionIncome = 0;
+  const auctMemory = archiveMemory(s);
+  if (s.prestige >= 90 && auctMemory.soldOutPrestige >= 1) {
+    auctionIncome = Math.round(1200 * auctMemory.soldOutPrestige * (1 + (s.prestige - 90) / 20));
+    s.cash += auctionIncome;
+    if (s.month % 4 === 0) log(s, `Secondary market: sold-out vintages are trading above release price at auction. ${money(auctionIncome)} arrived from buyer resales.`);
+  }
+
+  return { tourIncome, clubIncome, auctionIncome };
 }
 
 function grantMonthlyStaffXp(s) {
@@ -3651,7 +5076,7 @@ function buildingEquity(s) {
 
 function applyBuildEffect(s, id, tier) {
   if (id === "block") {
-    const row = makeRows(1, { plantedMonth: s.month, matureMonth: s.month + 18 })[0];
+    const row = makeRows(1, { plantedMonth: s.month, matureMonth: s.month + 18, varietal: s.varietal, region: s.region })[0];
     row.name = `Young Block ${s.rows.length + 1}`;
     s.rows.push(row);
     s.rows[s.rows.length - 1].id = s.rows.length;
@@ -3724,8 +5149,7 @@ function hireStaff(id) {
   state.actionsLeft -= 1;
   state.staff.push(id);
   ensureStaffProgress(state, id);
-  state.staffMarket = state.staffMarket.filter(staffId => staffId !== id);
-  state.staffMarket = STAFF_POOL.map(p => p.id).filter(staffId => !state.staff.includes(staffId));
+  state.staffMarket = shuffle(STAFF_POOL.map(p => p.id).filter(staffId => !state.staff.includes(staffId)));
   applyCapacityDelta(state, beforeCap);
   applyStaffPassive(state, person);
   log(state, `${person.name} joined as ${person.role}. Hiring used owner attention.`);
@@ -3888,9 +5312,11 @@ function monthlyTick(s) {
   applyInvestorPressure(s, costs.total);
 
   applyRegionEffects(s);
+  maybeSeasonalLog(s);
   applyWeather(s);
   const staffPassiveIncome = applyPassiveStaffEffects(s);
   applyPassiveBuildingEffects(s);
+  checkLustfulPair(s);
   decayAndOrders(s);
   (s.vintages || []).forEach(v => {
     if (v.bulkWine > 0) {
@@ -3916,11 +5342,87 @@ function monthlyTick(s) {
   const fatigueClear = 4 + staffBonus(s, "finance") + staffBonus(s, "bottling") + (s.season === "Dormant" ? 4 : 0);
   s.fatigue = clamp((s.fatigue || 0) + Math.max(0, load - 4) - fatigueClear, 0, 100);
   s.morale = clamp(s.morale - 2 + Math.floor(s.cash / 160000) + traitPassive.morale + frictionDelta - Math.floor((s.fatigue || 0) / 28) - Math.floor(load / 9), 0, 100);
+
+  // Sustained low morale eventually drives a hire to resign
+  if (s.morale < 32) {
+    s.lowMoraleMonths = (s.lowMoraleMonths || 0) + 1;
+  } else if (s.morale >= 40) {
+    s.lowMoraleMonths = 0;
+  }
+  if ((s.lowMoraleMonths || 0) >= 4 && s.staff.length > 0) {
+    const leaverId = s.staff[Math.floor(rand() * s.staff.length)];
+    const person = STAFF_POOL.find(p => p.id === leaverId);
+    s.staff = s.staff.filter(id => id !== leaverId);
+    if (!s.staffMarket.includes(leaverId)) s.staffMarket.push(leaverId);
+    s.lowMoraleMonths = 0;
+    s.morale = Math.max(s.morale - 8, 0);
+    log(s, `${person?.name || "A key hire"} handed in their notice. Four months of difficult conditions was enough.`);
+  }
+
   if (traitPassive.demand) addChannelDemand(s, ["cellarDoor", "club", "restaurant"], traitPassive.demand);
+  if (traitPassive.inventoryLeak > 0 && s.inventory.cases > 0) {
+    const leaked = Math.min(traitPassive.inventoryLeak, s.inventory.cases);
+    s.inventory.cases -= leaked;
+    if (leaked > 0) log(s, `${leaked} case${leaked > 1 ? "s" : ""} quietly disappeared. Someone on the team has expensive habits.`);
+  }
   // Prestige decays without market presence — fame requires buyers
   if (s.demand < 30 && s.prestige > 20) s.prestige = Math.max(20, s.prestige - 1);
+  // High prestige decays faster when not actively reinforced by quality and sales
+  const _prevSold = s.history.length ? s.history[s.history.length - 1].totalSold : 0;
+  const _casesSoldThisMonth = Math.max(0, s.totalSold - _prevSold);
+  if (s.prestige >= 90 && s.quality < 88 && _casesSoldThisMonth < 10) {
+    s.prestige = Math.max(s.prestige - 2, 80);
+  } else if (s.prestige >= 80 && s.quality < 82 && _casesSoldThisMonth < 5) {
+    s.prestige = Math.max(s.prestige - 1, 70);
+  }
 
+  // Elite estates can't coast on reputation: quality must stay high or prestige erodes faster
+  if (s.prestige >= 88 && s.quality < 78) {
+    const qualityGap = 78 - s.quality;
+    const reputationBleed = Math.ceil(qualityGap / 8);
+    s.prestige = Math.max(s.prestige - reputationBleed, 70);
+    if (s.month % 3 === 0) log(s, "The gap between reputation and current wine quality is starting to show. Prestige is slipping.");
+  }
+
+  // Legacy pressure: sustained demand/trust drain from a below-par release at a top estate
+  if ((s.legacyPressureMonths || 0) > 0) {
+    const mem = archiveMemory(s);
+    if (s.quality >= 85 && s.prestige >= 85) {
+      // Recovering — ease pressure faster
+      s.legacyPressureMonths = Math.max(0, s.legacyPressureMonths - 2);
+      if (s.legacyPressureMonths === 0) log(s, "The estate's quality is speaking again. Collector confidence is gradually returning.");
+    } else {
+      // Still underperforming — pressure compounds
+      addChannelTrust(s, "collector", -2); addChannelTrust(s, "club", -1);
+      s.prestige = Math.max(s.prestige - 1, 50);
+      s.legacyPressureMonths -= 1;
+      if (s.month % 2 === 0) log(s, `Legacy pressure: buyers are still measuring recent releases against the estate's ${mem.bestScore}-point peak. Trust remains fragile.`);
+    }
+  }
+
+  // Holiday demand: Nov-Dec spike, Jan hangover
+  const calMonth = calendarMonthNumber(s.month);
+  if (calMonth === 11) { addChannelDemand(s, Object.keys(CHANNELS), 2); }
+  if (calMonth === 12) { addChannelDemand(s, Object.keys(CHANNELS), 3); }
+  if (calMonth === 1)  { addChannelDemand(s, Object.keys(CHANNELS), -2); }
+
+  // Slow macro market cycle: drifts demand ±1 every few months
+  s.marketCycle = (s.marketCycle || 0) + 1;
+  if (s.marketCycleDir === undefined) s.marketCycleDir = 1;
+  if (s.marketCycle % 4 === 0) {
+    addChannelDemand(s, Object.keys(CHANNELS), s.marketCycleDir);
+    if (s.marketCycle % randint(28, 44) === 0) {
+      s.marketCycleDir *= -1;
+      log(s, s.marketCycleDir > 0 ? "Trade press notes growing enthusiasm for fine wine. Market appetite is building." : "Analysts flag softening premium wine demand. The macro tide is turning.");
+    }
+  }
+
+  // Brand fatigue: active fatigue flag drains commercial demand each month
+  if (s.marketMods.brandFatigue) {
+    addChannelDemand(s, ["distributor", "supermarket", "cellarDoor"], -2);
+  }
   Object.keys(s.marketMods).forEach(key => {
+    if (typeof s.marketMods[key] !== "number") { delete s.marketMods[key]; return; }
     s.marketMods[key] -= 1;
     if (s.marketMods[key] <= 0) delete s.marketMods[key];
   });
@@ -3954,6 +5456,7 @@ function monthlyTick(s) {
     directRevenue: sales.revenue,
     tourIncome: staffPassiveIncome.tourIncome,
     clubIncome: staffPassiveIncome.clubIncome,
+    auctionIncome: staffPassiveIncome.auctionIncome,
     endingCases: s.inventory.cases,
     fixedCost: totalCloseCost,
     interestCost: costs.interest,
@@ -3961,13 +5464,96 @@ function monthlyTick(s) {
     payrollCost: costs.salaries,
     operatingCost: costs.operating,
     harvestLaborCost: harvestResult?.laborCost || 0,
-    pnl: sales.revenue + staffPassiveIncome.tourIncome + staffPassiveIncome.clubIncome - totalCloseCost
+    pnl: sales.revenue + staffPassiveIncome.tourIncome + staffPassiveIncome.clubIncome + staffPassiveIncome.auctionIncome - totalCloseCost
   };
   recordHistory(s, closeCosts);
   s.month += 1;
   s.season = seasonName(s.month, s.region);
   resetActionBudgets(s);
   log(s, `Month closed: direct channels sold ${sales.cases} cases for ${money(sales.revenue)}; costs ${money(totalCloseCost)} including ${money(costs.interest)} interest${harvestResult?.laborCost ? ` and ${money(harvestResult.laborCost)} harvest labor` : ""}.`);
+}
+
+const SEASONAL_FLAVOR = {
+  Dormant: {
+    napa: ["The valley floor is quiet. Pruning crews work the hillside rows in cold, still air.", "Cover crops are greening between dormant canes. The cellar hums with barrel maintenance and the occasional tasting."],
+    bordeaux: ["The chai is quiet. The vines are bare and the team works through barrel samples by lamplight.", "A cold mist sits on the Gironde. Pruning cracks echo across the estate."],
+    burgundy: ["The Côte is silent. Every estate is pruning — the winter ritual that sets the next vintage.", "Frost still possible at night. The team works carefully through the old parcels."],
+    mosel: ["Slate terraces gleam under thin winter sun. The river mist doesn't lift until midday.", "The cellar is the only warm place on the estate. The vines will wait."],
+    barossa: ["The southern summer has passed. Pruning begins in the dry, mild Barossa winter.", "Quiet season. The team catches up on cellar work while the vines rest."],
+    mendoza: ["The Andes are snowcapped. The vines are dormant under clear, cold desert sky.", "Calm days in Mendoza. The altitude keeps nights brisk even in the off-season."],
+    piedmont: ["The Langhe is still. Fog settles over Barolo and doesn't lift for days at a stretch.", "Cold, patient work in the cellar. The Nebbiolo is sitting in barrel and not asking for anything yet."],
+    rioja: ["The plateau is bare and cold. Rioja winters make you earn the summer.", "Wind from the Sierra scours the estate. The team prunes fast and warms up inside."],
+    fingerlakes: ["Ice has edged the lake. The vines are buried in snow, which is protective in its own way.", "A Finger Lakes winter: brutal and clarifying. Good time to plan."],
+    default: ["The vines are dormant. A good time to plan, prune, and catch up on the cellar."]
+  },
+  Budbreak: {
+    napa: ["First green nubs are showing on the canes. Frost risk is real for another few weeks.", "The valley is waking up. Cover crops are blooming and the crews are back in the rows."],
+    bordeaux: ["Budbreak is tentative this year — cool nights keep the pace slow. That can be a good thing.", "The Médoc is greening. Châteaux are opening tasting rooms and the first visitors have arrived."],
+    burgundy: ["Fragile buds are emerging on the old vines. One hard frost now and the vintage changes character entirely.", "The Côte de Nuits is anxious in spring. Every morning someone checks the thermometer."],
+    mosel: ["The slate terraces are warming. Riesling buds are breaking slowly, which the old growers prefer.", "Spring is cautious on the steep banks of the Mosel. The river still runs cold."],
+    barossa: ["Spring in Barossa: warm days, wildflowers between rows, Shiraz canes flushing fast.", "The valley is fragrant. New growth is everywhere and the mood on the estate is optimistic."],
+    mendoza: ["The Andes are shedding snowmelt into the irrigation channels. Malbec is waking up.", "Spring at altitude feels different — sharp, bright, dry. The vines are responding quickly."],
+    piedmont: ["The Langhe hills are turning green. Nebbiolo is the last to break but the hillsides are already showing life.", "Alba is fragrant with spring. The estate is busy and the cellar crew is finishing up last vintage."],
+    rioja: ["The Ebro valley is warming. The vines are pushing and the work in the rows picks up.", "After a hard Rioja winter, the first buds feel like a small miracle."],
+    fingerlakes: ["Ice is off the lakes. The vines are stirring cautiously — they've survived worse.", "Spring arrives late here but it arrives. The crew is relieved to be back in the rows."],
+    default: ["Budbreak. The season's character starts now — frost will be the first test."]
+  },
+  Flowering: {
+    napa: ["The vineyard is in bloom. A warm, dry week now means fruit set. Everyone is watching the forecast.", "Flowering Napa smells extraordinary. Warm afternoons, dry nights — conditions are cooperating."],
+    bordeaux: ["Flowering in Bordeaux is the most anxious fortnight of the year. Rain now means coulure.", "The estate holds its breath through flowering. One wet week changes everything about the vintage."],
+    burgundy: ["Millerandage is the risk now — uneven berry size from a rough flowering. The team watches closely.", "Flowering Burgundy is beautiful and nerve-wracking in equal measure."],
+    mosel: ["Flowering on the steep Mosel slopes. The crews work through tight terraces to remove any compromised shoots.", "Cool nights are slowing fruit set. The winemaker is cautiously optimistic — slow and even is good."],
+    barossa: ["Barossa flowering goes fast in the heat. The fruit set looks heavy and clean.", "The vineyard is fragrant in the warm Barossa evenings. Flowering is nearly complete."],
+    mendoza: ["Dry, warm flowering conditions in Mendoza. The Malbec is setting evenly.", "The mountain air keeps the pressure low. A clean flowering."],
+    piedmont: ["Nebbiolo flowers quietly and slowly. The estate is patient — this variety doesn't rush.", "Flowering in the Langhe. Still months until harvest, but the vintage is already taking shape."],
+    rioja: ["The plateau is warm and dry — ideal for flowering. Tempranillo is setting well.", "Good conditions through Rioja flowering. The vintage outlook is solid so far."],
+    fingerlakes: ["A brief window of warmth for flowering. The crew makes the most of it.", "Finger Lakes flowering: cool, fast, and nail-biting. The vines are tough."],
+    default: ["The vineyard is in flower. Dry weather now sets up the vintage."]
+  },
+  Veraison: {
+    napa: ["Veraison is on. The berries are softening and turning — the color change moves through the rows over two weeks.", "Heat spikes in Napa veraison are the norm. The irrigation schedule is everything right now."],
+    bordeaux: ["Veraison. The vintage is becoming what it's going to be. The cellar team is preparing.", "The Médoc ripens unevenly block by block. Sorting at harvest will matter."],
+    burgundy: ["Pinot turning color in the Côte d'Or. The rows are extraordinary right now.", "Veraison in Burgundy is fleeting. Four weeks from here to harvest decisions."],
+    mosel: ["The steep Mosel rows are shifting color. A good veraison — slow and even.", "Late afternoon light through the Riesling. The slate is holding heat and the sugars are climbing."],
+    barossa: ["Barossa veraison in full heat. Water management is the priority.", "The Shiraz is turning and the aromas from the blocks are already extraordinary."],
+    mendoza: ["High-altitude veraison. Clear nights, warm days — the Malbec is concentrating beautifully.", "The mountain light is sharp. Veraison color is even across the estate."],
+    piedmont: ["Nebbiolo changing slowly. This is the patient part of the season.", "The Langhe fog is starting. Veraison Nebbiolo has another month of hang time ahead."],
+    rioja: ["Tempranillo turning. The plateau is hot and the irrigation schedule is tight.", "Good veraison color. The vintage is looking solid heading into the final weeks."],
+    fingerlakes: ["A race against autumn. The grapes are turning but the growing window is short.", "Riesling at veraison — lean, precise, and still building acidity."],
+    default: ["The grapes are turning. Harvest is six to eight weeks away."]
+  },
+  Harvest: {
+    napa: ["Harvest has begun. The picking crews are working before dawn to beat the afternoon heat.", "The valley smells of crushed fruit. Every winery in Napa is going at once."],
+    bordeaux: ["Château gates are locked. The harvest is in progress and the chai is full of activity.", "Bordeaux harvest: meticulous sorting, early mornings, and careful decisions about each block's timing."],
+    burgundy: ["The most pressured weeks of the year. Every hour matters in Burgundy harvest.", "Pinot harvest is fast and intentional. The old growers say you never get it exactly right."],
+    mosel: ["Mosel harvest is a relay — block by block, picking only what's ready, coming back for the rest.", "The steep slopes are busy. Riesling harvest on the Mosel has no machines — only hands and crates."],
+    barossa: ["Harvest is full on. The Shiraz comes in fast in the Barossa heat.", "The cellar is overwhelmed in the best way. Big fruit, big tanks, long nights."],
+    mendoza: ["Harvest at altitude: cool nights preserve acidity even as the sugar climbs.", "The Malbec is coming in. The mountain air makes harvest feel clean and focused."],
+    piedmont: ["Nebbiolo harvest is the last act. The rest of Piedmont has finished; Barolo waits.", "The fog is thick in the mornings. The crew picks through it and the fruit is extraordinary."],
+    rioja: ["Harvest on the plateau. Cool nights and warm days — the Tempranillo is coming in well.", "Rioja harvest moves fast once it starts. The whole region is in motion."],
+    fingerlakes: ["Racing the cold. The Riesling comes in at the last moment, fully flavored and bright.", "A tense Finger Lakes harvest. The fruit waited as long as it could and was worth it."],
+    default: ["Harvest. Everything the season built toward is being picked right now."]
+  },
+  Cellar: {
+    napa: ["The vineyard is quiet but the winery is loud. Fermentation tanks are bubbling around the clock.", "Post-harvest Napa. The cellar team is doing the real work now — pressing, racking, blending decisions."],
+    bordeaux: ["The chai smells of new wine. Assemblage decisions begin, and they will define the vintage.", "Post-harvest Bordeaux: barrel samples, blending trials, and the endless work of building a wine."],
+    burgundy: ["The cellar is full of Pinot. Every decision now is about preserving what the vintage gave.", "Burgundy cellar season: quiet, methodical, and consequential."],
+    mosel: ["The Riesling is fermenting slowly in cold cellar conditions. That's exactly how it should be.", "A slow, cool fermentation on the Mosel. The winemaker is patient."],
+    barossa: ["Big Shiraz in tank — dark, tannic, and needing time. Barrel decisions matter enormously here.", "The Barossa cellar is full. The team is racking, pressing, and tasting all day."],
+    mendoza: ["Malbec cellar season in Mendoza. The fruit concentration makes every step feel deliberate.", "The mountain light is already fading by late afternoon. The cellar is warm and the wine is moving."],
+    piedmont: ["Nebbiolo in barrel. The patience required for Barolo is its own form of discipline.", "The Langhe cellar is quiet and fragrant. The wine will need time — years of it."],
+    rioja: ["The Tempranillo is in barrel. Rioja cellar work is measured in months, not weeks.", "Post-harvest Rioja. The estate settles into the long, slow rhythm of barrel aging."],
+    fingerlakes: ["The lake effect has turned harsh. The cellar is warm; the vines are stripped and skeletal.", "A Finger Lakes cellar winter: careful winemaking and watching the weather from the window."],
+    default: ["The harvest is in. The real cellar work begins now."]
+  }
+};
+
+function maybeSeasonalLog(s) {
+  const prevSeason = s.history.length ? seasonName(s.month - 1, s.region) : null;
+  if (s.season === prevSeason) return;
+  const pool = (SEASONAL_FLAVOR[s.season] || {})[s.region] || SEASONAL_FLAVOR[s.season]?.default || [];
+  if (!pool.length) return;
+  log(s, pool[randint(0, pool.length - 1)]);
 }
 
 function applyRegionEffects(s) {
@@ -3989,7 +5575,7 @@ function applyRegionEffects(s) {
     const exportOrders = s.orders.filter(o => o.type === "export").length;
     if (exportOrders < 2 && s.month % 3 === 0 && rand() < 0.55) {
       addOrder(s, "export");
-      log(s, "An export broker reached out — Barossa Shiraz is moving well overseas.");
+      log(s, "An export broker reached out; Barossa Shiraz is moving well overseas.");
     }
   }
 }
@@ -4096,11 +5682,13 @@ function applyWeather(s) {
         row.disease = clamp(row.disease - randint(2, 5), 0, 100);
         row.pressure = "frost";
         break;
-      case "clear":
+      case "clear": {
+        const clearHumidityDrift = Math.round((humidity - 0.55) * 6);
         row.disease = clamp(row.disease - randint(2, 5), 0, 100);
-        row.water   = clamp(row.water   + randint(-2, 3), 0, 100);
-        row.health  = clamp(row.health  + 1, 8, 100);
+        row.water   = clamp(row.water + randint(-3, 2) + clearHumidityDrift, 0, 100);
+        row.health  = clamp(row.health + 1, 8, 100);
         break;
+      }
     }
 
     // High disease bleeds health over time
@@ -4159,7 +5747,7 @@ function harvest(s) {
   const crew = s.marketMods.harvestCrew ? 1.12 : 1;
   const greenHarvestMod = s.marketMods.greenHarvest ? 0.80 : 1.0;
   const grapes = Math.max(60, Math.round(
-    base * (avgHealth / 82) * v.yield * p.yield * (r.yieldMod || 1) * crew * waterYieldMod * diseaseYieldMod * greenHarvestMod
+    base * (avgHealth / 82) * v.yield * p.yield * (r.yieldMod || 1) * crew * waterYieldMod * diseaseYieldMod * greenHarvestMod * staffYieldMod(s)
   ));
   const rawQualityGain = Math.round((avgHealth - 58) / 8 + s.buildings.barrel * 0.7 + (s.marketMods.harvestCrew ? 2 : 0));
   const qualityGain = Math.round(rawQualityGain * waterQualityMod * diseaseQualityMod);
@@ -4308,15 +5896,103 @@ function checkGameOver() {
   }
 }
 
-function setupView() {
+function wineryNameInput() {
+  return `
+    <div class="winery-name-row">
+      <label class="winery-name-label">
+        <span>Winery name</span>
+        <input type="text" class="winery-name-input" placeholder="Your estate name..." maxlength="40"
+          value="${escapeHtml(setup.wineryName)}"
+          oninput="setup.wineryName = this.value;">
+      </label>
+    </div>
+  `;
+}
+
+function setupStartPanel(loadButton) {
+  return `
+    ${wineryNameInput()}
+    <div class="quick-start-list">
+      ${SUGGESTED_STARTS.map((s, i) => {
+        const r = REGIONS.find(reg => reg.id === s.region);
+        const v = VARIETALS[s.varietal];
+        const d = DIFFICULTIES.find(dif => dif.id === s.difficulty);
+        return `
+          <button class="quick-start-card quick-card-${s.label.toLowerCase()}" onclick="applySuggestedStart(${i})">
+            <div class="quick-card-header">
+              <span class="quick-start-badge">${s.label}</span>
+              <strong>${s.title}</strong>
+            </div>
+            <p>${s.description}</p>
+            <div class="quick-card-meta">
+              <span>${r?.name}</span>
+              <span>${v?.name}</span>
+              <span>${d?.name} difficulty</span>
+            </div>
+          </button>
+        `;
+      }).join("")}
+      <button class="quick-start-card quick-card-custom" onclick="setSetupMode('custom')">
+        <div class="quick-card-header">
+          <span class="quick-start-badge">Custom</span>
+          <strong>Custom Setup</strong>
+        </div>
+        <p>Choose your region, grape, philosophy, and difficulty step by step.</p>
+        <div class="quick-card-meta">
+          <span>9 regions</span>
+          <span>12 varietals</span>
+          <span>3 difficulties</span>
+        </div>
+      </button>
+    </div>
+    <div class="setup-start-footer">
+      <button class="ghost" onclick="randomStart()">Random start</button>
+      ${loadButton}
+    </div>
+  `;
+}
+
+function setupCustomPanel(loadButton) {
   const r = selectedRegion();
   const v = selectedVarietal();
   const p = selectedPhilosophy();
   const d = selectedDifficulty();
   const step = SETUP_STEPS[setupStep];
+  return `
+    ${wineryNameInput()}
+    <div class="setup-progress">
+      ${SETUP_STEPS.map((item, index) => `
+        <button class="${index === setupStep ? "active" : ""} ${index < setupStep ? "done" : ""}" onclick="setSetupStep(${index})">
+          <span>${index + 1}</span>${item.key}
+        </button>
+      `).join("")}
+    </div>
+    <h2>${step.title}</h2>
+    <p class="setup-kicker">${step.kicker}</p>
+    ${setupStepContent(step.key)}
+    <div class="setup-section">
+      <div class="section-title">Estate Summary</div>
+      ${setupSummary(r, v, p, d)}
+    </div>
+    <div class="setup-section top-actions">
+      <button class="ghost" onclick="setSetupMode('start')">← Back</button>
+      ${loadButton}
+      <button class="ghost" onclick="randomStart()">Random</button>
+      <button onclick="prevSetupStep()" ${setupStep === 0 ? "disabled" : ""}>Back</button>
+      ${setupStep < SETUP_STEPS.length - 1
+        ? `<button class="primary" onclick="nextSetupStep()">Next</button>`
+        : `<button class="primary" onclick="startGame()">Start vintage run</button>`}
+    </div>
+  `;
+}
+
+function setupView() {
   const loadButton = localStorage.getItem("cellar-baron-save")
     ? `<button class="ghost" onclick="loadGame()">Load saved estate</button>`
     : "";
+  let panelContent;
+  if (setupMode === "custom") panelContent = setupCustomPanel(loadButton);
+  else panelContent = setupStartPanel(loadButton);
   return `
     <main class="setup">
       <div class="setup-inner">
@@ -4327,36 +6003,7 @@ function setupView() {
           </div>
         </section>
         <section class="setup-panel">
-          <div class="winery-name-row">
-            <label class="winery-name-label">
-              <span>Winery name</span>
-              <input type="text" class="winery-name-input" placeholder="Your estate name..." maxlength="40"
-                value="${escapeHtml(setup.wineryName)}"
-                oninput="setup.wineryName = this.value;">
-            </label>
-          </div>
-          <div class="setup-progress">
-            ${SETUP_STEPS.map((item, index) => `
-              <button class="${index === setupStep ? "active" : ""} ${index < setupStep ? "done" : ""}" onclick="setSetupStep(${index})">
-                <span>${index + 1}</span>${item.key}
-              </button>
-            `).join("")}
-          </div>
-          <h2>${step.title}</h2>
-          <p class="setup-kicker">${step.kicker}</p>
-          ${setupStepContent(step.key)}
-          <div class="setup-section">
-            <div class="section-title">Estate Summary</div>
-            ${setupSummary(r, v, p, d)}
-          </div>
-          <div class="setup-section top-actions">
-            ${loadButton}
-            <button class="ghost" onclick="randomStart()">Random start</button>
-            <button onclick="prevSetupStep()" ${setupStep === 0 ? "disabled" : ""}>Back</button>
-            ${setupStep < SETUP_STEPS.length - 1
-              ? `<button class="primary" onclick="nextSetupStep()">Next</button>`
-              : `<button class="primary" onclick="startGame()">Start vintage run</button>`}
-          </div>
+          ${panelContent}
         </section>
       </div>
     </main>
@@ -4448,7 +6095,7 @@ function gameView() {
         </aside>
       </div>
     </main>
-    ${state.gameOver ? gameOverModal() : (!state.introSeen ? introModal() : (state.pendingNaming ? namingModal() : ""))}
+    ${state.gameOver ? gameOverModal() : (guideStep !== null && guideStep < GUIDE_PAGES.length ? guideModal() : (!state.introSeen ? introModal() : (state.pendingNaming ? namingModal() : "")))}
   `;
 }
 
@@ -4517,12 +6164,12 @@ function topbar() {
         </div>
         <div class="kpis">
           ${kpi("Date", currentDateLabel(state), "Current month. Most operations, weather, contracts, and costs advance monthly.")}
-          ${kpi("Cash", money(state.cash), "Available cash after operating costs, sales, debt draws, and repayments. Running out forces credit-line use.", state.cash < 0 ? "danger" : "")}
-          ${kpi("Prestige", `${state.prestige}/120`, "Reputation with critics, buyers, and collectors. Win requires 82+ prestige.")}
-          ${kpi("Demand", `${state.demand}/130`, "Commercial pull for your wine. Higher demand improves direct sales and buyer interest.")}
-          ${kpi("Quality", `${state.quality}/120`, "Current house quality. Vineyard health, weather, cellar work, and barrels move this. Decays faster above 85.")}
-          ${kpi("Morale", `${state.morale}/100`, "Staff and crew confidence. Below 20 loses an action/month and triggers labor events; 0 ends the game.", state.morale < 20 ? "danger" : state.morale < 40 ? "warn" : "")}
-          ${kpi("Fatigue", `${state.fatigue || 0}/100`, "Operational strain. Harvest, bottling, hospitality, emergencies, and heroics add fatigue; winter rest and operations capacity clear it.", (state.fatigue || 0) > 75 ? "danger" : (state.fatigue || 0) > 50 ? "warn" : "")}
+          ${kpi("Cash", money(state.cash), "Available cash after operating costs, sales, debt draws, and repayments. Running out forces credit-line use.", state.cash < 0 ? "danger" : state.cash < 30000 ? "warn" : state.cash >= 200000 ? "good" : "")}
+          ${kpi("Prestige", `${state.prestige}/120`, "Reputation with critics, buyers, and collectors. Win requires 82+ prestige.", state.prestige >= 82 ? "good" : state.prestige < 40 ? "warn" : "")}
+          ${kpi("Demand", `${state.demand}/130`, "Commercial pull for your wine. Higher demand improves direct sales and buyer interest.", state.demand >= 100 ? "good" : state.demand < 50 ? "warn" : "")}
+          ${kpi("Quality", `${state.quality}/120`, "Current house quality. Vineyard health, weather, cellar work, and barrels move this. Decays faster above 85.", state.quality >= 85 ? "good" : state.quality < 50 ? "warn" : "")}
+          ${kpi("Morale", `${state.morale}/100`, "Staff and crew confidence. Below 20 loses an action/month and triggers labor events; 0 ends the game.", state.morale < 20 ? "danger" : state.morale < 40 ? "warn" : state.morale >= 70 ? "good" : "")}
+          ${kpi("Fatigue", `${state.fatigue || 0}/100`, "Operational strain. Harvest, bottling, hospitality, emergencies, and heroics add fatigue; winter rest and operations capacity clear it.", (state.fatigue || 0) > 75 ? "danger" : (state.fatigue || 0) > 50 ? "warn" : (state.fatigue || 0) < 20 ? "good" : "")}
           ${kpi("Grape CE", totalGrapes(state), "Case-equivalent grapes across all vintage lots. Harvest adds these; cellar work converts them to bulk wine.")}
           ${kpi("Bulk CE", totalBulkWine(state), "Case-equivalent bulk wine aging across all vintage lots. Bottling converts this into finished cases.")}
           ${kpi("Cases", state.inventory.cases, "Finished cases ready to sell or reserve for contracts. Passive direct sales can reduce this at month close.")}
@@ -4619,7 +6266,7 @@ function negativeCashBanner() {
     <div class="alert-banner">
       <div class="alert-body">
         <strong>Cash overdrawn ${money(state.cash)}</strong>
-        <span>Draw from the credit line to cover operations — uncovered overdraft accrues at a penalty rate and drains morale.</span>
+        <span>Draw from the credit line to cover operations; uncovered overdraft accrues at a penalty rate and drains morale.</span>
       </div>
       <div class="alert-actions">
         <button onclick="drawDebt(25000)" ${!canDraw ? "disabled" : ""}>Draw ${money(25000)}</button>
@@ -4828,7 +6475,7 @@ function analyticsPanel() {
       ${pnlPanel(forecast)}
       <div class="chart-grid">
         ${barChart("Monthly Revenue", state.history, "revenue", "gold")}
-        ${lineChart("Net Worth Trend", state.history, "netWorth", { format: money, tone: "blue" })}
+        ${lineChart("Net Worth Trend", state.history, "netWorth", { format: money, tone: "blue", showLabels: true })}
       </div>
       ${metricTrends(state.history)}
     </section>
@@ -4847,6 +6494,7 @@ function pnlPanel(forecast) {
         ${pnlLine("Accepted contracts", forecast.contractRevenue, true)}
         ${forecast.tourIncome ? pnlLine("Estate tour income", forecast.tourIncome, true) : ""}
         ${forecast.clubIncome ? pnlLine("Wine club dues", forecast.clubIncome, true) : ""}
+        ${forecast.auctionIncome ? pnlLine("Secondary market (auction resales)", forecast.auctionIncome, true) : ""}
         ${pnlLine("Operating / vineyard / cellar", -costs.operating)}
         ${costs.loadCost ? pnlLine("Management load friction", -costs.loadCost) : ""}
         ${pnlLine("Payroll", -costs.salaries)}
@@ -4863,10 +6511,12 @@ function pnlPanel(forecast) {
         <div class="pnl-title">Last Closed Month</div>
         ${last && close ? (() => {
           const tourClub = (close.tourIncome || 0) + (close.clubIncome || 0);
-          const closedPnl = last.revenue + tourClub - last.fixedCost;
+          const auction = close.auctionIncome || 0;
+          const closedPnl = last.revenue + tourClub + auction - last.fixedCost;
           return `
           ${pnlLine("Sales revenue", last.revenue, true)}
           ${tourClub ? pnlLine("Tour & club income", tourClub, true) : ""}
+          ${auction ? pnlLine("Secondary market (auction resales)", auction, true) : ""}
           ${pnlLine("Total costs (payroll, ops, interest, lease)", -last.fixedCost)}
           ${last.interestCost ? pnlLineValue("  Interest included above", money(last.interestCost)) : ""}
           ${pnlLineValue("Cases sold", `${close.directCases} direct`)}
@@ -4908,6 +6558,9 @@ function commercialForecast(s) {
   const fixedCost = costBreakdown.total;
   const harvestLabor = isHarvestMonth(s.month, s.region) ? harvestLaborEstimate(s) : 0;
   const { tourIncome, clubIncome } = estimatePassiveStaffIncome(s);
+  const auctMem = archiveMemory(s);
+  const auctionIncome = (s.prestige >= 90 && auctMem.soldOutPrestige >= 1)
+    ? Math.round(1200 * auctMem.soldOutPrestige * (1 + (s.prestige - 90) / 20)) : 0;
   return {
     directCases: direct.cases,
     directRevenue: direct.revenue,
@@ -4915,10 +6568,11 @@ function commercialForecast(s) {
     contractRevenue,
     tourIncome,
     clubIncome,
+    auctionIncome,
     fixedCost,
     costBreakdown,
     harvestLabor,
-    netCash: direct.revenue + contractRevenue + tourIncome + clubIncome - fixedCost - harvestLabor
+    netCash: direct.revenue + contractRevenue + tourIncome + clubIncome + auctionIncome - fixedCost - harvestLabor
   };
 }
 
@@ -4963,27 +6617,40 @@ function metricTrends(history) {
 function lineChart(title, history, key, options = {}) {
   const data = history && history.length ? history.slice(-12) : [];
   if (!data.length) return `<div class="chart-card"><strong>${title}</strong><div class="empty">Close a month to start the graph.</div></div>`;
-  const format = options.format || (value => Math.round(value));
+  const format = options.format || (v => Math.round(v));
+  const labelFmt = options.labelFormat || (options.format === money ? shortMoney : v => Math.round(v));
   const values = data.map(point => point[key]);
   const min = Math.min(0, ...values);
   const max = Math.max(options.max || 1, ...values);
   const range = Math.max(1, max - min);
-  const points = data.map((point, index) => {
-    const x = data.length === 1 ? 50 : 8 + (index / (data.length - 1)) * 84;
-    const y = 88 - ((point[key] - min) / range) * 76;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
+  const showLabels = !!options.showLabels;
+  const xStart = showLabels ? 23 : 8;
+  const xSpan = 96 - xStart;
+
+  const px = (index) => data.length === 1 ? (xStart + 96) / 2 : xStart + (index / (data.length - 1)) * xSpan;
+  const py = (val) => 88 - ((val - min) / range) * 76;
+
+  const points = data.map((pt, i) => `${px(i).toFixed(1)},${py(pt[key]).toFixed(1)}`).join(" ");
+  const circles = data.map((pt, i) =>
+    `<circle cx="${px(i).toFixed(1)}" cy="${py(pt[key]).toFixed(1)}" r="2.2"><title>Month ${pt.month}: ${format(pt[key])}</title></circle>`
+  ).join("");
+
+  const gridLines = showLabels ? [
+    { val: min,           y: py(min),           dash: false },
+    { val: min + range/2, y: py(min + range/2), dash: true  },
+    { val: max,           y: py(max),            dash: true  },
+  ].map(({ val, y, dash }) => `
+    <line x1="${xStart}" y1="${y.toFixed(1)}" x2="96" y2="${y.toFixed(1)}" ${dash ? 'stroke-dasharray="2,2"' : ''}></line>
+    <text x="${xStart - 2}" y="${(y + 2.5).toFixed(1)}" text-anchor="end" class="chart-axis-label">${labelFmt(val)}</text>
+  `).join("") : `<line x1="6" y1="88" x2="96" y2="88"></line>`;
+
   return `
     <div class="chart-card">
       <div class="chart-head"><strong>${title}</strong><span>${format(data[data.length - 1][key])}</span></div>
       <svg class="line-chart ${options.tone || "blue"}" viewBox="0 0 100 100" role="img" aria-label="${title}">
-        <line x1="6" y1="88" x2="96" y2="88"></line>
+        ${gridLines}
         <polyline points="${points}"></polyline>
-        ${data.map((point, index) => {
-          const x = data.length === 1 ? 50 : 8 + (index / (data.length - 1)) * 84;
-          const y = 88 - ((point[key] - min) / range) * 76;
-          return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.2"><title>Month ${point.month}: ${format(point[key])}</title></circle>`;
-        }).join("")}
+        ${circles}
       </svg>
     </div>
   `;
@@ -5116,9 +6783,9 @@ function actionInventoryNote(action, s) {
       if (oldest) return { text: `${oldest.label} needs ${oldest.agingTarget - oldest.agingMonths}mo more aging`, hard: true };
     }
   }
-  if (action.id === "cellar" && totalGrapes(s) === 0) return { text: "No grapes — cellar quality work only", hard: false };
-  if (action.id === "sales" && availableCases(s) === 0) return { text: "No free cases — courts buyers only", hard: false };
-  if (action.id === "hospitality" && availableCases(s) === 0) return { text: "No allocation — weak demand, club patience risk", hard: false };
+  if (action.id === "cellar" && totalGrapes(s) === 0) return { text: "No grapes: cellar quality work only", hard: false };
+  if (action.id === "sales" && availableCases(s) === 0) return { text: "No free cases: courts buyers only", hard: false };
+  if (action.id === "hospitality" && availableCases(s) === 0) return { text: "No allocation: weak demand, club patience risk", hard: false };
   return null;
 }
 
@@ -5382,11 +7049,11 @@ function vintageCellarPanel() {
     const risk = typeof lot.flawRisk === "number" ? lot.flawRisk : baseLotFlawRisk(state, lot);
     const riskTone = risk >= 55 ? "text-danger" : risk >= 32 ? "text-warn" : "";
     const statusText = isPreagedStock
-      ? `${lot.bulkWine} CE ready${bottled ? ` · ${bottled} bottled` : ""}`
+      ? `${lot.bulkWine} CE ready${bottled ? `<br>${bottled} bottled` : ""}`
       : hasGrapes && !hasBulk
       ? `${lot.grapes} CE · ferment first`
       : isReady
-      ? `${lot.bulkWine} CE ready${bottled ? ` · ${bottled} bottled` : ""}`
+      ? `${lot.bulkWine} CE ready${bottled ? `<br>${bottled} bottled` : ""}`
       : hasBulk
       ? `${monthsLeft}mo left (${aged}/${target})`
       : "";
@@ -5464,7 +7131,7 @@ function archivePanel() {
             <span>Produced <strong>${entry.casesProduced}</strong></span>
             <span>Sold <strong>${entry.casesSold}</strong></span>
             <span>Avg price <strong>${entry.avgPrice ? money(entry.avgPrice) : "-"}</strong></span>
-            <span>${soldOut ? `Sold out ${monthDateLabel(entry.soldOutMonth)}` : `${entry.casesProduced - entry.casesSold} left in memory`}</span>
+            <span>${soldOut ? `Sold out ${monthDateLabel(entry.soldOutMonth)}` : `${entry.casesProduced - entry.casesSold} cases unsold`}</span>
           </div>
           <div class="small">Accolades: ${escapeHtml(accolades)}</div>
         </div>
@@ -5651,11 +7318,30 @@ function buildingsPanel() {
 function staffPanel() {
   const employed = state.staff.map(id => STAFF_POOL.find(p => p.id === id));
   const market = state.staffMarket.map(id => STAFF_POOL.find(p => p.id === id)).filter(Boolean);
+  const { items: moraleItems, net: moraleNet } = moraleBreakdownItems(state);
+  const netSign = moraleNet >= 0 ? "+" : "";
+  const netColor = moraleNet > 0 ? "var(--ok)" : moraleNet < 0 ? "var(--danger)" : "var(--muted)";
+  const moraleColor = state.morale < 20 ? "var(--danger)" : state.morale < 40 ? "var(--gold)" : "var(--ink)";
   return `
     <section class="panel">
       <div class="panel-head">
         <h2>Personnel ${helpIcon("Named staff add strong bonuses and quirks. Salaries are paid every month.")}</h2>
         <span class="small">Payroll ${money(state.staff.reduce((sum, id) => sum + (STAFF_POOL.find(p => p.id === id)?.salary || 0), 0))}/mo</span>
+      </div>
+      <div class="morale-breakdown">
+        <div class="morale-breakdown-head">
+          <span>Morale</span>
+          <strong style="color:${moraleColor}">${state.morale}/100</strong>
+          <em style="color:${netColor}">${netSign}${moraleNet} per month</em>
+        </div>
+        <div class="morale-breakdown-list">
+          ${moraleItems.map(item => `
+            <div class="morale-breakdown-row">
+              <span>${escapeHtml(item.label)}</span>
+              <strong style="color:${item.delta > 0 ? "var(--ok)" : item.delta < 0 ? "var(--danger)" : "var(--muted)"}">${item.delta > 0 ? "+" : ""}${item.delta}</strong>
+            </div>
+          `).join("")}
+        </div>
       </div>
       <div class="staff-list">
         ${employed.length ? employed.map(person => staffView(person, true)).join("") : `<div class="empty">No senior staff yet. Hire people to bend the estate toward your strategy.</div>`}
@@ -5760,13 +7446,16 @@ function namingModal() {
   const lot = (state.vintages || []).find(v => v.id === state.pendingNaming);
   if (!lot) { state.pendingNaming = null; return ""; }
   const tier = profileTier(state.profile ?? 50);
-  const pool = VINTAGE_NAMES[tier] || VINTAGE_NAMES.classic;
+  const pool = [
+    ...(VINTAGE_NAMES[tier] || VINTAGE_NAMES.classic),
+    ...(REGIONAL_VINTAGE_NAMES[state.region] || [])
+  ];
   const options = [...pool].sort(() => 0.5 - rand()).slice(0, 4);
   return `
     <div class="modal">
       <div class="modal-card naming-modal-card">
         <h2>Name this release</h2>
-        <p>The <strong>${escapeHtml(lot.label)}</strong> earned a critic score of <strong>${lot.criticScore}/100</strong>. Give it a lasting name to mark it in the cellar book — prestige bonus included.</p>
+        <p>The <strong>${escapeHtml(lot.label)}</strong> earned a critic score of <strong>${lot.criticScore}/100</strong>. Give it a lasting name to mark it in the cellar book. A prestige bonus is included.</p>
         <div class="naming-options">
           ${options.map(n => `<button class="naming-btn" onclick="chooseName(${JSON.stringify(lot.id).replace(/"/g,'&quot;')}, ${JSON.stringify(n).replace(/"/g,'&quot;')})">${escapeHtml(n)}</button>`).join("")}
         </div>
@@ -5815,32 +7504,30 @@ function introModal() {
   const r = REGIONS.find(reg => reg.id === state.region);
   const legacyVintage = (state.vintages || []).find(v => v.id === "opening");
   const score = legacyVintage?.score ?? 3;
+  const scoreWord = score >= 4 ? "a strong start" : score >= 3 ? "drinkable, not distinguished" : "below what most buyers expect";
+  const d = difficulty();
   return `
     <div class="modal">
       <div class="modal-card intro-modal-card">
         <h2>Welcome to ${escapeHtml(state.wineryName)}</h2>
-        <p class="intro-scene">You've taken the helm of a small ${r?.name || "regional"} estate. Five years to build something lasting — or fold under the pressure.</p>
+        <p class="intro-scene">${escapeHtml(state.wineryName)} has been trading for a few years under the previous operator: long enough to have a name, short enough that nothing is fixed. They left behind ${money(state.debt)} in outstanding debt, a monthly lease of ${money(state.leaseCost)}, and a cellar with ${state.inventory.cases} bottled cases from the inherited vintage alongside ${legacyVintage?.bulkWine ?? 0} case-equivalents still aging in tank. That vintage rated ${vintageScoreStars(score)}: ${scoreWord}.</p>
+        <p class="intro-scene">You've followed the business for years and always dreamed of running a winery, so when the chance opened up to take the helm you accepted. It won't be easy to turn ${escapeHtml(state.wineryName)} around, though: capital is tight, there aren't any reliable senior staff, and the wine itself isn't great, and you can only do so many jobs yourself before burning out. Do you have what it takes to navigate the risk and complexity of scaling a winery and building a business that can last over the next five seasons?</p>
         <div class="intro-grid">
           <div class="intro-section">
-            <div class="intro-head">On Hand</div>
+            <div class="intro-head">Starting Position</div>
             <div class="intro-row"><span>Cash</span><strong>${money(state.cash)}</strong></div>
+            <div class="intro-row"><span>Debt</span><strong>${money(state.debt)}</strong></div>
+            <div class="intro-row"><span>Monthly lease</span><strong>${money(state.leaseCost)}</strong></div>
             <div class="intro-row"><span>Bottled cases</span><strong>${state.inventory.cases}</strong></div>
-            <div class="intro-row"><span>Legacy vintage</span><strong>${score === 3 ? "Average (★★★☆☆)" : vintageScoreStars(score) + " " + vintageScoreLabel(score)} — drinkable, not distinguished</strong></div>
-            <div class="intro-row"><span>Bulk wine in tank</span><strong>${(legacyVintage?.bulkWine ?? 0)} CE — ready to bottle</strong></div>
-          </div>
-          <div class="intro-section">
-            <div class="intro-head">Vintage Score Guide</div>
-            <div class="intro-row score-guide"><span>★☆☆☆☆ Poor</span><em>Deep discount; hard to move</em></div>
-            <div class="intro-row score-guide"><span>★★☆☆☆ Below Average</span><em>Below-market pricing</em></div>
-            <div class="intro-row score-guide"><span>★★★☆☆ Average</span><em>Standard trade pricing</em></div>
-            <div class="intro-row score-guide"><span>★★★★☆ Good</span><em>Premium tier, restaurant buyers</em></div>
-            <div class="intro-row score-guide"><span>★★★★★ Exceptional</span><em>Collector demand, allocation list</em></div>
+            <div class="intro-row"><span>Bulk in tank</span><strong>${legacyVintage?.bulkWine ?? 0} CE</strong></div>
+            <div class="intro-row"><span>Prestige</span><strong>${state.prestige}</strong></div>
           </div>
           <div class="intro-section intro-goals">
             <div class="intro-head">Year One Priorities</div>
-            <div class="intro-goal">Hire your first staff member — they define your strategic direction.</div>
+            <div class="intro-goal">Hire your first staff member; they define your strategic direction.</div>
             <div class="intro-goal">Sell the inherited inventory to build a cash cushion.</div>
             <div class="intro-goal">Keep vineyard disease below 40 heading into harvest.</div>
+            <div class="intro-goal">Watch your monthly burn rate; lease and debt interest arrive before revenue does.</div>
             <div class="intro-goal">Bottle your first real vintage before year's end.</div>
           </div>
         </div>
@@ -5888,6 +7575,11 @@ function render() {
 
 window.startGame = startGame;
 window.randomStart = randomStart;
+window.applySuggestedStart = applySuggestedStart;
+window.setSetupMode = setSetupMode;
+window.advanceGuide = advanceGuide;
+window.retreatGuide = retreatGuide;
+window.skipGuide = skipGuide;
 window.dismissIntro = dismissIntro;
 window.saveGame = saveGame;
 window.loadGame = loadGame;
