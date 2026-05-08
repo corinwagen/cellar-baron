@@ -577,6 +577,14 @@ const REGION_CLIMATE = {
 
 const SOUTHERN_HEMISPHERE_REGIONS = new Set(["mendoza", "barossa"]);
 
+const STAFF_CAPACITY_KEY = {
+  ines: "vineyard", dr_chen: "vineyard",
+  marco: "cellar", oscar: "cellar",
+  samir: "ops",
+  beatrice: "hospitality", felix: "hospitality",
+  asha: "sales", lucy: "sales", priya: "sales", margot: "sales",
+};
+
 const STAFF_POOL = [
   {
     id: "ines",
@@ -3246,10 +3254,11 @@ function createState() {
   const d = selectedDifficulty();
   const inventoryMod = d.inventoryMod;
   const startProfile = clamp(50 + (PHILOSOPHY_PROFILE[p.id] || 0) + (VARIETAL_PROFILE[setup.varietal] || 0), 0, 100);
+  const startMonth = SOUTHERN_HEMISPHERE_REGIONS.has(r.id) ? 7 : 1;
   const s = {
-    month: 1,
+    month: startMonth,
     maxMonths: 60,
-    season: seasonName(1, r.id),
+    season: seasonName(startMonth, r.id),
     difficulty: d.id,
     region: r.id,
     varietal: setup.varietal,
@@ -3310,7 +3319,7 @@ function createState() {
     event: null,
     lastEventResult: null,
     lastWeather: "Clear",
-    lastTemp: regionalTempRange(r.id, 3),
+    lastTemp: regionalTempRange(r.id, calendarMonthNumber(startMonth)),
     lastClose: null,
     harvestReport: null,
     tutorialSeen: false,
@@ -3420,38 +3429,23 @@ const GUIDE_PAGES = [
 
 function guidePageBody(step) {
   if (step === 0) {
+    const sw = seasonWindows(state?.region);
+    const seasonDescs = {
+      Dormant:   "Prune vines, plan the year ahead, let crews recover. The winter planning action restores vine health and reduces operational fatigue.",
+      Budbreak:  "New growth emerges. Run the spray program now to suppress early fungal pressure before disease gains a foothold on young shoots.",
+      Flowering: "Fruit sets. Canopy thinning opens airflow through the fruit zone, cutting disease risk and raising wine quality.",
+      Veraison:  "Grapes change color and begin ripening. Green harvest (dropping 20% of the crop) concentrates flavor and sugar in what remains.",
+      Harvest:   "Pick the fruit. Selective picking improves capture rate and quality. Disease above 40 at harvest will tank your vintage score.",
+      Cellar:    "Fermentation begins and cellar work starts: racking lots, topping barrels, moving ready wine forward. This is where the pipeline starts, not ends.",
+    };
     return `
       <div class="guide-season-grid">
+        ${Object.entries(seasonDescs).map(([season, desc]) => `
         <div class="guide-season">
-          <span class="guide-season-label">Dormant</span>
-          <span class="guide-season-window">Dec – Feb</span>
-          <p>Prune vines, plan the year ahead, let crews recover. The winter planning action restores vine health and reduces operational fatigue.</p>
-        </div>
-        <div class="guide-season">
-          <span class="guide-season-label">Budbreak</span>
-          <span class="guide-season-window">Mar – Apr</span>
-          <p>New growth emerges. Run the spray program now to suppress early fungal pressure before disease gains a foothold on young shoots.</p>
-        </div>
-        <div class="guide-season">
-          <span class="guide-season-label">Flowering</span>
-          <span class="guide-season-window">May – Jun</span>
-          <p>Fruit sets. Canopy thinning opens airflow through the fruit zone, cutting disease risk and raising wine quality.</p>
-        </div>
-        <div class="guide-season">
-          <span class="guide-season-label">Veraison</span>
-          <span class="guide-season-window">Jul – Aug</span>
-          <p>Grapes change color and begin ripening. Green harvest (dropping 20% of the crop) concentrates flavor and sugar in what remains.</p>
-        </div>
-        <div class="guide-season">
-          <span class="guide-season-label">Harvest</span>
-          <span class="guide-season-window">Sep – Oct</span>
-          <p>Pick the fruit. Selective picking improves capture rate and quality. Disease above 40 at harvest will tank your vintage score.</p>
-        </div>
-        <div class="guide-season">
-          <span class="guide-season-label">Cellar</span>
-          <span class="guide-season-window">Nov – Feb</span>
-          <p>Fermentation begins and cellar work starts: racking lots, topping barrels, moving ready wine forward. This is where the pipeline starts, not ends.</p>
-        </div>
+          <span class="guide-season-label">${season}</span>
+          <span class="guide-season-window">${sw[season]}</span>
+          <p>${desc}</p>
+        </div>`).join("")}
       </div>
       <p class="guide-note">The pipeline: <strong>harvested grapes → bulk wine in tanks → barrels → bottled cases → revenue.</strong> Bottling happens when the wine is ready, which can be any season. Long-aging varietals (Nebbiolo, Cabernet Sauvignon) can spend a year or more in barrel across multiple seasons before release.</p>
     `;
@@ -7372,6 +7366,7 @@ function staffView(person, employed) {
       <p class="staff-agenda">${STAFF_AGENDAS[person.id] || "Wants the estate to match their discipline."}</p>
       <div class="staff-traits">
         ${person.traits.map(trait => `<span class="tag">${trait}</span>`).join("")}
+        ${STAFF_CAPACITY_KEY[person.id] ? `<span class="tag tag-capacity">+1 ${STAFF_CAPACITY_KEY[person.id]} action/mo</span>` : ""}
         <span class="tag">${money(effectiveSalary(state, person))}/mo</span>
       </div>
       ${(() => {

@@ -518,6 +518,12 @@ button:disabled {
   line-height: 1.4;
 }
 
+.tag.tag-capacity {
+  border-color: #a8c4b0;
+  color: #2e5c3a;
+  background: #eaf3ec;
+}
+
 .tag.trait-virtue {
   border-color: #c4a84a;
   color: #6b5010;
@@ -1358,6 +1364,11 @@ button:disabled {
   bottom: auto;
   left: auto;
   right: 0;
+}
+
+.tabs button:nth-child(-n+2)[data-tip]::after {
+  right: auto;
+  left: 0;
 }
 
 .small {
