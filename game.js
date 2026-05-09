@@ -3329,6 +3329,43 @@ function initialChannelDemand(regionDef, varietalDef, philosophyDef, difficultyD
   }, {});
 }
 
+const ACHIEVEMENTS = [
+  { id: "first-blush",            emoji: "🌸", name: "First Blush",            desc: "Reached prestige 40." },
+  { id: "benchmark",              emoji: "🏆", name: "Benchmark Producer",      desc: "Reached prestige 75." },
+  { id: "legend",                 emoji: "👑", name: "Legend",                  desc: "Reached prestige 90." },
+  { id: "auction-record",         emoji: "🔨", name: "Auction Record",          desc: "A sold-out vintage reached the secondary market." },
+  { id: "perfect-vintage",        emoji: "⭐", name: "Perfect Vintage",         desc: "Produced a five-star vintage." },
+  { id: "critical-darling",       emoji: "📰", name: "Critical Darling",        desc: "Earned a 95+ critic score." },
+  { id: "christies",              emoji: "🍾", name: "Christie's",              desc: "Consigned a vintage for auction." },
+  { id: "three-stars",            emoji: "🍽️",  name: "Three Stars",            desc: "Earned Michelin three-star placement." },
+  { id: "survived-board",         emoji: "😤", name: "Survived the Board",      desc: "Outlasted twelve months of investor board pressure." },
+  { id: "deep-red",               emoji: "💸", name: "Deep in the Red",         desc: "Kept the estate running with cash below −$30,000." },
+  { id: "comeback",               emoji: "💪", name: "Comeback",                desc: "Recovered from a prestige drop of 15 or more points." },
+  { id: "back-from-brink",        emoji: "🎯", name: "Back from the Brink",     desc: "Had morale fall to 10 or below, then recovered." },
+  { id: "smoke-season",           emoji: "🔥", name: "Smoke Season",            desc: "Navigated a Napa wildfire smoke advisory." },
+  { id: "tremors",                emoji: "🌍", name: "Tremors",                 desc: "Kept the estate intact after an earthquake." },
+  { id: "hailstorm",              emoji: "🌨️",  name: "Hailstorm",              desc: "Survived a Mendoza hailstorm." },
+  { id: "ice-harvest",            emoji: "❄️",  name: "Ice Harvest",            desc: "Pushed grapes to the freeze for an ice wine." },
+  { id: "en-primeur",             emoji: "🏰", name: "En Primeur",              desc: "Offered barrel samples before the vintage was finished." },
+  { id: "premier-cru",            emoji: "🥂", name: "Premier Cru",             desc: "Pursued the Burgundy premier cru classification." },
+  { id: "old-vines",              emoji: "👴", name: "Old Vines",               desc: "Acquired an 80-year-old Shiraz parcel." },
+  { id: "allocation-only",        emoji: "💎", name: "Allocation Only",         desc: "Fulfilled five collector-channel orders." },
+  { id: "volume-play",            emoji: "📦", name: "Volume Play",             desc: "Sold 5,000 cases across the game." },
+  { id: "full-ledger",            emoji: "🧾", name: "Full Ledger",             desc: "Earned $1,000,000 in total revenue." },
+  { id: "dream-team",             emoji: "🤝", name: "Dream Team",              desc: "Had five staff members on the payroll at once." },
+  { id: "destination-winery",     emoji: "🎪", name: "Destination Winery",      desc: "Maxed out the tasting room." },
+  { id: "precision-viticulture",  emoji: "🔬", name: "Precision Viticulture",   desc: "Built the viticulture lab to tier three." },
+  { id: "going-natural",          emoji: "🌿", name: "Going Natural",           desc: "Earned organic certification." },
+  { id: "natural-wine-fair",      emoji: "🍷", name: "Natural Wine Fair",        desc: "Poured at the natural wine fair." },
+  { id: "bootstrapped",           emoji: "🏦", name: "Bootstrapped",            desc: "Finished without drawing any additional debt." },
+  { id: "leveraged-up",           emoji: "🎰", name: "Leveraged Up",            desc: "Borrowed over $100,000 in total across the game." },
+  { id: "checkbook-winemaker",    emoji: "🛒", name: "Checkbook Winemaker",     desc: "Bought grapes instead of growing them. Terroir is wherever your truck can reach." },
+  { id: "impatient",              emoji: "⏩", name: "Impatient",               desc: "Released a vintage before its aging window closed. The wine wasn't ready. You were." },
+  { id: "first-harvest",         emoji: "🌾", name: "First Harvest",           desc: "Brought in your first crop." },
+  { id: "first-hire",            emoji: "🤵", name: "First Hire",              desc: "Brought on your first member of staff." },
+  { id: "debt-free",             emoji: "✅", name: "Debt Free",               desc: "Paid off every outstanding loan." },
+];
+
 function createState() {
   const r = selectedRegion();
   const v = selectedVarietal();
@@ -3417,7 +3454,21 @@ function createState() {
     fulfilled: 0,
     missed: 0,
     profile: startProfile,
-    gameOver: null
+    gameOver: null,
+    maxPrestige: r.prestige,
+    minCash: Math.round(r.cash * d.cashMod),
+    minMorale: 58,
+    hadPrestigeDrop: false,
+    harvestCount: 0,
+    totalStaffHired: 0,
+    boughtGrapes: false,
+    earlyReleased: false,
+    survivedInvestor: false,
+    totalDebtDrawn: d.debt || 0,
+    openingDebt: d.debt || 0,
+    collectorFulfilled: 0,
+    achievements: [],
+    newAchievements: []
   };
   ensureStaffTraits(s);
   // Long-aging varietals (nebbiolo, cabernet in high-bonus regions) face a ~20-month gap before
@@ -3939,6 +3990,7 @@ function drawDebt(amount) {
   if (draw <= 0) return;
   const rate = addDebt(state, draw, "Credit-line draw");
   state.cash += draw;
+  state.totalDebtDrawn = (state.totalDebtDrawn || 0) + draw;
   state.morale -= amount >= 50000 ? 2 : 0;
   log(state, `Drew ${money(draw)} from the winery credit line at ${(rate * 100).toFixed(1)}% monthly for new money.`);
   normalizeState(state);
@@ -5072,6 +5124,7 @@ function fulfillOrder(id) {
   state.inventory.cases -= order.cases;
   state.cash += revenue;
   state.prestige += order.type === "collector" ? 5 : order.type === "club" || order.type === "restaurant" ? 3 : 1;
+  if (order.type === "collector") state.collectorFulfilled = (state.collectorFulfilled || 0) + 1;
   recordArchiveSale(state, order.cases, revenue, order.channel || ORDER_CHANNEL[order.type] || "distributor");
   addChannelDemand(state, [order.channel || ORDER_CHANNEL[order.type] || "distributor"], 2);
   addChannelTrust(state, order.channel || ORDER_CHANNEL[order.type] || "distributor", 3);
@@ -5200,6 +5253,7 @@ function financeBuild(id) {
   const cost = capexCost(id, owned);
   if (availableCredit(state) < cost) return;
   addDebt(state, cost, `${capexTier(id, owned)?.name || id} financing`);
+  state.totalDebtDrawn = (state.totalDebtDrawn || 0) + cost;
   _doBuild(state, id, 0);
 }
 
@@ -5244,6 +5298,7 @@ function hireStaff(id) {
   state.cash -= signing;
   state.actionsLeft -= 1;
   state.staff.push(id);
+  state.totalStaffHired = (state.totalStaffHired || 0) + 1;
   ensureStaffProgress(state, id);
   state.staffMarket = shuffle(STAFF_POOL.map(p => p.id).filter(staffId => !state.staff.includes(staffId)));
   applyCapacityDelta(state, beforeCap);
@@ -5356,6 +5411,61 @@ function normalizeState(s) {
   // temperate trait: morale never falls below 10
   const hasTemperate = (s.staff || []).some(id => (s.staffTraits?.[id] || []).includes("temperate"));
   if (hasTemperate) s.morale = Math.max(s.morale, 10);
+  // update high-water / low-water tracking
+  s.maxPrestige = Math.max(s.maxPrestige || 0, s.prestige);
+  s.minCash = Math.min(s.minCash ?? s.cash, s.cash);
+  s.minMorale = Math.min(s.minMorale ?? s.morale, s.morale);
+  if (s.prestige < (s.maxPrestige || 0) - 15) s.hadPrestigeDrop = true;
+  checkAchievements(s);
+}
+
+function checkAchievements(s) {
+  if (!s || !s.achievements) return;
+  if (!s.newAchievements) s.newAchievements = [];
+  const earned = new Set(s.achievements);
+
+  function award(id) {
+    if (!earned.has(id)) {
+      earned.add(id);
+      s.achievements.push(id);
+      s.newAchievements.push(id);
+    }
+  }
+
+  if (s.prestige >= 40) award("first-blush");
+  if (s.prestige >= 75) award("benchmark");
+  if (s.prestige >= 90) award("legend");
+  if ((s.eventMemory?.["secondary-market-record"]?.count || 0) > 0) award("auction-record");
+  if ((s.archive || []).some(e => (e.vintageScore || 0) >= 5)) award("perfect-vintage");
+  if ((s.archive || []).some(e => (e.score || 0) >= 95)) award("critical-darling");
+  if ((s.eventMemory?.["auction-house"]?.count || 0) > 0) award("christies");
+  if (s.classification?.threeStar) award("three-stars");
+  if (s.survivedInvestor) award("survived-board");
+  if ((s.minCash || 0) <= -30000) award("deep-red");
+  if (s.hadPrestigeDrop && s.prestige >= (s.maxPrestige || 0) - 8) award("comeback");
+  if ((s.minMorale ?? 60) <= 10 && s.morale > 55) award("back-from-brink");
+  if ((s.eventMemory?.["napa-smoke"]?.count || 0) > 0) award("smoke-season");
+  if ((s.eventMemory?.["napa-earthquake"]?.count || 0) > 0) award("tremors");
+  if ((s.eventMemory?.["mendoza-hail"]?.count || 0) > 0) award("hailstorm");
+  if ((s.eventMemory?.["fingerlakes-icewine"]?.count || 0) > 0) award("ice-harvest");
+  if ((s.eventMemory?.["bordeaux-primeur"]?.count || 0) > 0) award("en-primeur");
+  if ((s.eventMemory?.["burgundy-premier-cru"]?.count || 0) > 0) award("premier-cru");
+  if ((s.eventMemory?.["barossa-old-vine"]?.count || 0) > 0) award("old-vines");
+  if ((s.collectorFulfilled || 0) >= 5) award("allocation-only");
+  if ((s.totalSold || 0) >= 5000) award("volume-play");
+  if ((s.totalRevenue || 0) >= 1000000) award("full-ledger");
+  if ((s.staff || []).length >= 5) award("dream-team");
+  if ((s.buildings?.room || 0) >= 4) award("destination-winery");
+  if ((s.buildings?.lab || 0) >= 3) award("precision-viticulture");
+  if (s.classification?.organic) award("going-natural");
+  if ((s.eventMemory?.["natural-wine-fair"]?.count || 0) > 0) award("natural-wine-fair");
+  if (s.gameOver && (s.totalDebtDrawn || 0) <= (s.openingDebt || 0)) award("bootstrapped");
+  if ((s.totalDebtDrawn || 0) >= 100000) award("leveraged-up");
+  if (s.boughtGrapes) award("checkbook-winemaker");
+  if (s.earlyReleased) award("impatient");
+  if (s.harvestCount > 0) award("first-harvest");
+  if ((s.staff || []).length > 0 || (s.totalStaffHired || 0) > 0) award("first-hire");
+  if ((s.openingDebt || 0) > 0 && s.debt <= 0) award("debt-free");
 }
 
 function profilePriceCeil(s) {
@@ -5696,6 +5806,7 @@ function applyInvestorPressure(s, costs) {
   }
   s.investor.pressureMonths -= 1;
   if (s.investor.pressureMonths <= 0) {
+    s.survivedInvestor = true;
     log(s, "The investor's first-year pressure eased. The estate keeps the capital structure.");
   }
 }
@@ -5889,6 +6000,7 @@ function harvest(s) {
     avgWater: Math.round(avgWater),
     note: (s.marketMods.harvestCrew ? "Selective picking raised yield and quality." : "Standard seasonal labor.") + diseaseNote + waterNote
   };
+  s.harvestCount = (s.harvestCount || 0) + 1;
   log(s, `Harvest: ${grapes} CE from ${productive.length} blocks. Disease ${Math.round(avgDisease)}, water ${Math.round(avgWater)}. ${vintageScoreLabel(vintageScore)} vintage. Labor ${money(laborCost)}.`);
   return s.harvestReport;
 }
@@ -5985,29 +6097,16 @@ function resolveEvent(choiceIndex) {
 
 function checkGameOver() {
   if (!state) return;
-  const worth = netWorth(state);
-  const targetWorth = difficulty().winNetWorth;
-  if (state.prestige >= 82 && worth >= targetWorth && state.fulfilled >= 12) {
-    state.gameOver = {
-      win: true,
-      title: "Your estate became a benchmark producer.",
-      text: "Collectors chase your allocation, distributors answer your calls, and the bank has stopped calling first."
-    };
-  } else if (state.month > state.maxMonths) {
-    const respectable = worth > 120000 && state.prestige > 45;
-    state.gameOver = {
-      win: respectable,
-      title: respectable ? "You built a durable regional winery." : "The vintage ledger closed hard.",
-      text: respectable
-        ? "You did not dominate the trade, but the business can survive another generation."
-        : "Cash, reputation, or operations never reached escape velocity before the five-year window closed."
-    };
+  if (state.month > state.maxMonths) {
+    state.gameOver = { score: true };
+    checkAchievements(state);
   } else if (state.debt > state.creditLine + 65000 || (state.cash < -50000 && availableCredit(state) <= 0) || state.prestige <= 0 || state.morale <= 0) {
     state.gameOver = {
-      win: false,
+      score: false,
       title: "The estate lost confidence.",
       text: "The board stepped in after debt, morale, or reputation broke the business."
     };
+    checkAchievements(state);
   }
 }
 
@@ -6211,6 +6310,7 @@ function gameView() {
       </div>
     </main>
     ${state.gameOver ? gameOverModal() : (guideStep !== null && guideStep < GUIDE_PAGES.length ? guideModal() : (!state.introSeen ? introModal() : (state.pendingNaming ? namingModal() : "")))}
+    ${achievementToast()}
   `;
 }
 
@@ -6280,7 +6380,7 @@ function topbar() {
         <div class="kpis">
           ${kpi("Date", currentDateLabel(state), "Current month. Most operations, weather, contracts, and costs advance monthly.")}
           ${kpi("Cash", money(state.cash), "Available cash after operating costs, sales, debt draws, and repayments. Running out forces credit-line use.", state.cash < 0 ? "danger" : state.cash < 30000 ? "warn" : state.cash >= 200000 ? "good" : "")}
-          ${kpi("Prestige", `${state.prestige}/120`, "Reputation with critics, buyers, and collectors. Win requires 82+ prestige.", state.prestige >= 82 ? "good" : state.prestige < 40 ? "warn" : "")}
+          ${kpi("Prestige", `${state.prestige}/120`, "Reputation with critics, buyers, and collectors.", state.prestige >= 75 ? "good" : state.prestige < 40 ? "warn" : "")}
           ${kpi("Demand", `${state.demand}/130`, "Commercial pull for your wine. Higher demand improves direct sales and buyer interest.", state.demand >= 100 ? "good" : state.demand < 50 ? "warn" : "")}
           ${kpi("Quality", `${state.quality}/120`, "Current house quality. Vineyard health, weather, cellar work, and barrels move this. Decays faster above 85.", state.quality >= 85 ? "good" : state.quality < 50 ? "warn" : "")}
           ${kpi("Morale", `${state.morale}/100`, "Staff and crew confidence. Below 20 loses an action/month and triggers labor events; 0 ends the game.", state.morale < 20 ? "danger" : state.morale < 40 ? "warn" : state.morale >= 70 ? "good" : "")}
@@ -6437,7 +6537,7 @@ function overviewPanel() {
     <section class="panel overview-panel">
       <div class="panel-head">
         <h2>Operating Brief</h2>
-        <span class="small">Win: 82 prestige, ${money(difficulty().winNetWorth)} net worth, 12 fulfilled orders</span>
+        <span class="small">Five seasons — how far can you go?</span>
       </div>
       <div class="brief-grid">
         <button class="brief-card" onclick="setTab('vineyard')" ${tip("Watch row health and threat. High pressure lowers harvest yield and quality.")}>
@@ -7089,6 +7189,7 @@ function earlyRelease(lotId) {
   lot.score = Math.max(1, (lot.score || 3) - penalty);
   lot.agingMonths = lot.agingTarget;
   lot.earlyReleased = true;
+  state.earlyReleased = true;
   log(state, `Early release: ${lot.label} cut ${remaining} months short. Vintage score −${penalty} (harsh tannins, unintegrated structure).`);
   normalizeState(state);
   render();
@@ -7127,6 +7228,7 @@ function buyGrapes() {
   state.cash -= total;
   state.actionsLeft -= 1;
   state.profile = clamp((state.profile ?? 50) - 4, 0, 100);
+  state.boughtGrapes = true;
   log(state, `Purchased ${lotSize} CE of ${v.name} grapes for ${money(total)}. Procurement used owner attention.`);
   normalizeState(state);
   render();
@@ -7674,22 +7776,45 @@ function dismissIntro() {
 }
 
 function gameOverModal() {
+  if (!state.gameOver.score) {
+    return `
+      <div class="modal">
+        <div class="modal-card">
+          <h2>${state.gameOver.title}</h2>
+          <p>${state.gameOver.text}</p>
+          <div class="score-grid">
+            <div class="stat-box"><span>Peak prestige</span><strong>${state.maxPrestige || state.prestige}</strong></div>
+            <div class="stat-box"><span>Net worth</span><strong>${money(netWorth(state))}</strong></div>
+            <div class="stat-box"><span>Cases sold</span><strong>${state.totalSold}</strong></div>
+          </div>
+          ${scoreAchievements()}
+          <div class="top-actions">
+            <button class="primary" onclick="resetGame()">New estate</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   const worth = netWorth(state);
+  const bestScore = Math.max(0, ...(state.archive || []).map(e => e.score || 0));
+  const totalBottles = (state.totalSold || 0) * 12;
   return `
     <div class="modal">
-      <div class="modal-card">
-        <h2>${state.gameOver.title}</h2>
-        <p>${state.gameOver.text}</p>
+      <div class="modal-card score-screen">
+        <h2>Five seasons at ${escapeHtml(state.wineryName)}</h2>
+        <p class="score-tagline">Here's how you did.</p>
         <div class="score-grid">
-          <div class="stat-box"><span>Result</span><strong>${state.gameOver.win ? "Win" : "Loss"}</strong></div>
-          <div class="stat-box"><span>Net worth</span><strong>${money(worth)}</strong></div>
-          <div class="stat-box"><span>Prestige</span><strong>${state.prestige}</strong></div>
-          <div class="stat-box"><span>Cases sold</span><strong>${state.totalSold}</strong></div>
-          <div class="stat-box"><span>Orders fulfilled</span><strong>${state.fulfilled}</strong></div>
+          <div class="stat-box"><span>Peak prestige</span><strong>${state.maxPrestige || state.prestige}</strong></div>
+          <div class="stat-box"><span>Final net worth</span><strong>${money(worth)}</strong></div>
           <div class="stat-box"><span>Total revenue</span><strong>${money(state.totalRevenue)}</strong></div>
+          <div class="stat-box"><span>Cases sold</span><strong>${state.totalSold.toLocaleString()}</strong></div>
+          <div class="stat-box"><span>Bottles shipped</span><strong>${totalBottles.toLocaleString()}</strong></div>
+          <div class="stat-box"><span>Orders fulfilled</span><strong>${state.fulfilled}</strong></div>
+          ${bestScore > 0 ? `<div class="stat-box"><span>Best critic score</span><strong>${bestScore}/100</strong></div>` : ""}
         </div>
+        ${scoreAchievements()}
         <div class="top-actions">
-          <button onclick="state.gameOver = null; render()">Keep playing</button>
           <button class="primary" onclick="resetGame()">New estate</button>
         </div>
       </div>
@@ -7697,9 +7822,44 @@ function gameOverModal() {
   `;
 }
 
+function scoreAchievements() {
+  const earned = (state.achievements || []);
+  if (!earned.length) return "";
+  const items = earned.map(id => {
+    const a = ACHIEVEMENTS.find(a => a.id === id);
+    return a ? `<div class="achievement-chip" title="${escapeHtml(a.desc)}">${a.emoji} <span>${escapeHtml(a.name)}</span></div>` : "";
+  }).join("");
+  return `
+    <div class="achievement-section">
+      <h3>Achievements (${earned.length}/${ACHIEVEMENTS.length})</h3>
+      <div class="achievement-chips">${items}</div>
+    </div>
+  `;
+}
+
+function achievementToast() { return ""; }
+
+function flushAchievementToasts() {
+  const root = document.getElementById("toast-root");
+  if (!root || !state?.newAchievements?.length) return;
+  const ids = [...state.newAchievements];
+  state.newAchievements = [];
+  ids.forEach((id, i) => {
+    const a = ACHIEVEMENTS.find(a => a.id === id);
+    if (!a) return;
+    const el = document.createElement("div");
+    el.className = "achievement-toast";
+    el.innerHTML = `${a.emoji} <strong>${escapeHtml(a.name)}</strong> — ${escapeHtml(a.desc)}`;
+    el.style.bottom = `${24 + i * 64}px`;
+    root.appendChild(el);
+    setTimeout(() => el.remove(), 4200);
+  });
+}
+
 function render() {
   document.body.dataset.region = state?.region || "";
   app.innerHTML = state ? gameView() : setupView();
+  flushAchievementToasts();
 }
 
 window.startGame = startGame;
