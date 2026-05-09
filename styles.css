@@ -1371,6 +1371,12 @@ button:disabled {
   left: 0;
 }
 
+.trait-virtue[data-tip]::after,
+.trait-vice[data-tip]::after {
+  right: auto;
+  left: 0;
+}
+
 .small {
   color: var(--muted);
   font-size: 12px;
