@@ -506,7 +506,8 @@ const EVENT_RULES = {
   "mouse-taint": { cooldown: 22 },
   "vine-disease": { cooldown: 999, max: 1 },
   "fingerlakes-icewine": { cooldown: 30, max: 2 },
-  "mendoza-inflacion": { cooldown: 24, max: 2 }
+  "mendoza-inflacion": { cooldown: 24, max: 2 },
+  "credit-ceiling": { max: 1 }
 };
 
 const ACTION_CAPACITY = {
@@ -2600,6 +2601,70 @@ const EVENT_DECK = [
           log(s, "Quebracho and native-oak alternatives sourced locally. Less French, more Argentine. The wine will taste like where it comes from.");
         }}
     ]
+  },
+  {
+    id: "credit-ceiling",
+    priority: true,
+    title: "The Bank Has Reached Its Limit",
+    body: "The account manager's call came Tuesday morning. The credit facility is at its ceiling and the bank is not extending further. Operating costs will continue regardless. The estate needs a solution — none of them comfortable.",
+    condition: s => availableCredit(s) <= 15000 && s.debt > 30000 && s.month > 3,
+    choices: [
+      {
+        label: "Emergency bridge loan",
+        hint: "Cash +$70,000 at penalty rate (3.2%/mo). Credit line extended. Prestige −6, Morale −10.",
+        effect: s => {
+          const amount = 70000;
+          s.creditLine += amount;
+          ensureDebtLots(s);
+          s.debtLots.push({ principal: amount, rate: 0.032, label: "Emergency bridge loan" });
+          s.debt = Math.round(s.debtLots.reduce((t, l) => t + l.principal, 0));
+          s.cash += amount;
+          s.prestige = clamp(s.prestige - 6, 1, 120);
+          s.morale = clamp(s.morale - 10, 1, 100);
+          log(s, "Emergency capital secured at punishing terms — 3.2% monthly on the bridge. The estate is still operating.");
+        }
+      },
+      {
+        label: "Sell a vineyard block",
+        hint: "Remove one block permanently for $45,000 cash. Less land means lower future harvests.",
+        effect: s => {
+          if (s.rows && s.rows.length > 1) {
+            const block = s.rows.pop();
+            s.cash += 45000;
+            s.prestige = clamp(s.prestige - 4, 1, 120);
+            s.morale = clamp(s.morale - 6, 1, 100);
+            log(s, `The ${block.name} block sold at distress price. $45,000 arrived. One less row in the vineyard, permanently.`);
+          } else {
+            s.cash += 22000;
+            s.prestige = clamp(s.prestige - 5, 1, 120);
+            log(s, "Equipment and secondary assets liquidated. $22,000 arrived. Not much left to sell after this.");
+          }
+        }
+      },
+      {
+        label: "Force-release wine early",
+        hint: "Rush the most-ready lot to bulk buyers at 50% of retail. Prestige −8 but cash arrives this week.",
+        effect: s => {
+          const lots = (s.vintages || []).filter(v => v.bulkWine > 0);
+          if (lots.length) {
+            const lot = lots.sort((a, b) =>
+              (b.agingMonths / Math.max(1, b.agingTarget)) - (a.agingMonths / Math.max(1, a.agingTarget))
+            )[0];
+            lot.agingMonths = Math.max(lot.agingMonths, lot.agingTarget);
+            const cash = Math.round(lot.bulkWine * (s.price || 28) * 12 * 0.5);
+            s.cash += cash;
+            s.prestige = clamp(s.prestige - 8, 1, 120);
+            s.morale = clamp(s.morale - 5, 1, 100);
+            const label = lot.label;
+            lot.bulkWine = 0;
+            log(s, `${label} sold in bulk to a négociant at distress prices. ${money(cash)} arrived. The trade will notice the early release.`);
+          } else {
+            s.cash += 9000;
+            log(s, "Remaining bottled inventory sold off. $9,000 recovered. It buys a month, no more.");
+          }
+        }
+      }
+    ]
   }
 ];
 
@@ -3355,6 +3420,24 @@ function createState() {
     gameOver: null
   };
   ensureStaffTraits(s);
+  // Long-aging varietals (nebbiolo, cabernet in high-bonus regions) face a ~20-month gap before
+  // the first bottleable vintage. Add a partially-aged barrel lot that ships 4 months into play —
+  // simulating wine already in barrel when you took over the estate.
+  const baseAgingTarget = agingTarget(s);
+  if (baseAgingTarget >= 9) {
+    s.vintages.push({
+      id: "barrel-opening",
+      year: START_YEAR - 1,
+      score: 3,
+      label: `${START_YEAR - 1} ${VARIETALS[s.varietal].name} (In Barrel)`,
+      grapes: 0,
+      bulkWine: Math.round(300 * inventoryMod),
+      agingMonths: baseAgingTarget - 4,
+      agingTarget: baseAgingTarget,
+      bottled: 0,
+      purchased: true
+    });
+  }
   return s;
 }
 
@@ -5340,7 +5423,10 @@ function monthlyTick(s) {
 
   const harvestResult = isHarvestMonth(s.month, s.region) ? harvest(s) : null;
 
-  if (rand() < 0.36 * eventRiskMod(s) * difficulty().eventMod) {
+  const priorityEvent = drawPriorityEvent(s);
+  if (priorityEvent) {
+    s.event = priorityEvent;
+  } else if (rand() < 0.36 * eventRiskMod(s) * difficulty().eventMod) {
     s.event = drawEvent(s);
   }
 
@@ -5838,6 +5924,7 @@ function decayAndOrders(s) {
 function drawEvent(s) {
   ensureEventMemory(s);
   const candidates = EVENT_DECK.filter(event => {
+    if (event.priority) return false;
     if (event.minMonth && s.month < event.minMonth) return false;
     if (event.condition && !event.condition(s)) return false;
     const rule = EVENT_RULES[event.id];
@@ -5850,6 +5937,21 @@ function drawEvent(s) {
     return true;
   });
   return candidates[randint(0, candidates.length - 1)];
+}
+
+function drawPriorityEvent(s) {
+  ensureEventMemory(s);
+  const candidates = EVENT_DECK.filter(event => {
+    if (!event.priority) return false;
+    if (event.minMonth && s.month < event.minMonth) return false;
+    if (event.condition && !event.condition(s)) return false;
+    const rule = EVENT_RULES[event.id];
+    const memory = s.eventMemory[event.id] || { count: 0, lastMonth: -999 };
+    if (rule?.max && memory.count >= rule.max) return false;
+    if (rule?.cooldown && s.month - memory.lastMonth < rule.cooldown) return false;
+    return true;
+  });
+  return candidates[0] || null;
 }
 
 function resolveEvent(choiceIndex) {
