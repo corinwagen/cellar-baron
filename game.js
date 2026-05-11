@@ -3151,6 +3151,7 @@ const CHANNEL_SOFT_CAPS = {
 const TABS = [
   { id: "overview", name: "Overview", tip: "A short operating brief and the highest-level estate signals." },
   { id: "vineyard", name: "Vineyard", tip: "Weather, row health, disease pressure, and harvest risk." },
+  { id: "cellar", name: "Cellar", tip: "Vintage lots in aging, cellar archives, and bulk wine management." },
   { id: "commercial", name: "Commercial", tip: "Bottle pricing, direct sales forecast, buyer contracts, and order timing." },
   { id: "estate", name: "Estate", tip: "Capital upgrades that compound your production engine." },
   { id: "people", name: "People", tip: "Senior staff, payroll, traits, and morale pressure." }
@@ -6467,11 +6468,14 @@ function tabPanel() {
   if (activeTab === "vineyard") {
     return `${artBanner("vineyard", "Vineyard blocks, weather, and disease pressure")}${vineyardPanel()}`;
   }
+  if (activeTab === "cellar") {
+    return `${artBanner("cellar", "Vintage lots, aging timeline, and cellar archives")}${vintageCellarPanel()}${archivePanel()}`;
+  }
   if (activeTab === "commercial") {
     return `${artBanner("commercial", "Tasting room, buyers, and distribution")}${marketPanel()}${channelPanel()}${analyticsPanel()}${ordersPanel()}`;
   }
   if (activeTab === "estate") {
-    return `${artBanner("cellar", "Cellar, bottling line, tanks, and barrels")}${buildingsPanel()}${vintageCellarPanel()}${archivePanel()}`;
+    return `${artBanner("cellar", "Cellar, bottling line, tanks, and barrels")}${buildingsPanel()}`;
   }
   if (activeTab === "people") {
     return `${staffPanel()}`;
@@ -6686,9 +6690,9 @@ function overviewPanel() {
           <strong>${state.demand}/130</strong>
           <em>${state.orders.length} buyer requests</em>
         </button>
-        <button class="brief-card" onclick="setTab('estate')" ${tip("Upgrade tanks, barrels, bottling, tasting room, weather lab, and vineyard blocks.")}>
-          <span>Estate Value</span>
-          <strong>${money(worth)}</strong>
+        <button class="brief-card" onclick="setTab('cellar')" ${tip("View vintage lots aging in cellar, bottling readiness, and cellar archives.")}>
+          <span>Cellar</span>
+          <strong>${totalBulkWine(state)} CE aging</strong>
           <em>${state.inventory.cases} cases ready</em>
         </button>
         <button class="brief-card" onclick="setTab('people')" ${tip("Hire carefully. Staff bonuses are powerful, but payroll repeats every month.")}>
@@ -6778,8 +6782,8 @@ function estateDashboard() {
           ${rowLines.join("")}
           <div class="dash-row muted"><span>Season</span><em>${state.season} · ${state.lastWeather}</em></div>
         </button>
-        <button class="dash-col" onclick="setTab('estate')" ${tip("Upgrade cellar infrastructure and view vintage aging pipeline.")}>
-          <div class="dash-col-head">Cellar &amp; Production</div>
+        <button class="dash-col" onclick="setTab('cellar')" ${tip("View vintage lots aging in cellar and cellar archives.")}>
+          <div class="dash-col-head">Cellar</div>
           <div class="dash-row"><span>Grapes on hand</span><em>${totalGrapes(state)} CE</em></div>
           <div class="dash-row"><span>Bulk wine aging</span><em>${totalBulkWine(state)} CE${agingLots.length ? ` · ${agingLots.length} not ready` : ""}${readyLots.length ? ` · ${readyLots.length} ready` : ""}</em></div>
           <div class="dash-row"><span>Tanks</span><em>level ${state.buildings.tank}</em></div>
@@ -7185,7 +7189,7 @@ function actionsPanel() {
             <button class="action-card ${available ? "" : "offseason"}" onclick="useAction('${action.id}')" ${disabled ? "disabled" : ""}>
               <b>${actionName(action, state)}</b>
               <span class="${effectClass}">${effectText}</span>
-              <em>${action.navigateTab ? "Open Estate" : `${money(cost)} · ${spendLabel}`}</em>
+              <em>${action.navigateTab ? `Open ${TABS.find(t => t.id === action.navigateTab)?.name || "Estate"}` : `${money(cost)} · ${spendLabel}`}</em>
             </button>
           `;
         }).join("")}
