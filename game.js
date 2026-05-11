@@ -508,7 +508,10 @@ const EVENT_RULES = {
   "vine-disease": { cooldown: 999, max: 1 },
   "fingerlakes-icewine": { cooldown: 30, max: 2 },
   "mendoza-inflacion": { cooldown: 24, max: 2 },
-  "credit-ceiling": { max: 1 }
+  "credit-ceiling": { max: 1 },
+  "priest-arrives": { max: 1 },
+  "priest-arrives-again": { max: 1 },
+  "vintner-arrives": { max: 1 }
 };
 
 const ACTION_CAPACITY = {
@@ -594,6 +597,7 @@ const STAFF_BIOS = {
   oscar:   { hometown: "Roussillon, France",   bio: "Apprenticed in natural cellars in Roussillon and Georgia before settling into a philosophy of minimal intervention and maximal attention. His wines are discussed; his methods, debated." },
   rodrigo: { hometown: "Ribera del Duero, Spain", bio: "Managed yield programs across some of Spain's largest cooperative estates before moving to private labels. He is unsentimental about quality ceilings and very good at pushing tonnage." },
   nadia:   { hometown: "Rijeka, Croatia",       bio: "Built her logistics career coordinating cold-chain shipments across the Adriatic before moving into wine supply. She has never missed a delivery window and considers it a point of personal pride." },
+  priest:  { hometown: "Cîteaux.",              bio: "Left the trade after a vintage he would not discuss. He listens more than he speaks." },
 };
 
 const STAFF_CAPACITY_KEY = {
@@ -745,6 +749,30 @@ const STAFF_POOL = [
     traits: ["Supply chain", "Reliable"],
     text: "Manages supplier relationships and fulfillment schedules. Glass and supplies arrive before you run out, operating costs edge down, and she keeps the whole back-of-house running on time.",
     effects: { glassMonthly: 150, costCut: 0.95, morale: 1 }
+  },
+  {
+    id: "vintner",
+    name: "Severin Apollos",
+    gender: "m",
+    role: "Vintner",
+    salary: 2400,
+    hidden: true,
+    portrait: "vintner",
+    traits: ["Apocryphal", "Patient"],
+    text: "Available immediately. Trained at the press at Bozrah. References on request — none will reply.",
+    effects: { cellar: 4, quality: 8, prestige: 3, cup: 5, wrath: true }
+  },
+  {
+    id: "priest",
+    name: "Father Aurelian",
+    gender: "m",
+    role: "Visitor",
+    salary: 0,
+    hidden: true,
+    portrait: "priest",
+    traits: ["Patient", "Watchful"],
+    text: "Asks no salary. Requests only board and a small share of the harvest for the parish.",
+    effects: { faithGen: 2, cellar: 1, wrathSlow: 1 }
   }
 ];
 
@@ -1387,6 +1415,84 @@ const CAPEX_TIERS = {
 
 const EVENT_DECK = [
   {
+    id: "vintner-arrives",
+    title: "A Man at the Service Gate",
+    body: "He arrived without notice. He gave his name as Severin Apollos. He said he had worked a press before and knew the valley. He said he was available. He did not say how long he had been waiting at the gate.",
+    image: "assets/vintner-arrival.png",
+    largeArt: true,
+    priority: true,
+    condition: s => s.vintnerSpawned && !s.vintnerArrivalEventFired,
+    choices: [
+      {
+        label: "Acknowledge",
+        effect: s => { s.vintnerArrivalEventFired = true; }
+      }
+    ]
+  },
+  {
+    id: "priest-arrives",
+    title: "A Visitor at the Gate",
+    body: "A man has come up from the village. He carries a small bag and a breviary. He asks to speak with the master. He says he was once in the trade.",
+    image: "assets/priest-arrival.png",
+    largeArt: true,
+    priority: true,
+    condition: s => inWrath(s) && s.wrathState.cueCount >= 3 && !s.wrathState.priestVisited,
+    choices: [
+      {
+        label: "Receive him",
+        effect: s => {
+          s.wrathState.priestVisited = true;
+          s.wrathState.priestAccepted = true;
+          s.wrathState.iniquityAfterPriestBase = s.wrathState.iniquityChoicesAccepted;
+          s.staff.push("priest");
+          s.wrathState.faith = Math.min(s.wrathState.faithCap, s.wrathState.faith + 4);
+          log(s, "Father Aurelian set his bag down by the kitchen door and asked where the cellar was, which is the same question the vintner had asked. The answers given were different.");
+          awardAchievement(s, "received-the-priest");
+        }
+      },
+      {
+        label: "Send him away",
+        effect: s => {
+          s.wrathState.priestVisited = true;
+          s.wrathState.priestRefused = true;
+          s.wrathState.priestFirstRefusedMonth = s.month;
+          log(s, "He bowed slightly and walked back the way he came. The dogs followed him to the gate and watched him go.");
+        }
+      }
+    ]
+  },
+  {
+    id: "priest-arrives-again",
+    title: "A Visitor at the Gate",
+    body: "The priest from the village is at the gate again. He has not pressed the matter, but he is here.",
+    image: "assets/priest-arrival.png",
+    largeArt: true,
+    priority: true,
+    condition: s => inWrath(s) && s.wrathState.priestRefused && !s.wrathState.priestRefusedTwice && !s.wrathState.priestAccepted && s.wrathState.priestFirstRefusedMonth !== null && s.month >= s.wrathState.priestFirstRefusedMonth + 3,
+    choices: [
+      {
+        label: "Receive him",
+        effect: s => {
+          s.wrathState.priestAccepted = true;
+          s.wrathState.iniquityAfterPriestBase = s.wrathState.iniquityChoicesAccepted;
+          s.staff.push("priest");
+          s.wrathState.faith = Math.min(s.wrathState.faithCap, s.wrathState.faith + 4);
+          log(s, "Father Aurelian set his bag down by the kitchen door and asked where the cellar was, which is the same question the vintner had asked. The answers given were different.");
+          awardAchievement(s, "received-the-priest");
+        }
+      },
+      {
+        label: "Send him away",
+        effect: s => {
+          s.wrathState.priestRefusedTwice = true;
+          s.wrathState.faithCap = 30;
+          s.wrathState.faith = Math.min(30, s.wrathState.faith);
+          log(s, "He did not return a third time.");
+        }
+      }
+    ]
+  },
+  {
     id: "frost",
     title: "Late Frost Warning",
     body: "Cold air is pooling in the vineyard. Fans and candles are expensive, but losing buds is worse.",
@@ -1401,7 +1507,21 @@ const EVENT_DECK = [
           const hardy = traitAffinityBonus(s, ["fortitudinous", "wrathful"]);
           adjustRows(s, hardy ? 1 : 2, "frost");
           if (hardy) log(s, "Stout-hearted staff held their nerve. Frost damage was limited.");
-        }}
+        }},
+      { label: "...", iniquity: true,
+        condition: s => inWrath(s) && s.wrathState.seal >= 2,
+        hint: null,
+        effect: s => {
+          adjustRows(s, -3, "spared");
+          s.wrathState.cup += 8;
+          log(s, "The pressure passed the estate. It did not pass the neighbors. No one spoke of it.");
+        }
+      },
+      { label: "Refuse the path offered", faithGain: 3,
+        condition: s => inWrath(s) && s.wrathState.iniquityChoicesAccepted >= 1,
+        hint: "Faith +3.",
+        effect: s => { log(s, "The path was seen and refused."); }
+      }
     ]
   },
   {
@@ -1423,8 +1543,24 @@ const EVENT_DECK = [
         }
       },
       { label: "Decline gracefully",
+        faithGain: 1,
         hint: "Morale +2, Prestige −1.",
-        effect: s => { s.morale += 2; s.prestige -= 1; } }
+        effect: s => { s.morale += 2; s.prestige -= 1; } },
+      { label: "...", iniquity: true,
+        condition: s => inWrath(s) && s.wrathState.seal >= 2,
+        hint: null,
+        effect: s => {
+          s.prestige += 18;
+          s.demand += 12;
+          s.wrathState.cup += 8;
+          log(s, "The critic's review was beyond what the wine could have earned. It was published anyway.");
+        }
+      },
+      { label: "Refuse the path offered", faithGain: 3,
+        condition: s => inWrath(s) && s.wrathState.iniquityChoicesAccepted >= 1,
+        hint: "Faith +3.",
+        effect: s => { log(s, "The path was seen and refused."); }
+      }
     ]
   },
   {
@@ -1433,11 +1569,26 @@ const EVENT_DECK = [
     body: "Your crew wants predictable hours before harvest pressure builds.",
     choices: [
       { label: "Raise wages", cost: 6500,
+        faithGain: 1,
         hint: "Morale +10, Quality +2.",
         effect: s => { s.morale += 10; s.quality += 2; } },
       { label: "Hold the line",
         hint: "Cash +$1,200 but Morale −9.",
-        effect: s => { s.morale -= 9; s.cash += 1200; } }
+        effect: s => { s.morale -= 9; s.cash += 1200; } },
+      { label: "...", iniquity: true,
+        condition: s => inWrath(s) && s.wrathState.seal >= 2,
+        hint: null,
+        effect: s => {
+          s.morale -= 4; s.quality += 6; s.cash += 3000;
+          s.wrathState.cup += 8;
+          log(s, "The crew's grievance was filed in a drawer. Production accelerated. No one asked.");
+        }
+      },
+      { label: "Refuse the path offered", faithGain: 3,
+        condition: s => inWrath(s) && s.wrathState.iniquityChoicesAccepted >= 1,
+        hint: "Faith +3.",
+        effect: s => { log(s, "The path was seen and refused."); }
+      }
     ]
   },
   {
@@ -1467,7 +1618,21 @@ const EVENT_DECK = [
         effect: s => {
           const hardy = traitAffinityBonus(s, ["fortitudinous", "wrathful"]);
           adjustRows(s, hardy ? 1 : 2, "mildew");
-        }}
+        }},
+      { label: "...", iniquity: true,
+        condition: s => inWrath(s) && s.wrathState.seal >= 2,
+        hint: null,
+        effect: s => {
+          adjustRows(s, -3, "spared");
+          s.wrathState.cup += 8;
+          log(s, "The pressure passed the estate. It did not pass the neighbors. No one spoke of it.");
+        }
+      },
+      { label: "Refuse the path offered", faithGain: 3,
+        condition: s => inWrath(s) && s.wrathState.iniquityChoicesAccepted >= 1,
+        hint: "Faith +3.",
+        effect: s => { log(s, "The path was seen and refused."); }
+      }
     ]
   },
   {
@@ -1537,12 +1702,31 @@ const EVENT_DECK = [
       },
       {
         label: "Stay independent",
+        faithGain: 3,
         hint: "Prestige +3, Morale +5, Influence −1.",
         effect: s => {
           s.prestige += 3;
           s.morale += 5;
           s.influence -= 1;
         }
+      },
+      { label: "...", iniquity: true,
+        condition: s => inWrath(s) && s.wrathState.seal >= 2,
+        hint: null,
+        effect: s => {
+          s.cash += 95000;
+          s.influence += 10;
+          s.demand += 8;
+          s.investor = null;
+          s.survivedInvestor = true;
+          s.wrathState.cup += 8;
+          log(s, "The investor's terms were settled by means the record does not show. The board did not meet again.");
+        }
+      },
+      { label: "Refuse the path offered", faithGain: 3,
+        condition: s => inWrath(s) && s.wrathState.iniquityChoicesAccepted >= 1,
+        hint: "Faith +3.",
+        effect: s => { log(s, "The path was seen and refused."); }
       }
     ]
   },
@@ -1574,7 +1758,24 @@ const EVENT_DECK = [
       },
       { label: "Decline this year",
         hint: "Demand +2.",
-        effect: s => { s.demand += 2; } }
+        effect: s => { s.demand += 2; } },
+      { label: "...", iniquity: true,
+        condition: s => inWrath(s) && s.wrathState.seal >= 2,
+        hint: null,
+        effect: s => {
+          s.competitionEntered = true;
+          s.prestige += 16;
+          s.demand += 14;
+          s.morale += 8;
+          s.wrathState.cup += 8;
+          log(s, "The medal arrived by courier. The judges' notes were brief. No one requested the samples back.");
+        }
+      },
+      { label: "Refuse the path offered", faithGain: 3,
+        condition: s => inWrath(s) && s.wrathState.iniquityChoicesAccepted >= 1,
+        hint: "Faith +3.",
+        effect: s => { log(s, "The path was seen and refused."); }
+      }
     ]
   },
   {
@@ -2069,7 +2270,23 @@ const EVENT_DECK = [
           s.fatigue = clamp((s.fatigue || 0) + 10, 0, 100);
           s.morale -= 5;
           log(s, "The estate crew stretched to cover harvest. The fruit is in, but everyone is exhausted.");
-        }}
+        }},
+      { label: "...", iniquity: true,
+        condition: s => inWrath(s) && s.wrathState.seal >= 2,
+        hint: null,
+        effect: s => {
+          s.marketMods = s.marketMods || {};
+          s.marketMods.harvestCrew = true;
+          s.morale += 4;
+          s.wrathState.cup += 8;
+          log(s, "The crews arrived before dawn and did not leave until the last block was done. No one asked where they came from.");
+        }
+      },
+      { label: "Refuse the path offered", faithGain: 3,
+        condition: s => inWrath(s) && s.wrathState.iniquityChoicesAccepted >= 1,
+        hint: "Faith +3.",
+        effect: s => { log(s, "The path was seen and refused."); }
+      }
     ]
   },
   {
@@ -2956,14 +3173,47 @@ const ACTIONS = [
     }
   },
   {
+    id: "tithe",
+    name: "Tithe",
+    detail: "Give a portion of the estate's cash to the parish poor. The widow's mite — only counted if it costs the estate meaningfully.",
+    cost: 4000,
+    consequence: "Faith +3 if the gift represents a real share of cash on hand.",
+    hidden: s => !inWrath(s) || !hasStaff(s, "vintner"),
+    available: s => inWrath(s) && hasStaff(s, "vintner") && s.wrathState.seal >= 1,
+    apply: s => {
+      const fraction = 4000 / Math.max(1, s.cash + 4000);
+      const earned = fraction > 0.08 ? 3 : 1;
+      s.wrathState.faith = clamp(s.wrathState.faith + earned, 0, s.wrathState.faithCap);
+      log(s, earned > 1
+        ? "Father Aurelian carried the gift to the village. The estate's cash is meaningfully thinner. Faith earned."
+        : "The gift was given. It did not cost the estate much. Faith earned modestly.");
+    }
+  },
+  {
+    id: "vigil",
+    name: "Keep Vigil",
+    detail: "Rest. Watch. Do not demand more of the team. Replaces heroics during corruption.",
+    cost: 0,
+    consequence: "Fatigue −10, Faith +2. Heroics streak resets.",
+    hidden: s => !inWrath(s) || !hasStaff(s, "vintner"),
+    available: s => inWrath(s) && hasStaff(s, "vintner") && s.wrathState.seal >= 1,
+    apply: s => {
+      s.fatigue = Math.max(0, s.fatigue - 10);
+      s.heroicsStreak = 0;
+      s.wrathState.faith = clamp(s.wrathState.faith + 2, 0, s.wrathState.faithCap);
+      log(s, "The crew was sent home early. The vintner worked alone in the cellar. The night was quiet.");
+    }
+  },
+  {
     id: "heroics",
-    name: "Ask for Heroics",
+    name: s => wrathLabel(s, "Ask for Heroics", [[6, "Compel them"], [3, "Drive the crew"]]),
     detail: "Borrow one more push from the team this month.",
     seasons: ["Budbreak", "Flowering", "Veraison", "Harvest", "Cellar", "Dormant"],
     consequence: "Gain +1 placement now. Fatigue +14; repeated use risks burnout.",
     cost: 0,
     apply: s => {
       s.heroicsUsedMonth = s.month;
+      s.heroicsTotal = (s.heroicsTotal || 0) + 1;
       s.actionsLeft += 2; // one extra net placement after this action is spent
       s.fatigue += 14 + Math.max(0, (s.heroicsStreak || 0) * 4);
       s.heroicsStreak = (s.heroicsStreak || 0) + 1;
@@ -3115,6 +3365,7 @@ let setupMode = "start"; // "start" | "custom"
 let activeTab = "overview";
 let helpOpen = true;
 let guideStep = null;
+let noHelpModalOpen = false;
 
 const SETUP_STEPS = [
   { key: "region", title: "Choose Region", kicker: "Where the estate lives shapes weather, prestige, land cost, and grape options." },
@@ -3439,6 +3690,12 @@ const ACHIEVEMENTS = [
   { id: "centenaire",            emoji: "✨", name: "Centenaire",              desc: "Reached prestige 100." },
   { id: "esprit-de-corps",       emoji: "🎉", name: "Esprit de Corps",         desc: "Hit 100 morale." },
   { id: "well-rested",           emoji: "🧘", name: "Well Rested",             desc: "Closed a month with zero fatigue." },
+  { id: "hired-the-vintner",     emoji: "🍷", name: "The Cellar Spoke",        desc: "Hired a winemaker no record knew." },
+  { id: "received-the-priest",   emoji: "🕯️", name: "Received the Stranger",  desc: "A visitor came to the estate and was let in." },
+  { id: "cup-held-back",         emoji: "⚖️", name: "The Cup Held Back",       desc: "The estate was measured and held." },
+  { id: "diminished-endured",    emoji: "🌾", name: "Diminished but Endured",  desc: "The estate survived its own harvest." },
+  { id: "found-wanting",         emoji: "🔥", name: "Found Wanting",           desc: "The wine was perfect. The cup was full." },
+  { id: "would-not-receive-him", emoji: "🚪", name: "Would Not Receive Him",   desc: "The estate refused the visitor and stood by its work." },
 ];
 
 function createState() {
@@ -3543,7 +3800,14 @@ function createState() {
     openingDebt: d.debt || 0,
     collectorFulfilled: 0,
     achievements: [],
-    newAchievements: []
+    newAchievements: [],
+    wrathState: null,
+    heroicsTotal: 0,
+    vintnerSpawned: false,
+    vintnerArrivalEventFired: false,
+    prestigeBeforeMonth: r.prestige,
+    lastHarvestForecast: 0,
+    lastHarvestGrapes: 0
   };
   ensureStaffTraits(s);
   // Long-aging varietals (nebbiolo, cabernet in high-bonus regions) face a ~20-month gap before
@@ -3585,9 +3849,427 @@ function makeRows(count, options = {}) {
   }));
 }
 
-function log(s, text) {
-  s.log.unshift({ month: s.month, text });
+function log(s, text, opts) {
+  s.log.unshift({ month: s.month, text, italic: opts?.italic || false });
   s.log = s.log.slice(0, 45);
+}
+
+function inWrath(s) { return s.wrathState !== null && s.wrathState !== undefined; }
+function hasStaff(s, id) { return (s.staff || []).includes(id); }
+
+function effectiveStaffEffects(s, id) {
+  const person = STAFF_POOL.find(p => p.id === id);
+  if (!person) return {};
+  if (id === "vintner" && inWrath(s)) {
+    const sealBonus = s.wrathState.seal || 0;
+    return { ...person.effects, quality: person.effects.quality + sealBonus, prestige: person.effects.prestige + sealBonus };
+  }
+  return person.effects;
+}
+
+function awardAchievement(s, id) {
+  if (!s.achievements) return;
+  if (!s.achievements.includes(id)) {
+    s.achievements.push(id);
+    if (!s.newAchievements) s.newAchievements = [];
+    s.newAchievements.push(id);
+  }
+}
+
+function buildStaffMarket(s) {
+  return shuffle(
+    STAFF_POOL
+      .filter(p => !p.hidden || (p.id === "vintner" && s.vintnerSpawned))
+      .map(p => p.id)
+      .filter(id => !(s.staff || []).includes(id))
+  );
+}
+
+// ── Cup of Wrath path ────────────────────────────────────────────────────────
+
+const WRATH_CUES = [
+  [
+    "The grapes were heavy this morning, but the press was silent.",
+    "Marco said he heard the barrels settle at three. Marco was not in the cellar at three.",
+    "A bottle was found on the rack bearing no label anyone recognized. It was full.",
+    "The vintner does not eat with the others. The others have stopped asking why.",
+    "Critic notes used the word uncanny. The piece was complimentary.",
+    "The delivery driver left without collecting the signature. His face was not one anyone knew.",
+    "The second racking this quarter produced three more cases than the inventory showed."
+  ],
+  [
+    "Beatrice asked, in passing, whether the master still attended services.",
+    "The dogs will not enter the south block. They never used to mind it.",
+    "The wine in tank 4 is darker than the must it came from. No one will say so.",
+    "Ines came in late. She had been standing at the fence line. She did not say what she was looking at.",
+    "A bird flew into the cellar window and did not survive. The vintner buried it. Apparently.",
+    "The temperature in the cellar is twelve degrees. The reading has not changed in eleven days.",
+    "A visiting buyer asked if the vintner had always been here. She had not meant to ask it aloud."
+  ],
+  [
+    "The harvest came in three weeks early. The almanac is wrong, the vintner said. Not the harvest.",
+    "There is writing on the inside of an empty barrel. It was not there yesterday.",
+    "Margot left without giving notice. Her last act was to leave a candle lit in the office.",
+    "The plumb line in the new tank room hangs at an angle the carpenter cannot explain.",
+    "The estate has not had rain in nine weeks. The neighbors have had floods.",
+    "The south block has flowered twice this year. This has not been remarked upon.",
+    "The estate's name appeared in a trade journal under a vintage that has not yet been made."
+  ],
+  [
+    "The wine has begun to refuse the bottle. Three lots cracked their casks overnight.",
+    "The vintner was seen in the south block at the hour no one keeps.",
+    "A guest at the tasting room asked, politely, whether the master was well. The master had not yet entered the room.",
+    "The lampstands are out. They were full at dusk.",
+    "The vintner is no longer in the staff records. He is still here.",
+    "A record was found in the cellar book in a hand no one on the estate recognizes. It was accurate.",
+    "The vintner laid out twelve glasses on the tasting table and did not explain the number."
+  ]
+];
+
+const WRATH_SEAL_CUES = {
+  1: "Severin Apollos set his room in order on the first day and has not touched it since.",
+  2: "A label was found in the press room in the estate's own typeface. The vintage printed on it was two years ahead.",
+  3: "A man has come up from the village. He waits at the gate. He says he was once in the trade.",
+  4: "The cellar register is current to the day. No one on the estate has been keeping it.",
+  5: "The clock in the office is striking, but the hands have not moved since dawn.",
+  6: "A tasting note was left on the winery door. It described a wine that is still in barrel.",
+  7: "The press has been opened. The vat is brimming. It cannot hold more."
+};
+
+const WRATH_CUE_USED = {};
+
+function pickCue(tier) {
+  const pool = WRATH_CUES[Math.min(3, tier)] || WRATH_CUES[0];
+  return pool[Math.floor(rand() * pool.length)];
+}
+
+function initWrathState() {
+  return {
+    vintnerHired: false,
+    vintnerHiredMonth: null,
+    priestVisited: false,
+    priestAccepted: false,
+    priestRefused: false,
+    priestFirstRefusedMonth: null,
+    priestRefusedTwice: false,
+    faithCap: 100,
+    cup: 0,
+    faith: 0,
+    lastFaith: 0,
+    seal: 0,
+    prevSeal: 0,
+    cueCount: 0,
+    weightedStaffLost: [],
+    hiddenChoicesRefused: 0,
+    iniquityChoicesAccepted: 0,
+    iniquityAfterPriestBase: 0,
+    mode: "normal",
+    measurementStep: 0,
+    speakUsed: [],
+    aceldamaBlock: null,
+    endingResolved: false
+  };
+}
+
+function onVintnerHired(s) {
+  s.wrathState = { ...initWrathState(), vintnerHired: true, vintnerHiredMonth: s.month };
+  log(s, "Severin Apollos arrived with a single trunk. He asked where the cellar was, not the master.");
+  awardAchievement(s, "hired-the-vintner");
+}
+
+function currentSeal(s) {
+  if (!inWrath(s)) return 0;
+  const thresholds = [12, 25, 38, 52, 66, 80, 92, 100];
+  const slow = hasStaff(s, "priest") ? 3 : 0;
+  const adjustedCup = Math.max(0, s.wrathState.cup - slow * 3);
+  let seal = 0;
+  for (let i = 0; i < thresholds.length; i++) {
+    if (adjustedCup >= thresholds[i]) seal = i + 1;
+  }
+  return Math.min(8, seal);
+}
+
+function baseCupFill(s) {
+  if (!inWrath(s) || !hasStaff(s, "vintner")) return 0;
+  let fill = 2;
+  if (s.heroicsUsedMonth === s.month) fill += 3;
+  if (s.morale < 35) fill += 2;
+  if (s.marketMods.brandFatigue) fill += 4;
+  return fill;
+}
+
+function maybeFireCue(s) {
+  if (!inWrath(s) || !hasStaff(s, "vintner")) return;
+  const seal = s.wrathState.seal;
+  const p = [0.25, 0.25, 0.45, 0.45, 0.70, 0.70, 1.0, 1.0][Math.min(7, seal)];
+  if (rand() > p) return;
+  const tier = Math.min(3, Math.floor(seal / 2));
+  const cue = pickCue(tier);
+  log(s, cue, { italic: true });
+  s.wrathState.cueCount += 1;
+}
+
+function checkPriestDeparture(s) {
+  if (!inWrath(s) || !hasStaff(s, "priest")) return;
+  const ws = s.wrathState;
+  const iniquityAfterPriest = ws.iniquityChoicesAccepted - ws.iniquityAfterPriestBase;
+  const faithDropped = (ws.lastFaith - ws.faith) >= 5;
+  const cupHighFaithLow = ws.cup >= 90 && ws.faith < 30;
+  if (iniquityAfterPriest >= 3 || faithDropped || cupHighFaithLow) {
+    log(s, "Father Aurelian left a note on the kitchen table. It read: I have prayed for the estate. I cannot remain.");
+    s.staff = s.staff.filter(id => id !== "priest");
+    ws.priestAccepted = false;
+  }
+}
+
+function maybeSpawnVintner(s) {
+  if (s.vintnerSpawned || inWrath(s)) return;
+  const prevPrestige = s.prestigeBeforeMonth || s.prestige;
+  const prestigeDrop = prevPrestige - s.prestige >= 15;
+  const poorHarvest = s.lastHarvestForecast > 0 && s.lastHarvestGrapes < s.lastHarvestForecast * 0.6;
+  if ((s.lowMoraleMonths || 0) >= 3 || (s.heroicsTotal || 0) >= 3 || poorHarvest || prestigeDrop) {
+    s.vintnerSpawned = true;
+    if (!s.staffMarket.includes("vintner")) {
+      s.staffMarket = [...s.staffMarket, "vintner"];
+    }
+  }
+}
+
+function wrathTick(s) {
+  if (!inWrath(s)) return;
+  const ws = s.wrathState;
+
+  if (ws.mode === "measurement") return;
+
+  // Cup fill
+  const fill = baseCupFill(s);
+  ws.cup = Math.min(100, ws.cup + fill);
+
+  // Seal progression
+  const newSeal = currentSeal(s);
+  if (newSeal > ws.seal) {
+    ws.prevSeal = ws.seal;
+    ws.seal = newSeal;
+    // One-time seal cues
+    if (WRATH_SEAL_CUES[ws.seal]) {
+      log(s, WRATH_SEAL_CUES[ws.seal], { italic: true });
+    }
+    // Set aceldama block at stage 3
+    if (ws.seal >= 5 && !ws.aceldamaBlock && s.rows.length > 0) {
+      ws.aceldamaBlock = s.rows[s.rows.length - 1].id;
+    }
+  }
+
+  // Random cues
+  maybeFireCue(s);
+
+  // Priest passive faith
+  if (hasStaff(s, "priest")) {
+    ws.faith = Math.min(ws.faithCap, ws.faith + 2);
+  }
+
+  // Priest departure check
+  ws.lastFaith = ws.faith;
+  checkPriestDeparture(s);
+
+  // Cup full → enter measurement
+  if (ws.cup >= 100 && ws.mode === "normal") {
+    enterMeasurement(s);
+  }
+}
+
+function enterMeasurement(s) {
+  const ws = s.wrathState;
+  ws.mode = "measurement";
+  ws.measurementStep = 0;
+  log(s, "The press has been opened. The vat is brimming. It cannot hold more.");
+}
+
+function advanceMeasurementStep(s) {
+  const ws = s.wrathState;
+  ws.measurementStep = (ws.measurementStep || 0) + 1;
+  if (ws.measurementStep >= 5) {
+    resolveWrathEnding(s);
+  }
+}
+
+function resolveWrathEnding(s) {
+  const ws = s.wrathState;
+  const f = ws.faith;
+  let ending;
+  if (ws.priestRefusedTwice || (ws.priestRefused && !ws.priestAccepted)) {
+    ending = f >= 20 ? "endured-alone" : "found-wanting";
+  } else {
+    if (f >= 70) ending = "cup-held-back";
+    else if (f >= 40) ending = "diminished";
+    else ending = "found-wanting";
+  }
+  applyWrathEnding(s, ending);
+  s.gameOver = { score: true, wrathEnding: ending };
+  ws.endingResolved = true;
+  checkAchievements(s);
+}
+
+function applyWrathEnding(s, ending) {
+  if (ending === "cup-held-back") {
+    s.prestige += 20;
+    if (!s.savedEstate) s.savedEstate = {};
+    s.savedEstate.measuredAndSufficient = true;
+    awardAchievement(s, "cup-held-back");
+  } else if (ending === "diminished") {
+    s.cash = 0;
+    const toRemove = Math.floor(s.staff.length * 0.6);
+    for (let i = 0; i < toRemove; i++) s.staff.shift();
+    s.vintages = (s.vintages || []).filter(v => v.bulkWine === 0 || v.bottled > 0);
+    s.prestige = Math.max(0, s.prestige - 15);
+    awardAchievement(s, "diminished-endured");
+  } else if (ending === "found-wanting") {
+    s.cash = 0;
+    awardAchievement(s, "found-wanting");
+  } else if (ending === "endured-alone") {
+    s.prestige += 5;
+    awardAchievement(s, "would-not-receive-him");
+  }
+}
+
+function corruptionStage(s) {
+  if (!inWrath(s)) return 0;
+  if (s.wrathState.mode === "measurement") return 9;
+  return s.wrathState.seal; // 0–8
+}
+
+function wrathLabel(s, defaultLabel, thresholds) {
+  if (!inWrath(s)) return defaultLabel;
+  const seal = s.wrathState.seal;
+  for (const [min, label] of thresholds) {
+    if (seal >= min) return label;
+  }
+  return defaultLabel;
+}
+
+function corruptChars(s, text) {
+  if (!inWrath(s)) return text;
+  const seal = s.wrathState.seal;
+  if (seal < 4) return text;
+  const rate = seal >= 7 ? 0.22 : seal >= 6 ? 0.14 : seal >= 5 ? 0.08 : 0.04;
+  return text.split("").map(ch => {
+    if (!/[a-zA-Z]/.test(ch)) return ch;
+    if (rand() < rate) return `<span class="corrupt-char">${ch}</span>`;
+    return ch;
+  }).join("");
+}
+
+function measurementStepContent(s) {
+  const ws = s.wrathState;
+  const step = ws.measurementStep || 0;
+  const f = ws.faith;
+
+  if (step === 0) {
+    return `
+      <div class="measurement-step">
+        <h3>I. The Plumb Line</h3>
+        <img class="measurement-img" src="assets/measurement-1-plumb.png" alt="" onerror="this.style.display='none'">
+        <p class="measurement-verse">A plumb line hangs in the new tank room at an angle no carpenter can explain. The estate is being measured. The line shows what the line shows.</p>
+        <div class="measurement-scales">
+          <div class="scale-col scale-cup">
+            <span class="scale-label">Cup</span>
+            <div class="scale-bar"><div class="scale-fill" style="width:${ws.cup}%"></div></div>
+            <strong>${ws.cup}/100</strong>
+          </div>
+          <div class="scale-col scale-faith">
+            <span class="scale-label">Faith</span>
+            <div class="scale-bar scale-bar-faith"><div class="scale-fill" style="width:${ws.faith}%"></div></div>
+            <strong>${ws.faith}/100</strong>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (step === 1) {
+    const heroicsLine = (s.heroicsTotal || 0) > 0 ? `<li>Heroics called on ${s.heroicsTotal} time${s.heroicsTotal > 1 ? "s" : ""}.</li>` : "";
+    const staffLostLine = ws.weightedStaffLost.length > 0 ? `<li>${ws.weightedStaffLost.join(", ")} left the estate during these years.</li>` : "";
+    const iniqLine = ws.iniquityChoicesAccepted > 0 ? `<li>${ws.iniquityChoicesAccepted} path${ws.iniquityChoicesAccepted > 1 ? "s" : ""} were taken that cannot be re-walked.</li>` : "";
+    const faithLine = f >= 10 ? `<li>Faith was not entirely absent.</li>` : "";
+    const priestLine = ws.priestAccepted ? `<li>Father Aurelian was received.</li>` : ws.priestRefusedTwice ? `<li>The priest was sent away twice.</li>` : "";
+    return `
+      <div class="measurement-step">
+        <h3>II. The Books Opened</h3>
+        <img class="measurement-img" src="assets/measurement-2-books.png" alt="" onerror="this.style.display='none'">
+        <p class="measurement-verse">The records of the years lie open. The vintner stands at one side of the table. The priest stands at the other. Neither speaks.</p>
+        <ul class="measurement-record">
+          ${heroicsLine}${staffLostLine}${iniqLine}${faithLine}${priestLine}
+        </ul>
+      </div>
+    `;
+  }
+
+  if (step === 2) {
+    const verdict = f >= 70
+      ? "The cup is full. The hand that fills it has been weighed."
+      : f >= 40
+      ? "The cup is full. The hand is half steady."
+      : "The cup is full. The hand has been found wanting.";
+    return `
+      <div class="measurement-step">
+        <h3>III. The Writing</h3>
+        <img class="measurement-img" src="assets/measurement-3-writing.png" alt="" onerror="this.style.display='none'">
+        <p class="measurement-verse">Writing has appeared on the inside of an empty barrel. The words are not in any tongue the estate has spoken. Their meaning is plain.</p>
+        <p class="measurement-verdict">${verdict}</p>
+      </div>
+    `;
+  }
+
+  if (step === 3) {
+    const [cupText, chaliceClass, cupImg] = f >= 70
+      ? ["The cup was carried out of the estate. It did not return.", "chalice-held", "measurement-4-cup-held-back.png"]
+      : f >= 40
+      ? ["Some of the wine was lost. The press did not break.", "chalice-spilled", "measurement-4-cup-diminished.png"]
+      : ["The cup was emptied on the estate's own threshing floor.", "chalice-fractured", "measurement-4-cup-found-wanting.png"];
+    return `
+      <div class="measurement-step">
+        <h3>IV. The Cup Itself</h3>
+        <img class="measurement-img" src="assets/${cupImg}" alt="" onerror="this.style.display='none'">
+        <div class="chalice-wrap">
+          <svg class="chalice ${chaliceClass}" viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 10 Q10 35 15 55 Q20 70 40 80 Q60 70 65 55 Q70 35 60 10 Z" fill="none" stroke="currentColor" stroke-width="2.5"/>
+            <line x1="40" y1="80" x2="40" y2="95" stroke="currentColor" stroke-width="2.5"/>
+            <line x1="28" y1="95" x2="52" y2="95" stroke="currentColor" stroke-width="2.5"/>
+            <clipPath id="chalice-clip"><path d="M22 12 Q12 36 17 55 Q22 68 40 78 Q58 68 63 55 Q68 36 58 12 Z"/></clipPath>
+            <rect x="0" y="0" width="80" height="100" clip-path="url(#chalice-clip)" fill="var(--wine)" opacity="0.7" class="chalice-fill"/>
+          </svg>
+        </div>
+        <p class="measurement-cup-text">${cupText}</p>
+      </div>
+    `;
+  }
+
+  if (step >= 4) {
+    const ws2 = s.wrathState;
+    const ending = ws2.priestRefusedTwice || (ws2.priestRefused && !ws2.priestAccepted)
+      ? (ws2.faith >= 20 ? "endured-alone" : "found-wanting")
+      : ws2.faith >= 70 ? "cup-held-back" : ws2.faith >= 40 ? "diminished" : "found-wanting";
+    const verdictImg = ending === "cup-held-back" || ending === "endured-alone"
+      ? "measurement-5-verdict-held-back.png"
+      : ending === "diminished"
+      ? "measurement-5-verdict-diminished.png"
+      : "measurement-5-verdict-found-wanting.png";
+    const texts = {
+      "cup-held-back": "Severin Apollos departed in the night. The lots he made remained, and they aged into something the estate will be remembered for. Father Aurelian stayed one more season and then walked back down to the village. The estate kept its name.",
+      "diminished": "The estate survived, but barely. Two-thirds of the staff scattered to other valleys. The wine in barrel was largely lost. What remained was honest.",
+      "found-wanting": "The press at Bozrah is silent now. The vintage was extraordinary. The estate is no longer the estate's. The records will note the wines and not the way of them.",
+      "endured-alone": "The estate stood. Severin Apollos was gone before dawn. No priest had been received, and the estate stood by what it had done, which was sometimes more than it had been asked. The years that followed were quieter than they had been."
+    };
+    return `
+      <div class="measurement-step">
+        <h3>V. The Verdict</h3>
+        <img class="measurement-img" src="assets/${verdictImg}" alt="" onerror="this.style.display='none'">
+        <p class="measurement-final">${texts[ending] || texts["found-wanting"]}</p>
+      </div>
+    `;
+  }
+
+  return "";
 }
 
 function startGame() {
@@ -3899,7 +4581,7 @@ function ensureEconomy(s) {
   if (!('naturalCellarUsedMonth' in s)) s.naturalCellarUsedMonth = -1;
   if (!s.insurance) s.insurance = { crop: false };
   if (s.inventory && !('stash' in s.inventory)) s.inventory.stash = 0;
-  s.staffMarket = shuffle(STAFF_POOL.map(p => p.id).filter(staffId => !(s.staff || []).includes(staffId)));
+  s.staffMarket = buildStaffMarket(s);
   ensureStaffTraits(s);
   ensureActionBudgets(s);
   ensureChannels(s);
@@ -3908,6 +4590,13 @@ function ensureEconomy(s) {
   ensureEventMemory(s);
   if (typeof s.fatigue !== "number") s.fatigue = 18;
   if (!s.classification) s.classification = {};
+  if (s.wrathState === undefined) s.wrathState = null;
+  if (typeof s.heroicsTotal !== "number") s.heroicsTotal = 0;
+  if (typeof s.vintnerSpawned !== "boolean") s.vintnerSpawned = false;
+  if (typeof s.vintnerArrivalEventFired !== "boolean") s.vintnerArrivalEventFired = false;
+  if (typeof s.prestigeBeforeMonth !== "number") s.prestigeBeforeMonth = s.prestige;
+  if (typeof s.lastHarvestForecast !== "number") s.lastHarvestForecast = 0;
+  if (typeof s.lastHarvestGrapes !== "number") s.lastHarvestGrapes = 0;
   ensureLotRisk(s);
 }
 
@@ -3923,9 +4612,8 @@ function resetGame() {
 
 function staffBonus(s, key) {
   const base = s.staff.reduce((sum, id) => {
-    const person = STAFF_POOL.find(p => p.id === id);
-    if (!person) return sum;
-    return sum + (person.effects[key] || 0);
+    const effects = effectiveStaffEffects(s, id);
+    return sum + (effects[key] || 0);
   }, 0);
   return base + staffPerkBonus(s, key);
 }
@@ -4847,6 +5535,8 @@ function ensureAllStaffProgress(s) {
 function ensureStaffTraits(s) {
   if (!s.staffTraits) s.staffTraits = {};
   [...(s.staff || []), ...(s.staffMarket || [])].forEach(id => {
+    const person = STAFF_POOL.find(p => p.id === id);
+    if (person?.hidden) return;
     if (!s.staffTraits[id]) rollTraitsForStaff(s, id);
   });
 }
@@ -5418,10 +6108,14 @@ function hireStaff(id) {
   state.staff.push(id);
   state.totalStaffHired = (state.totalStaffHired || 0) + 1;
   ensureStaffProgress(state, id);
-  state.staffMarket = shuffle(STAFF_POOL.map(p => p.id).filter(staffId => !state.staff.includes(staffId)));
+  state.staffMarket = buildStaffMarket(state);
   applyCapacityDelta(state, beforeCap);
   applyStaffPassive(state, person);
-  log(state, `${person.name} joined as ${person.role}. Hiring used owner attention.`);
+  if (id === "vintner") {
+    onVintnerHired(state);
+  } else {
+    log(state, `${person.name} joined as ${person.role}. Hiring used owner attention.`);
+  }
   normalizeState(state);
   render();
 }
@@ -5430,14 +6124,25 @@ function fireStaff(id) {
   ensureActionBudgets(state);
   const person = STAFF_POOL.find(p => p.id === id);
   if (!person || state.actionsLeft <= 0 || state.event || state.gameOver) return;
+  if (id === "priest") return;
+  if (id === "vintner" && inWrath(state) && state.wrathState.seal >= 4) {
+    log(state, "He remains.");
+    render();
+    return;
+  }
   const beforeCap = monthlyOperationalCapacity(state);
   state.cash -= Math.round(person.salary * 0.8);
   state.actionsLeft -= 1;
   state.morale -= 5;
   state.staff = state.staff.filter(staffId => staffId !== id);
-  if (!state.staffMarket.includes(id)) state.staffMarket.push(id);
+  if (!person.hidden && !state.staffMarket.includes(id)) state.staffMarket.push(id);
+  if (id === "vintner" && inWrath(state)) {
+    state.wrathState = null;
+    log(state, `${person.name} left the estate.`);
+  } else {
+    log(state, `${person.name} left the estate. The transition used owner attention.`);
+  }
   applyCapacityDelta(state, beforeCap);
-  log(state, `${person.name} left the estate. The transition used owner attention.`);
   normalizeState(state);
   render();
 }
@@ -5480,6 +6185,7 @@ function useAction(id) {
 }
 
 function isActionAvailable(action, s) {
+  if (action.available && !action.available(s)) return false;
   return !action.seasons || action.seasons.includes(s.season);
 }
 
@@ -5512,6 +6218,7 @@ function seasonalAction(s) {
 }
 
 function seasonListLabel(seasons) {
+  if (!seasons) return "all seasons";
   const windows = seasonWindows(state?.region);
   return seasons.map(season => `${season} (${windows[season]})`).join(", ");
 }
@@ -5628,7 +6335,14 @@ function advanceMonth() {
 }
 
 function monthlyTick(s) {
+  // Measurement mode: advance sequence, skip normal tick
+  if (inWrath(s) && s.wrathState.mode === "measurement") {
+    advanceMeasurementStep(s);
+    return;
+  }
+
   ensureEconomy(s);
+  s.prestigeBeforeMonth = s.prestige;
   s.monthStartPrice = s.price; // anchor for next month's price cap
   const startingCases = s.inventory.cases;
   const sales = directSales(s);
@@ -5686,13 +6400,20 @@ function monthlyTick(s) {
     s.lowMoraleMonths = 0;
   }
   if ((s.lowMoraleMonths || 0) >= 4 && s.staff.length > 0) {
-    const leaverId = s.staff[Math.floor(rand() * s.staff.length)];
-    const person = STAFF_POOL.find(p => p.id === leaverId);
-    s.staff = s.staff.filter(id => id !== leaverId);
-    if (!s.staffMarket.includes(leaverId)) s.staffMarket.push(leaverId);
-    s.lowMoraleMonths = 0;
-    s.morale = Math.max(s.morale - 8, 0);
-    log(s, `${person?.name || "A key hire"} handed in their notice. Four months of difficult conditions was enough.`);
+    const eligibleLeavers = s.staff.filter(id => id !== "priest" && id !== "vintner");
+    const leaverId = eligibleLeavers[Math.floor(rand() * eligibleLeavers.length)];
+    if (leaverId) {
+      const person = STAFF_POOL.find(p => p.id === leaverId);
+      s.staff = s.staff.filter(id => id !== leaverId);
+      if (!person?.hidden && !s.staffMarket.includes(leaverId)) s.staffMarket.push(leaverId);
+      s.lowMoraleMonths = 0;
+      s.morale = Math.max(s.morale - 8, 0);
+      if (inWrath(s) && ["margot", "beatrice", "ines"].includes(leaverId)) {
+        s.wrathState.weightedStaffLost.push(leaverId);
+        s.wrathState.cup = Math.min(100, s.wrathState.cup + 6);
+      }
+      log(s, `${person?.name || "A key hire"} handed in their notice. Four months of difficult conditions was enough.`);
+    }
   }
 
   if (traitPassive.demand) addChannelDemand(s, ["cellarDoor", "club", "restaurant"], traitPassive.demand);
@@ -5776,6 +6497,9 @@ function monthlyTick(s) {
 
   const previousSold = s.history.length ? s.history[s.history.length - 1].totalSold : 0;
   applyChannelDemandDrift(s, Math.max(0, s.totalSold - previousSold));
+
+  if (inWrath(s)) wrathTick(s);
+  maybeSpawnVintner(s);
 
   normalizeState(s);
   const totalCloseCost = costs.total + (harvestResult?.laborCost || 0);
@@ -6094,6 +6818,8 @@ function harvest(s) {
   const grapes = Math.max(60, Math.round(
     base * (avgHealth / 82) * v.yield * p.yield * (r.yieldMod || 1) * crew * waterYieldMod * diseaseYieldMod * greenHarvestMod * staffYieldMod(s) * avgMaturityYield
   ));
+  s.lastHarvestForecast = Math.max(60, Math.round(base * v.yield * p.yield * (r.yieldMod || 1) * staffYieldMod(s)));
+  s.lastHarvestGrapes = grapes;
   const rawQualityGain = Math.round((avgHealth - 58) / 8 + s.buildings.barrel * 0.7 + (s.marketMods.harvestCrew ? 2 : 0));
   const qualityGain = Math.round(rawQualityGain * waterQualityMod * diseaseQualityMod * avgMaturityQuality);
 
@@ -6207,6 +6933,8 @@ function resolveEvent(choiceIndex) {
   const event = state.event;
   if (!event) return;
   const choice = event.choices[choiceIndex];
+  if (!choice) return;
+  if (choice.condition && !choice.condition(state)) return;
   let cost = choice.cost || 0;
   if (choice.insured && state.insurance?.crop) cost = Math.round(cost * 0.2);
   if (cost && state.cash < cost) return;
@@ -6216,11 +6944,25 @@ function resolveEvent(choiceIndex) {
   }
   const beforeLog = state.log.length;
   choice.effect(state);
-  log(state, `${event.title}: ${choice.label}.`);
+  if (choice.iniquity && inWrath(state)) {
+    state.wrathState.iniquityChoicesAccepted += 1;
+    if (hasStaff(state, "priest")) {
+      // iniquityAfterPriest is computed from baseline at priest arrival
+    }
+  }
+  if (choice.faithGain && inWrath(state)) {
+    state.wrathState.faith = clamp(
+      state.wrathState.faith + choice.faithGain,
+      0,
+      state.wrathState.faithCap
+    );
+  }
+  const displayLabel = choice.iniquity ? "Severin dealt with it" : choice.label;
+  if (!choice.iniquity) log(state, `${event.title}: ${displayLabel}.`);
   const summary = state.log.slice(0, Math.max(1, state.log.length - beforeLog)).map(entry => entry.text).reverse().join(" ");
   state.lastEventResult = {
     title: `${event.title} resolved`,
-    choice: choice.label,
+    choice: displayLabel,
     summary: summary || "Outcome recorded in the estate ledger."
   };
   ensureEventMemory(state);
@@ -6234,10 +6976,11 @@ function resolveEvent(choiceIndex) {
 
 function checkGameOver() {
   if (!state) return;
+  if (inWrath(state) && state.wrathState.mode === "measurement") return;
   if (state.month > state.maxMonths) {
     state.gameOver = { score: true };
     checkAchievements(state);
-  } else if (state.debt > state.creditLine + 65000 || (state.cash < -50000 && availableCredit(state) <= 0) || state.prestige <= 0 || state.morale <= 0) {
+  } else if (state.debt > state.creditLine + 65000 || (state.cash < -50000 && availableCredit(state) <= 0) || state.prestige <= 0 || (state.morale <= 0 && !inWrath(state))) {
     state.gameOver = {
       score: false,
       title: "The estate lost confidence.",
@@ -6447,24 +7190,36 @@ function gameView() {
       </div>
     </main>
     ${state.gameOver ? gameOverModal() : (guideStep !== null && guideStep < GUIDE_PAGES.length ? guideModal() : (!state.introSeen ? introModal() : (state.pendingNaming ? namingModal() : "")))}
+    ${noHelpModal()}
     ${achievementToast()}
   `;
 }
 
 function tabs() {
+  if (inWrath(state) && state.wrathState.mode === "measurement") return "";
   return `
     <nav class="tabs" aria-label="Estate sections">
-      ${TABS.map(tab => `
+      ${TABS.map(tab => {
+        const TAB_WRATH_NAMES = {
+          overview: [[6, "The Estate"]],
+          people:   [[5, "The Hands"]],
+          cellar:   [[7, "The Press"]],
+        };
+        const name = corruptChars(state, wrathLabel(state, tab.name, TAB_WRATH_NAMES[tab.id] || []));
+        return `
         <button class="${activeTab === tab.id ? "active" : ""}" onclick="setTab('${tab.id}')" ${tip(tab.tip)}>
-          ${tab.name}
-        </button>
-      `).join("")}
-      <button class="help-toggle" onclick="toggleHelp()" ${tip("Show or hide the short tutorial brief.")}>${helpOpen ? "Hide Help" : "Show Help"}</button>
+          ${name}
+        </button>`;
+      }).join("")}
+      <button class="help-toggle" onclick="${inWrath(state) && state.wrathState.seal >= 3 ? "openNoHelpModal()" : "toggleHelp()"}" ${tip("Show or hide the short tutorial brief.")}>${inWrath(state) && state.wrathState.seal >= 3 ? corruptChars(state, "Call For Help") : (helpOpen ? "Hide Help" : "Show Help")}</button>
     </nav>
   `;
 }
 
 function tabPanel() {
+  if (inWrath(state) && state.wrathState.mode === "measurement") {
+    return measurementStepContent(state);
+  }
   if (activeTab === "vineyard") {
     return `${artBanner("vineyard", "Vineyard blocks, weather, and disease pressure")}${vineyardPanel()}`;
   }
@@ -6494,6 +7249,36 @@ function toggleHelp() {
   render();
 }
 
+function openNoHelpModal() {
+  noHelpModalOpen = true;
+  render();
+}
+
+function closeNoHelpModal() {
+  noHelpModalOpen = false;
+  render();
+}
+
+function noHelpModal() {
+  if (!noHelpModalOpen) return "";
+  const seal = state?.wrathState?.seal || 0;
+  const body = seal >= 7
+    ? "The record is being kept. The account is complete. There is no counsel available for what follows."
+    : seal >= 5
+    ? "No help is forthcoming. The estate stands as it has stood. The vintner is still in the cellar."
+    : "No help is forthcoming. The estate stands as it has stood. The account is being kept.";
+  return `
+    <div class="modal" onclick="closeNoHelpModal()">
+      <div class="modal-card" style="max-width:420px" onclick="event.stopPropagation()">
+        <p style="font-style:italic;color:#4a2222;line-height:1.7;">${body}</p>
+        <div class="top-actions" style="margin-top:12px;">
+          <button onclick="closeNoHelpModal()">Understood</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function tip(text) {
   return `data-tip="${escapeHtml(text)}" aria-label="${escapeHtml(text)}"`;
 }
@@ -6519,7 +7304,7 @@ function topbar() {
         </div>
         <div class="kpis">
           ${kpi("Date", currentDateLabel(state), "Current month. Most operations, weather, contracts, and costs advance monthly.")}
-          ${kpi("Cash", money(state.cash), "Available cash after operating costs, sales, debt draws, and repayments. Running out forces credit-line use.", state.cash < 0 ? "danger" : state.cash < 30000 ? "warn" : state.cash >= 200000 ? "good" : "")}
+          ${kpi(wrathLabel(state, "Cash", [[4, "Mammon"]]), money(state.cash), "Available cash after operating costs, sales, debt draws, and repayments. Running out forces credit-line use.", state.cash < 0 ? "danger" : state.cash < 30000 ? "warn" : state.cash >= 200000 ? "good" : "")}
           ${kpi("Prestige", `${state.prestige}/120`, "Reputation with critics, buyers, and collectors.", state.prestige >= 75 ? "good" : state.prestige < 40 ? "warn" : "")}
           ${kpi("Demand", `${state.demand}/130`, "Commercial pull for your wine. Higher demand improves direct sales and buyer interest.", state.demand >= 100 ? "good" : state.demand < 50 ? "warn" : "")}
           ${kpi("Quality", `${state.quality}/120`, "Current house quality. Vineyard health, weather, cellar work, and barrels move this. Decays faster above 85.", state.quality >= 85 ? "good" : state.quality < 50 ? "warn" : "")}
@@ -6532,7 +7317,7 @@ function topbar() {
         </div>
         <div class="top-actions">
           <button onclick="saveGame()">Save</button>
-          <button onclick="advanceMonth()" class="primary" ${state.event || state.gameOver ? "disabled" : ""}>End month</button>
+          <button onclick="advanceMonth()" class="primary" ${state.event || state.gameOver ? "disabled" : ""}>${inWrath(state) && state.wrathState.mode === "measurement" ? "Behold" : wrathLabel(state, "End month", [[7, "Let it end"], [4, "Let it pass"]])}</button>
         </div>
       </div>
     </header>
@@ -6546,20 +7331,29 @@ function kpi(label, value, tooltip, tone) {
 
 function eventPanel() {
   if (!state.event) return "";
+  const visibleChoices = state.event.choices.filter((choice, _i) => {
+    if (choice.condition) return choice.condition(state);
+    if (choice.iniquity) return inWrath(state) && state.wrathState.seal >= 2;
+    return true;
+  });
   return `
-    <section class="panel event-banner ${state.event.image ? "with-art" : ""}">
+    <section class="panel event-banner ${state.event.image ? (state.event.largeArt ? "with-art-large" : "with-art") : ""}">
       ${state.event.image ? `<img src="${state.event.image}" alt="${state.event.title}">` : ""}
       <div>
         <strong>${state.event.title}</strong>
         <div class="small">${typeof state.event.body === "function" ? state.event.body(state) : state.event.body}</div>
         <div class="event-buttons">
           ${state.event.choices.map((choice, index) => {
+            if (choice.condition && !choice.condition(state)) return "";
+            if (choice.iniquity && !(inWrath(state) && state.wrathState.seal >= 2)) return "";
             const effectiveCost = choice.insured && state.insurance?.crop ? Math.round((choice.cost || 0) * 0.2) : (choice.cost || 0);
             const costLabel = choice.cost ? (effectiveCost < choice.cost ? ` (${money(effectiveCost)} · insured)` : ` (${money(choice.cost)})`) : "";
+            const isIniquity = !!choice.iniquity;
+            const label = isIniquity ? "Ask Severin to deal with it" : choice.label;
             return `
-            <button class="event-choice" onclick="resolveEvent(${index})" ${effectiveCost && state.cash < effectiveCost ? "disabled" : ""}>
-              <span class="event-choice-label">${choice.label}${costLabel}</span>
-              ${choice.hint ? `<span class="event-choice-hint">${escapeHtml(choice.hint)}</span>` : ""}
+            <button class="event-choice ${isIniquity ? "event-choice-iniquity" : ""}" onclick="resolveEvent(${index})" ${effectiveCost && state.cash < effectiveCost ? "disabled" : ""} ${isIniquity ? 'title="..."' : ""}>
+              <span class="event-choice-label">${label}${costLabel}</span>
+              ${!isIniquity && choice.hint ? `<span class="event-choice-hint">${escapeHtml(choice.hint)}</span>` : ""}
             </button>
           `;
           }).join("")}
@@ -7095,7 +7889,7 @@ function vineyardPanel() {
           return `
             <div class="row-card">
               <div class="row-info">
-                <div class="row-name">${row.name} ${matBadge}</div>
+                <div class="row-name ${inWrath(state) && state.wrathState.aceldamaBlock === row.id ? "row-name-aceldama" : ""}">${inWrath(state) && state.wrathState.aceldamaBlock === row.id ? "Block Aceldama" : row.name} ${matBadge}</div>
                 <div class="row-pressure">${row.pressure || "normal"}</div>
               </div>
               <div class="row-meters">
@@ -7157,13 +7951,51 @@ function actionInventoryNote(action, s) {
   return null;
 }
 
+function measurementActionPanel() {
+  const ws = state.wrathState;
+  const step = ws.measurementStep || 0;
+  const speakUsed = (ws.speakUsed || []).includes(step);
+  const isLastStep = step >= 4;
+  return `
+    <section class="panel measurement-panel">
+      <div class="panel-head">
+        <h2>The Measurement</h2>
+        <span class="small">Step ${step + 1} of 5</span>
+      </div>
+      <div class="measurement-bar">
+        <div class="measurement-bar-fill" style="width:${((step + 1) / 5) * 100}%"></div>
+      </div>
+      <div class="actions">
+        <button class="action-card" onclick="advanceMonth()" ${state.gameOver ? "disabled" : ""}>
+          <b>${isLastStep ? "Accept the verdict" : "Behold"}</b>
+          <span class="effect">Advance to the next step.</span>
+          <em>No cost.</em>
+        </button>
+        ${!speakUsed && !isLastStep ? `
+        <button class="action-card" onclick="useSpeakAction(${step})">
+          <b>Speak</b>
+          <span class="effect">Record a word for the estate's account. Used once per step.</span>
+          <em>No cost.</em>
+        </button>` : ""}
+      </div>
+      <div class="measurement-faith-cup">
+        <span>Faith <strong style="color:var(--gold)">${ws.faith}</strong></span>
+        <span>Cup <strong style="color:var(--wine)">${ws.cup}</strong></span>
+      </div>
+    </section>
+  `;
+}
+
 function actionsPanel() {
+  if (inWrath(state) && state.wrathState.mode === "measurement") {
+    return measurementActionPanel();
+  }
   ensureActionBudgets(state);
-  const sorted = [...ACTIONS].sort((a, b) => Number(isActionAvailable(b, state)) - Number(isActionAvailable(a, state)));
+  const sorted = [...ACTIONS].filter(a => !a.hidden || !a.hidden(state)).sort((a, b) => Number(isActionAvailable(b, state)) - Number(isActionAvailable(a, state)));
   return `
     <section class="panel">
       <div class="panel-head">
-        <h2>Monthly Actions ${helpIcon("Actions are owner attention and scarce operating focus. Staff, infrastructure, fatigue, and obligations determine how far those choices actually stretch.")}</h2>
+        <h2>${corruptChars(state, wrathLabel(state, "Monthly Actions", [[7, "What remains"], [4, "This month's obligations"]]))} ${helpIcon("Actions are owner attention and scarce operating focus. Staff, infrastructure, fatigue, and obligations determine how far those choices actually stretch.")}</h2>
         <span class="small">${state.actionsLeft} owner attention left</span>
       </div>
       <div class="capacity-strip">
@@ -7187,7 +8019,7 @@ function actionsPanel() {
           const effectClass = invNote ? "effect effect-note" : "effect";
           return `
             <button class="action-card ${available ? "" : "offseason"}" onclick="useAction('${action.id}')" ${disabled ? "disabled" : ""}>
-              <b>${actionName(action, state)}</b>
+              <b>${corruptChars(state, actionName(action, state))}</b>
               <span class="${effectClass}">${effectText}</span>
               <em>${action.navigateTab ? `Open ${TABS.find(t => t.id === action.navigateTab)?.name || "Estate"}` : `${money(cost)} · ${spendLabel}`}</em>
             </button>
@@ -7744,10 +8576,16 @@ function staffView(person, employed) {
   const signing = Math.round(person.salary * 1.4);
   const progress = employed ? ensureStaffProgress(state, person.id) : null;
   const blocked = state.actionsLeft <= 0 || state.event || state.gameOver;
+  const isHidden = !!person.hidden;
+  const isVintner = person.id === "vintner";
+  const isPriest = person.id === "priest";
+  const vintnerLocked = isVintner && inWrath(state) && state.wrathState.seal >= 4;
+  const nameClass = isHidden ? "staff-name-hidden" : "";
   return `
-    <div class="staff">
+    <div class="staff ${isHidden ? "staff-hidden" : ""}">
       <div class="staff-head">
         <div class="staff-id">
+          ${(!isHidden || person.portrait) ? `
           <div class="portrait-hover-wrap">
             <img src="assets/${person.portrait || person.id}.png" alt="${person.name}" onerror="this.style.display='none'">
             ${(() => { const bio = STAFF_BIOS[person.id] || {}; const portrait = person.portrait || person.id; return `
@@ -7760,8 +8598,8 @@ function staffView(person, employed) {
                 ${bio.bio ? `<p class="portrait-bio">${bio.bio}</p>` : ""}
               </div>
             </div>`; })()}
-          </div>
-          <strong>${person.name}</strong>
+          </div>` : ""}
+          <strong class="${nameClass}">${person.name}</strong>
         </div>
         <span class="tag">${person.role}</span>
       </div>
@@ -7770,9 +8608,10 @@ function staffView(person, employed) {
       <div class="staff-traits">
         ${person.traits.map(trait => `<span class="tag">${trait}</span>`).join("")}
         ${STAFF_CAPACITY_KEY[person.id] ? `<span class="tag tag-capacity">+1 ${STAFF_CAPACITY_KEY[person.id]} action/mo</span>` : ""}
-        <span class="tag">${money(effectiveSalary(state, person))}/mo</span>
+        ${person.salary > 0 ? `<span class="tag">${money(effectiveSalary(state, person))}/mo</span>` : `<span class="tag">No salary</span>`}
       </div>
       ${(() => {
+        if (isHidden) return "";
         const pTraits = getStaffTraits(state, person.id);
         if (!pTraits.length) return "";
         return `<div class="personality-traits">${pTraits.map(t =>
@@ -7781,10 +8620,10 @@ function staffView(person, employed) {
       })()}
       <div class="staff-actions">
         ${employed
-          ? `<button class="ghost" onclick="fireStaff('${person.id}')" ${blocked ? "disabled" : ""}>Release · owner attention</button>`
-          : `<button onclick="hireStaff('${person.id}')" ${blocked || state.cash < signing || state.staff.length >= 5 ? "disabled" : ""}>Hire ${money(signing)} · owner attention</button>`}
+          ? (isPriest ? "" : `<button class="ghost" onclick="fireStaff('${person.id}')" ${blocked || vintnerLocked ? "disabled" : ""}>${vintnerLocked ? "Cannot release" : "Release · owner attention"}</button>`)
+          : `<button onclick="hireStaff('${person.id}')" ${blocked || state.cash < signing || state.staff.length >= 5 ? "disabled" : ""}>Hire ${signing > 0 ? money(signing) + " · owner attention" : "· owner attention"}</button>`}
       </div>
-      ${employed ? advancementTree(person, progress) : ""}
+      ${employed && !isHidden ? advancementTree(person, progress) : ""}
     </div>
   `;
 }
@@ -7834,7 +8673,7 @@ function ledgerPanel() {
         <span class="small">Season notes</span>
       </div>
       <div class="log">
-        ${state.log.length ? state.log.map(entry => `<div class="log-entry"><strong>M${entry.month}</strong> ${entry.text}</div>`).join("") : `<div class="empty">No entries yet.</div>`}
+        ${state.log.length ? state.log.map(entry => `<div class="log-entry${entry.italic ? " cue-italic" : ""}"><strong>M${entry.month}</strong> ${entry.text}</div>`).join("") : `<div class="empty">No entries yet.</div>`}
       </div>
     </section>
   `;
@@ -7911,6 +8750,9 @@ function introModal() {
         <p class="intro-scene">${escapeHtml(state.wineryName)} has been trading for about a decade: long enough to have a name, short enough that nothing is fixed.</p>
         <p class="intro-scene">The previous owners left behind ${money(state.debt)} in outstanding debt, a monthly lease of ${money(state.leaseCost)}, and a cellar with ${state.inventory.cases} bottled cases from the inherited vintage alongside ${legacyVintage?.bulkWine ?? 0} case-equivalents still aging in tank. That vintage rated ${vintageScoreStars(score)}: ${scoreWord}.</p>
         <p class="intro-scene">You've always dreamed of running a winery, so when the chance opened up to take the helm you accepted. It won't be easy to turn ${escapeHtml(state.wineryName)} around, though: capital is tight, there aren't any reliable senior staff, the wine itself isn't great yet, and you can only do so many jobs yourself before burning out. Do you have what it takes to navigate the risk and complexity of scaling a winery and building a business that can last over the next five seasons?</p>
+        <div class="top-actions" style="margin: 8px 0 12px;">
+          <button class="primary" onclick="dismissIntro()">Begin</button>
+        </div>
         <div class="intro-grid">
           <div class="intro-section">
             <div class="intro-head">Starting Position</div>
@@ -7929,9 +8771,6 @@ function introModal() {
             <div class="intro-goal">Watch your monthly burn rate; lease and debt interest arrive before revenue does.</div>
             <div class="intro-goal">Bottle your first real vintage before year's end.</div>
           </div>
-        </div>
-        <div class="top-actions">
-          <button class="primary" onclick="dismissIntro()">Begin</button>
         </div>
       </div>
     </div>
@@ -7967,11 +8806,18 @@ function gameOverModal() {
   const worth = netWorth(state);
   const bestScore = Math.max(0, ...(state.archive || []).map(e => e.score || 0));
   const totalBottles = (state.totalSold || 0) * 12;
+  const wrathEnding = state.gameOver?.wrathEnding;
+  const wrathTaglines = {
+    "cup-held-back": "The estate was measured. It held.",
+    "diminished": "The estate endured. What remained was honest.",
+    "found-wanting": "The vintage was extraordinary. The cup was full.",
+    "endured-alone": "The estate stood by what it had done."
+  };
   return `
     <div class="modal">
       <div class="modal-card score-screen">
         <h2>Five seasons at ${escapeHtml(state.wineryName)}</h2>
-        <p class="score-tagline">Here's how you did.</p>
+        <p class="score-tagline">${wrathEnding ? wrathTaglines[wrathEnding] || "Here's how you did." : "Here's how you did."}</p>
         <div class="score-grid">
           <div class="stat-box"><span>Peak prestige</span><strong>${state.maxPrestige || state.prestige}</strong></div>
           <div class="stat-box"><span>Final net worth</span><strong>${money(worth)}</strong></div>
@@ -8026,6 +8872,8 @@ function flushAchievementToasts() {
 
 function render() {
   document.body.dataset.region = state?.region || "";
+  const stage = state ? corruptionStage(state) : 0;
+  document.body.className = stage > 0 ? `corruption-stage-${stage}` : "";
   app.innerHTML = state ? gameView() : setupView();
   flushAchievementToasts();
 }
@@ -8047,6 +8895,8 @@ window.nextSetupStep = nextSetupStep;
 window.prevSetupStep = prevSetupStep;
 window.setTab = setTab;
 window.toggleHelp = toggleHelp;
+window.openNoHelpModal = openNoHelpModal;
+window.closeNoHelpModal = closeNoHelpModal;
 window.useAction = useAction;
 window.advanceMonth = advanceMonth;
 window.setPrice = setPrice;
@@ -8071,5 +8921,16 @@ window.chooseName = chooseName;
 window.skipNaming = skipNaming;
 window.toggleInsurance = toggleInsurance;
 window.setStash = setStash;
+window.useSpeakAction = useSpeakAction;
 
 render();
+
+function useSpeakAction(step) {
+  if (!state || !inWrath(state)) return;
+  const ws = state.wrathState;
+  if (!ws.speakUsed) ws.speakUsed = [];
+  if (ws.speakUsed.includes(step)) return;
+  ws.speakUsed.push(step);
+  log(state, "The estate's word was recorded.");
+  render();
+}

@@ -545,12 +545,12 @@ button:disabled {
 
 /* ── Intro modal ─────────────────────────────────��─────────────── */
 .intro-modal-card {
-  max-width: 680px;
+  max-width: 860px;
   width: 100%;
 }
 
 .intro-scene {
-  margin: 4px 0 14px;
+  margin: 4px 0 8px;
   color: #5a5040;
   font-style: italic;
 }
@@ -563,7 +563,6 @@ button:disabled {
 }
 
 .intro-goals {
-  grid-column: 1 / -1;
 }
 
 .intro-section {
@@ -2564,6 +2563,11 @@ input[type="range"] {
   align-items: start;
 }
 
+.event-banner.with-art-large {
+  grid-template-columns: 200px minmax(0, 1fr);
+  align-items: start;
+}
+
 .event-banner img {
   width: 112px;
   aspect-ratio: 1;
@@ -2572,6 +2576,17 @@ input[type="range"] {
   object-fit: cover;
   object-position: center top;
   background: #f1e3bf;
+}
+
+.event-banner.with-art-large img {
+  width: 200px;
+  height: auto;
+  max-height: 300px;
+  object-fit: contain;
+  object-position: top center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
 }
 
 .event-banner strong {
@@ -3088,4 +3103,226 @@ body[data-region="fingerlakes"] { --wine: #255c68; --paper: #f1f5f3; --line: #ca
 
 .achievement-chip span {
   font-weight: 500;
+}
+
+/* ── Cup of Wrath path ──────────────────────────────────────────────────── */
+
+/* Log italic cues */
+.cue-italic {
+  color: #6a4a4a;
+  font-style: italic;
+}
+
+/* Hidden staff card */
+.staff.staff-hidden {
+  border-color: #c8b8b8;
+  background: #fdf8f5;
+}
+.staff-name-hidden {
+  font-style: italic;
+  color: #6a4a4a;
+}
+
+/* Iniquity event choice */
+.event-choice-iniquity {
+  grid-column: 1 / -1;
+  border-color: #8b2222;
+  opacity: 0.65;
+  color: #6a1a1a;
+}
+.event-choice-iniquity:hover:not(:disabled) {
+  opacity: 1;
+  border-color: var(--wine);
+}
+
+/* Character-level font corruption */
+.corrupt-char {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-size: 0.97em;
+  color: #5a2a2a;
+  display: inline;
+}
+
+/* Block Aceldama */
+.row-name-aceldama {
+  font-family: Georgia, "Times New Roman", serif;
+  color: #6a2222;
+}
+
+/* Measurement panel */
+.measurement-panel .measurement-bar {
+  height: 4px;
+  background: #e8ddd0;
+  border-radius: 2px;
+  margin-bottom: 12px;
+}
+.measurement-panel .measurement-bar-fill {
+  height: 100%;
+  background: var(--wine);
+  border-radius: 2px;
+  transition: width 0.4s;
+}
+.measurement-panel .measurement-faith-cup {
+  display: flex;
+  gap: 20px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+.measurement-step h3 {
+  font-size: 15px;
+  margin-bottom: 8px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.measurement-verse {
+  font-style: italic;
+  color: #4a3838;
+  line-height: 1.65;
+  margin-bottom: 14px;
+}
+.measurement-scales {
+  display: flex;
+  gap: 24px;
+  margin-top: 12px;
+}
+.scale-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.scale-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.scale-col.scale-cup .scale-label { color: #8b2222; }
+.scale-col.scale-faith .scale-label { color: var(--gold); }
+.scale-bar {
+  height: 8px;
+  background: #e8ddd0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.scale-col.scale-cup .scale-bar .scale-fill { background: #8b2222; height: 100%; border-radius: 4px; }
+.scale-col.scale-faith .scale-bar.scale-bar-faith .scale-fill { background: var(--gold); height: 100%; border-radius: 4px; }
+.measurement-record {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.8;
+  color: #3a2a2a;
+}
+.measurement-verdict {
+  font-size: 16px;
+  font-style: italic;
+  color: #4a2222;
+  line-height: 1.6;
+  margin-top: 12px;
+}
+.chalice-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+}
+.chalice {
+  width: 80px;
+  height: 100px;
+  color: #8b2222;
+}
+.chalice-held .chalice-fill { animation: chalice-fill-hold 2s ease forwards; }
+.chalice-spilled .chalice-fill { animation: chalice-fill-spill 2s ease forwards; }
+.chalice-fractured .chalice-fill { animation: chalice-fill-fracture 2s ease forwards; }
+@keyframes chalice-fill-hold { from { y: 100px; height: 0; } to { y: 20px; height: 80px; } }
+@keyframes chalice-fill-spill { from { y: 100px; height: 0; } to { y: 0; height: 100px; } }
+@keyframes chalice-fill-fracture { 0% { y: 100px; height: 0; } 80% { y: 0; height: 100px; opacity: 1; } 100% { opacity: 0.2; } }
+.measurement-cup-text {
+  text-align: center;
+  font-style: italic;
+  color: #4a2222;
+  margin-top: 8px;
+}
+.measurement-final {
+  font-size: 15px;
+  line-height: 1.75;
+  color: #2a1a1a;
+  font-style: italic;
+}
+
+/* Smooth transitions so stage changes ease in rather than snap */
+body, .panel, .topbar, .kpi, button {
+  transition: background-color 2s ease, border-color 1.5s ease, color 1s ease;
+}
+
+@keyframes clock-flicker {
+  0%, 94%, 100% { opacity: 1; }
+  96% { opacity: 0.25; }
+  97% { opacity: 0.9; }
+  98.5% { opacity: 0.4; }
+}
+
+/* Seal 1 — barely perceptible */
+body.corruption-stage-1 .cue-italic { color: #6a3a3a; }
+body.corruption-stage-1 .staff.staff-hidden { border-color: #b89898; }
+
+/* Seal 2 — faint panel tint */
+body.corruption-stage-2 .panel { border-color: rgba(139,34,34,0.09); }
+body.corruption-stage-2 .staff.staff-hidden { border-color: rgba(139,34,34,0.30); }
+
+/* Seal 3 — row names shift font */
+body.corruption-stage-3 .panel { border-color: rgba(139,34,34,0.14); }
+body.corruption-stage-3 .row-name { font-family: Georgia, "Times New Roman", serif; }
+
+/* Seal 4 — background breathes warm */
+body.corruption-stage-4 { background: color-mix(in srgb, var(--paper) 97%, #3a0a0a 3%); }
+body.corruption-stage-4 .panel { border-color: rgba(139,34,34,0.18); }
+body.corruption-stage-4 .topbar { background: color-mix(in srgb, #fff 97%, #3a0a0a 3%); }
+
+/* Seal 5 — deepens */
+body.corruption-stage-5 { background: color-mix(in srgb, var(--paper) 94%, #3a0a0a 6%); }
+body.corruption-stage-5 .panel { border-color: rgba(139,34,34,0.22); }
+body.corruption-stage-5 .topbar { background: color-mix(in srgb, #fff 94%, #3a0a0a 6%); }
+body.corruption-stage-5 .row-name { font-family: Georgia, "Times New Roman", serif; color: #5a2222; }
+
+/* Seal 6 — pronounced, numbers flicker */
+body.corruption-stage-6 { background: color-mix(in srgb, var(--paper) 89%, #3a0a0a 11%); }
+body.corruption-stage-6 .panel { border-color: rgba(139,34,34,0.28); background: color-mix(in srgb, var(--panel) 96%, #3a0a0a 4%); }
+body.corruption-stage-6 .topbar { background: color-mix(in srgb, #fff 90%, #3a0a0a 10%); }
+body.corruption-stage-6 .kpi strong { animation: clock-flicker 6s infinite; }
+
+/* Seal 7 — heavy */
+body.corruption-stage-7 { background: color-mix(in srgb, var(--paper) 82%, #1a0808 18%); color: #3a2020; }
+body.corruption-stage-7 .panel { border-color: rgba(139,34,34,0.38); background: color-mix(in srgb, var(--panel) 90%, #1a0808 10%); }
+body.corruption-stage-7 .topbar { background: color-mix(in srgb, #fff 83%, #1a0808 17%); }
+body.corruption-stage-7 .kpi strong { animation: clock-flicker 4s infinite; }
+body.corruption-stage-7 button:not(.primary) { border-color: rgba(139,34,34,0.30); }
+
+/* Seal 8 / measurement — near-black */
+body.corruption-stage-9 { background: #1a1210; color: #d4c4b4; }
+body.corruption-stage-9 .panel { background: #221a16; border-color: #3a2a22; color: #d4c4b4; }
+body.corruption-stage-9 .topbar { background: #161008; border-bottom-color: #3a2a22; }
+body.corruption-stage-9 button:not(.primary) { background: #2a1e18; border-color: #3a2a22; color: #c4b4a4; }
+body.corruption-stage-9 .kpi { color: #c4b4a4; }
+body.corruption-stage-9 strong { color: #e8d8c8; }
+
+.staff-arrival-banner {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  display: block;
+  object-fit: cover;
+  max-height: 180px;
+  margin-bottom: 8px;
+}
+
+.measurement-img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 320px;
+  border-radius: 4px;
+  object-fit: contain;
+  margin: 0 auto 16px;
 }
