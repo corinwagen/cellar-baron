@@ -1418,6 +1418,11 @@ button:disabled {
   font-size: 10px;
   font-style: normal;
 }
+.row-badge-oldvine {
+  background: #f0e6d0;
+  color: var(--gold);
+  font-weight: 600;
+}
 
 .row-pressure {
   margin-top: 3px;
@@ -1547,6 +1552,13 @@ button:disabled {
   color: #315f7d;
   font-size: 11px;
   font-weight: 700;
+}
+
+.action-card .effect-note {
+  color: #8a6a2a;
+  font-size: 11px;
+  font-weight: 600;
+  font-style: italic;
 }
 
 .action-card.offseason {
