@@ -511,8 +511,96 @@ const EVENT_RULES = {
   "credit-ceiling": { max: 1 },
   "priest-arrives": { max: 1 },
   "priest-arrives-again": { max: 1 },
-  "vintner-arrives": { max: 1 }
+  "vintner-arrives": { max: 1 },
+  "papal-envoy": { cooldown: 999, max: 1 }
 };
+
+const PAPAL_QUESTIONS = [
+  {
+    id: "pq1",
+    prompt: "The Church declared it heretical to say that burning heretics is against the will of the Spirit.",
+    answer: true,
+    correct: "Candidate understands regrettable provisos.",
+    incorrect: "You have answered humanely, but not curially."
+  },
+  {
+    id: "pq2",
+    prompt: "The Council of Trent taught that the Vulgate was to be held authentic in public lectures, disputations, sermons, and expositions.",
+    answer: true,
+    correct: "Your cellar Latin may remain untranslated.",
+    incorrect: "The secretary marks a deficiency in scriptural apparatus."
+  },
+  {
+    id: "pq3",
+    prompt: "According to Trent, after consecration the Eucharist contains Christ only as a sign, figure, or symbol.",
+    answer: false,
+    correct: "The envoy quietly restores your sparkling wine to consideration.",
+    incorrect: "The envoy removes the sparkling wine from consideration."
+  },
+  {
+    id: "pq4",
+    prompt: "Trent held that fear of hell, when it leads a sinner toward repentance, is itself sinful.",
+    answer: false,
+    correct: "Terror, when properly administered, remains pastorally admissible.",
+    incorrect: "The Dominican secretary underlines 'overconfident.'"
+  },
+  {
+    id: "pq5",
+    prompt: "Trent taught that good works merely show justification but do not preserve or increase justice before God.",
+    answer: false,
+    correct: "Your vineyard laborers may continue pruning with salvific seriousness.",
+    incorrect: "The envoy glances sadly at your unmerited terroir."
+  },
+  {
+    id: "pq6",
+    prompt: "Trent taught that souls in Purgatory are helped by the prayers and offerings of the living, especially the sacrifice of the altar.",
+    answer: true,
+    correct: "The envoy asks whether you offer a memorial discount for deceased patrons.",
+    incorrect: "Your afterlife logistics are judged unsatisfactory."
+  },
+  {
+    id: "pq7",
+    prompt: "In modern canon law, striking the Pope is treated as an automatic excommunication reserved to the Apostolic See.",
+    answer: true,
+    correct: "The tasting room shall install a rope barrier around visiting pontiffs.",
+    incorrect: "A practical security concern has been noted."
+  },
+  {
+    id: "pq8",
+    prompt: "Trent taught that baptism administered by heretics is invalid even if performed in the name of the Father, Son, and Holy Spirit.",
+    answer: false,
+    correct: "Even a doctrinally disastrous cellar hand may, under narrow conditions, validly operate the sacramental hose.",
+    incorrect: "The secretary underlines 'rebaptizer?' twice."
+  },
+  {
+    id: "pq9",
+    prompt: "Trent anathematized the claim that baptism is optional rather than necessary for salvation.",
+    answer: true,
+    correct: "Your wine may be optional. Baptism, less so.",
+    incorrect: "The envoy detects a dangerously casual sacramental register."
+  },
+  {
+    id: "pq10",
+    prompt: "Trent taught that the Mass is only a sacrifice of praise and thanksgiving, not a propitiatory sacrifice.",
+    answer: false,
+    correct: "You distinguish commemoration from propitiation. The vintage remains under consideration.",
+    incorrect: "The envoy mutters that bare commemoration is not enough."
+  },
+  {
+    id: "pq11",
+    prompt: "Under modern canon law, apostasy, heresy, and schism incur latae sententiae excommunication.",
+    answer: true,
+    correct: "The secretary draws three boxes labeled Apostasy, Heresy, and Schism.",
+    incorrect: "The envoy fears you are soft on canonical categories."
+  },
+  {
+    id: "pq12",
+    prompt: "Trent condemned the veneration of saints, relics, and sacred images as improper distractions from Christ.",
+    answer: false,
+    correct: "The tasting room icon corner may remain.",
+    incorrect: "The envoy's reliquary-hand twitches."
+  }
+];
 
 const ACTION_CAPACITY = {
   vineyard: "vineyard",
@@ -1489,6 +1577,22 @@ const EVENT_DECK = [
           s.wrathState.faith = Math.min(30, s.wrathState.faith);
           log(s, "He did not return a third time.");
         }
+      }
+    ]
+  },
+  {
+    id: "papal-envoy",
+    title: "A Visitor from the Curia",
+    body: "A letter bearing a curial seal arrived before dawn. A representative of the Holy See has come to conduct a brief examination of the estate's theological orthodoxy. He is in the courtyard. He has brought a secretary with a very large ledger.",
+    image: "assets/papal-envoy.png",
+    largeArt: true,
+    priority: true,
+    condition: s => s.prestige >= 60 && !s.papalEnvoyDone && !inWrath(s),
+    choices: [
+      {
+        label: "Admit him",
+        hint: "Submit to the ecclesiastical examination.",
+        effect: s => { startPapalQuiz(); }
       }
     ]
   },
@@ -3378,6 +3482,8 @@ let activeTab = "overview";
 let helpOpen = true;
 let guideStep = null;
 let noHelpModalOpen = false;
+let papalQuiz = null; // { questions, idx, score, phase, lastCorrect, lastFeedback, resultTitle, resultBody, prestigeGain }
+let papalQuizTimerId = null;
 
 const SETUP_STEPS = [
   { key: "region", title: "Choose Region", kicker: "Where the estate lives shapes weather, prestige, land cost, and grape options." },
@@ -3708,6 +3814,9 @@ const ACHIEVEMENTS = [
   { id: "diminished-endured",    emoji: "🌾", name: "Diminished but Endured",  desc: "The estate survived its own harvest." },
   { id: "found-wanting",         emoji: "🔥", name: "Found Wanting",           desc: "The wine was perfect. The cup was full." },
   { id: "would-not-receive-him", emoji: "🚪", name: "Would Not Receive Him",   desc: "The estate refused the visitor and stood by its work." },
+  { id: "curial-endorsement",    emoji: "✝️",  name: "Curial Endorsement",     desc: "Answered all 7 questions correctly. Rome is satisfied." },
+  { id: "nihil-obstat",          emoji: "📜",  name: "Nihil Obstat",            desc: "Passed the papal examination with minor reservations." },
+  { id: "genevan-influence",     emoji: "🪤",  name: "Suspected Genevan Influence", desc: "The envoy left early. The secretary has a very long list." },
 ];
 
 function createState() {
@@ -3817,6 +3926,7 @@ function createState() {
     heroicsTotal: 0,
     vintnerSpawned: false,
     vintnerArrivalEventFired: false,
+    papalEnvoyDone: false,
     prestigeBeforeMonth: r.prestige,
     lastHarvestForecast: 0,
     lastHarvestGrapes: 0
@@ -7216,6 +7326,7 @@ function gameView() {
     </main>
     ${state.gameOver ? gameOverModal() : (guideStep !== null && guideStep < GUIDE_PAGES.length ? guideModal() : (!state.introSeen ? introModal() : (state.pendingNaming ? namingModal() : "")))}
     ${noHelpModal()}
+    ${papalQuizModal()}
     ${achievementToast()}
   `;
 }
@@ -7298,6 +7409,219 @@ function noHelpModal() {
         <p style="font-style:italic;color:#4a2222;line-height:1.7;">${body}</p>
         <div class="top-actions" style="margin-top:12px;">
           <button onclick="closeNoHelpModal()">Understood</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Papal Envoy Quiz ────────────────────────────────────────────────────────
+
+const PAPAL_QUIZ_SECONDS = 9;
+
+function startPapalQuiz() {
+  const shuffled = [...PAPAL_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 7);
+  papalQuiz = {
+    questions: shuffled,
+    idx: 0,
+    score: 0,
+    phase: "question",
+    lastCorrect: null,
+    lastFeedback: null,
+    resultTitle: null,
+    resultBody: null,
+    prestigeGain: 0
+  };
+  state.papalEnvoyDone = true;
+  _papalStartTimer();
+  document.addEventListener("keydown", _papalKeyHandler);
+  render();
+}
+
+function _papalStartTimer() {
+  _papalClearTimer();
+  const deadline = Date.now() + PAPAL_QUIZ_SECONDS * 1000;
+  papalQuizTimerId = setInterval(() => {
+    const bar = document.getElementById("papal-timer-bar");
+    const txt = document.getElementById("papal-timer-text");
+    const remaining = Math.max(0, deadline - Date.now());
+    const pct = (remaining / (PAPAL_QUIZ_SECONDS * 1000)) * 100;
+    if (bar) bar.style.width = pct + "%";
+    if (txt) txt.textContent = Math.ceil(remaining / 1000) + "s";
+    if (remaining <= 0) {
+      _papalClearTimer();
+      _papalTimeout();
+    }
+  }, 80);
+}
+
+function _papalClearTimer() {
+  if (papalQuizTimerId) {
+    clearInterval(papalQuizTimerId);
+    papalQuizTimerId = null;
+  }
+}
+
+function _papalTimeout() {
+  if (!papalQuiz || papalQuiz.phase !== "question") return;
+  papalQuiz.phase = "feedback";
+  papalQuiz.lastCorrect = false;
+  papalQuiz.lastFeedback = "The clock ran out. The secretary marks a blank.";
+  render();
+}
+
+function papalAnswer(answer) {
+  if (!papalQuiz || papalQuiz.phase !== "question") return;
+  _papalClearTimer();
+  const q = papalQuiz.questions[papalQuiz.idx];
+  const correct = answer === q.answer;
+  if (correct) papalQuiz.score++;
+  papalQuiz.phase = "feedback";
+  papalQuiz.lastCorrect = correct;
+  papalQuiz.lastFeedback = correct ? q.correct : q.incorrect;
+  render();
+}
+
+function papalNext() {
+  if (!papalQuiz) return;
+  if (papalQuiz.phase === "result") { closePapalQuiz(); return; }
+  papalQuiz.idx++;
+  if (papalQuiz.idx >= papalQuiz.questions.length) {
+    _papalFinish();
+  } else {
+    papalQuiz.phase = "question";
+    _papalStartTimer();
+    render();
+  }
+}
+
+function _papalFinish() {
+  _papalClearTimer();
+  document.removeEventListener("keydown", _papalKeyHandler);
+  const score = papalQuiz.score;
+  const total = papalQuiz.questions.length;
+  let resultTitle, resultBody, prestigeGain;
+  if (score === total) {
+    resultTitle = "Curial Endorsement Granted";
+    resultBody = "The envoy departs satisfied, making several favorable annotations. Word will reach Rome before the vintage does.";
+    prestigeGain = 12;
+    awardAchievement(state, "curial-endorsement");
+  } else if (score >= 5) {
+    resultTitle = "Conditional Nihil Obstat";
+    resultBody = "Minor reservations have been noted in the ledger. The estate may continue its operations pending no further irregularities.";
+    prestigeGain = 6;
+    awardAchievement(state, "nihil-obstat");
+  } else if (score >= 3) {
+    resultTitle = "Theologically Ambiguous";
+    resultBody = "The envoy departed without committing. A brief has been filed. The secretary underlined three words and said nothing.";
+    prestigeGain = 2;
+  } else {
+    resultTitle = "Suspected Genevan Influence";
+    resultBody = "The envoy left before the tasting. The secretary has a very long list. A follow-up inquiry is expected.";
+    prestigeGain = -4;
+    awardAchievement(state, "genevan-influence");
+  }
+  state.prestige = clamp(state.prestige + prestigeGain, 0, 120);
+  if (prestigeGain > 0) {
+    log(state, `Papal Envoy: ${resultTitle}. Prestige +${prestigeGain}.`);
+  } else {
+    log(state, `Papal Envoy: ${resultTitle}. Prestige ${prestigeGain}.`);
+  }
+  papalQuiz.phase = "result";
+  papalQuiz.resultTitle = resultTitle;
+  papalQuiz.resultBody = resultBody;
+  papalQuiz.prestigeGain = prestigeGain;
+  papalQuiz.score = score;
+  papalQuiz.total = total;
+  normalizeState(state);
+  checkAchievements(state);
+  render();
+}
+
+function closePapalQuiz() {
+  _papalClearTimer();
+  document.removeEventListener("keydown", _papalKeyHandler);
+  papalQuiz = null;
+  render();
+}
+
+function _papalKeyHandler(e) {
+  if (!papalQuiz) return;
+  if (papalQuiz.phase === "question") {
+    if (e.key === "t" || e.key === "T") { e.preventDefault(); papalAnswer(true); }
+    if (e.key === "f" || e.key === "F") { e.preventDefault(); papalAnswer(false); }
+  } else {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); papalNext(); }
+  }
+}
+
+function papalQuizModal() {
+  if (!papalQuiz) return "";
+  const { questions, idx, score, phase, lastCorrect, lastFeedback, resultTitle, resultBody, prestigeGain } = papalQuiz;
+  const total = questions.length;
+
+  let inner = "";
+  if (phase === "question") {
+    const q = questions[idx];
+    inner = `
+      <div class="pq-progress-row">
+        <span class="pq-progress-label">Question ${idx + 1} of ${total}</span>
+        <span class="pq-score">${idx > 0 ? `Score: ${score}/${idx}` : ""}</span>
+      </div>
+      <div class="pq-timer-track" role="progressbar" aria-label="Time remaining">
+        <div class="pq-timer-bar" id="papal-timer-bar" style="width:100%"></div>
+      </div>
+      <div class="pq-timer-text-row"><span id="papal-timer-text">${PAPAL_QUIZ_SECONDS}s</span></div>
+      <div class="pq-question">${escapeHtml(q.prompt)}</div>
+      <div class="pq-tf-row">
+        <button class="pq-true-btn" onclick="papalAnswer(true)" aria-label="True">
+          True <span class="pq-key-hint">[T]</span>
+        </button>
+        <button class="pq-false-btn" onclick="papalAnswer(false)" aria-label="False">
+          False <span class="pq-key-hint">[F]</span>
+        </button>
+      </div>
+    `;
+  } else if (phase === "feedback") {
+    const q = questions[idx];
+    inner = `
+      <div class="pq-progress-row">
+        <span class="pq-progress-label">Question ${idx + 1} of ${total}</span>
+        <span class="pq-score">Score: ${score}/${idx + 1}</span>
+      </div>
+      <div class="pq-feedback-verdict ${lastCorrect ? "pq-correct" : "pq-incorrect"}">
+        ${lastCorrect ? "✓ Correct" : "✗ Incorrect"}
+      </div>
+      <div class="pq-question pq-dim">${escapeHtml(q.prompt)}</div>
+      <div class="pq-correct-answer">The answer was: <strong>${q.answer ? "True" : "False"}</strong></div>
+      <div class="pq-flavor">${escapeHtml(lastFeedback)}</div>
+      <div class="pq-continue-row">
+        <button class="pq-continue-btn" onclick="papalNext()">${idx + 1 < total ? "Next question" : "See verdict"} <span class="pq-key-hint">[Enter]</span></button>
+      </div>
+    `;
+  } else {
+    const gained = prestigeGain >= 0 ? `+${prestigeGain}` : `${prestigeGain}`;
+    inner = `
+      <div class="pq-result-header">${escapeHtml(resultTitle)}</div>
+      <div class="pq-result-score">${score} / ${total} correct</div>
+      <div class="pq-result-body">${escapeHtml(resultBody)}</div>
+      <div class="pq-result-prestige" style="color:${prestigeGain >= 0 ? "var(--ok)" : "var(--danger)"}">Prestige ${gained}</div>
+      <div class="pq-continue-row">
+        <button class="pq-continue-btn" onclick="closePapalQuiz()">Dismiss <span class="pq-key-hint">[Enter]</span></button>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="modal pq-backdrop" onclick="return false">
+      <div class="pq-card" role="dialog" aria-modal="true" aria-label="Papal Orthodoxy Examination" onclick="event.stopPropagation()">
+        <div class="pq-header">
+          <span class="pq-crest">✝</span>
+          <span class="pq-title">Ecclesiastical Examination</span>
+          <span class="pq-crest">✝</span>
+        </div>
+        <div class="pq-body">
+          ${inner}
         </div>
       </div>
     </div>
@@ -8922,6 +9246,9 @@ window.setTab = setTab;
 window.toggleHelp = toggleHelp;
 window.openNoHelpModal = openNoHelpModal;
 window.closeNoHelpModal = closeNoHelpModal;
+window.papalAnswer = papalAnswer;
+window.papalNext = papalNext;
+window.closePapalQuiz = closePapalQuiz;
 window.useAction = useAction;
 window.advanceMonth = advanceMonth;
 window.setPrice = setPrice;
