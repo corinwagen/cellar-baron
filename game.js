@@ -512,6 +512,7 @@ const EVENT_RULES = {
   "priest-arrives": { max: 1 },
   "priest-arrives-again": { max: 1 },
   "vintner-arrives": { max: 1 },
+  "severin-debt-offer": { max: 1 },
   "papal-envoy": { cooldown: 999, max: 1 },
   "pest-infestation": { max: 1 }
 };
@@ -1585,6 +1586,37 @@ const EVENT_DECK = [
           s.wrathState.faith = Math.min(30, s.wrathState.faith);
           log(s, "He did not return a third time.");
         }
+      }
+    ]
+  },
+  {
+    id: "severin-debt-offer",
+    title: "A Man in the Lane",
+    body: "He has been standing at the edge of the property for two days. He has not knocked. This morning he left a note under the cellar door. It said: I know what the estate needs. I know what you need. I have both. He signed it S.A.",
+    priority: true,
+    condition: s => !inWrath(s) && !s.vintnerSpawned && s.cash < 0 && availableCredit(s) <= 0 && s.rows.length >= 1,
+    choices: [
+      {
+        label: "Hear his terms",
+        hint: "$66,000 against the estate. Severin joins the cellar. The account begins immediately.",
+        effect: s => {
+          s.cash += 66000;
+          s.creditLine += 66000;
+          const rate = addDebt(s, 66000, "Severin Apollos — private terms");
+          s.vintnerSpawned = true;
+          s.vintnerArrivalEventFired = true;
+          if (!s.staffMarket.includes("vintner")) s.staffMarket.push("vintner");
+          s.staff.push("vintner");
+          s.wrathState = { ...initWrathState(), vintnerHired: true, vintnerHiredMonth: s.month, cup: 25, seal: 2 };
+          log(s, `He came in through the cellar door. He did not use the front entrance. $66,000 drawn at ${(rate * 100).toFixed(1)}% monthly.`);
+          log(s, WRATH_SEAL_CUES[2], { italic: true });
+          awardAchievement(s, "hired-the-vintner");
+        }
+      },
+      {
+        label: "Send him away",
+        hint: "Refuse the offer. The estate is on its own.",
+        effect: s => { log(s, "The note was burned. The lane was empty by morning. The accounts remain what they are."); }
       }
     ]
   },
@@ -4241,6 +4273,12 @@ function wrathTick(s) {
     ws.faith = Math.min(ws.faithCap, ws.faith + 2);
   }
 
+  // Faithful staff passive faith (1 per faithful staff member)
+  const faithfulCount = s.staff.filter(id => (s.staffTraits?.[id] || []).includes("faithful")).length;
+  if (faithfulCount > 0) {
+    ws.faith = Math.min(ws.faithCap, ws.faith + faithfulCount);
+  }
+
   // Priest departure check
   ws.lastFaith = ws.faith;
   checkPriestDeparture(s);
@@ -4403,15 +4441,6 @@ function measurementStepContent(s) {
       <div class="measurement-step">
         <h3>IV. The Cup Itself</h3>
         <img class="measurement-img" src="assets/${cupImg}" alt="" onerror="this.style.display='none'">
-        <div class="chalice-wrap">
-          <svg class="chalice ${chaliceClass}" viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 10 Q10 35 15 55 Q20 70 40 80 Q60 70 65 55 Q70 35 60 10 Z" fill="none" stroke="currentColor" stroke-width="2.5"/>
-            <line x1="40" y1="80" x2="40" y2="95" stroke="currentColor" stroke-width="2.5"/>
-            <line x1="28" y1="95" x2="52" y2="95" stroke="currentColor" stroke-width="2.5"/>
-            <clipPath id="chalice-clip"><path d="M22 12 Q12 36 17 55 Q22 68 40 78 Q58 68 63 55 Q68 36 58 12 Z"/></clipPath>
-            <rect x="0" y="0" width="80" height="100" clip-path="url(#chalice-clip)" fill="var(--wine)" opacity="0.7" class="chalice-fill"/>
-          </svg>
-        </div>
         <p class="measurement-cup-text">${cupText}</p>
       </div>
     `;
@@ -8460,10 +8489,11 @@ function sparkline(title, history, key, options = {}) {
 }
 
 function artBanner(kind, label) {
+  const wrath = inWrath(state) && (state.wrathState?.seal || 0) >= 3;
   const map = {
-    vineyard: "assets/vineyard.png",
-    commercial: "assets/tasting-room.png",
-    cellar: "assets/cellar.png"
+    vineyard:   wrath ? "assets/vineyard-wrath.png"      : "assets/vineyard.png",
+    commercial: wrath ? "assets/tasting-room-wrath.png"  : "assets/tasting-room.png",
+    cellar:     wrath ? "assets/cellar-wrath.png"        : "assets/cellar.png"
   };
   return `
     <section class="scene-art ${kind}" style="background-image: linear-gradient(90deg, rgba(31,36,33,.58), rgba(31,36,33,.08)), url('${map[kind]}');">

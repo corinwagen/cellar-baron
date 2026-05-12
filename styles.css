@@ -3222,22 +3222,6 @@ body[data-region="fingerlakes"] { --wine: #255c68; --paper: #f1f5f3; --line: #ca
   line-height: 1.6;
   margin-top: 12px;
 }
-.chalice-wrap {
-  display: flex;
-  justify-content: center;
-  margin: 16px 0;
-}
-.chalice {
-  width: 80px;
-  height: 100px;
-  color: #8b2222;
-}
-.chalice-held .chalice-fill { animation: chalice-fill-hold 2s ease forwards; }
-.chalice-spilled .chalice-fill { animation: chalice-fill-spill 2s ease forwards; }
-.chalice-fractured .chalice-fill { animation: chalice-fill-fracture 2s ease forwards; }
-@keyframes chalice-fill-hold { from { y: 100px; height: 0; } to { y: 20px; height: 80px; } }
-@keyframes chalice-fill-spill { from { y: 100px; height: 0; } to { y: 0; height: 100px; } }
-@keyframes chalice-fill-fracture { 0% { y: 100px; height: 0; } 80% { y: 0; height: 100px; opacity: 1; } 100% { opacity: 0.2; } }
 .measurement-cup-text {
   text-align: center;
   font-style: italic;
