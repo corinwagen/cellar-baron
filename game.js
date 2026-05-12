@@ -512,7 +512,8 @@ const EVENT_RULES = {
   "priest-arrives": { max: 1 },
   "priest-arrives-again": { max: 1 },
   "vintner-arrives": { max: 1 },
-  "papal-envoy": { cooldown: 999, max: 1 }
+  "papal-envoy": { cooldown: 999, max: 1 },
+  "pest-infestation": { max: 1 }
 };
 
 const PAPAL_QUESTIONS = [
@@ -600,6 +601,13 @@ const PAPAL_QUESTIONS = [
     correct: "The tasting room icon corner may remain.",
     incorrect: "The envoy's reliquary-hand twitches."
   }
+];
+
+const PEST_TYPES = [
+  { emoji: "🐛", speed: 0.55, size: 22, name: "leafroller",   hp: 1 },
+  { emoji: "🦗", speed: 1.10, size: 19, name: "leafhopper",   hp: 1 },
+  { emoji: "🪲", speed: 0.38, size: 26, name: "vine beetle",  hp: 2 },
+  { emoji: "🦟", speed: 1.45, size: 17, name: "sharpshooter", hp: 1 },
 ];
 
 const ACTION_CAPACITY = {
@@ -1593,6 +1601,40 @@ const EVENT_DECK = [
         label: "Admit him",
         hint: "Submit to the ecclesiastical examination.",
         effect: s => { startPapalQuiz(); }
+      }
+    ]
+  },
+  {
+    id: "pest-infestation",
+    title: "Something Moving in the Canopy",
+    body: "Scouts are reporting unusual insect activity across the blocks — leafrollers in the upper wire, possibly worse below. It will compound if left alone.",
+    priority: true,
+    condition: s => !inWrath(s) && !s.pestInfestationActive && s.rows.length >= 2 && s.month >= 20,
+    choices: [
+      {
+        label: "Start scouting",
+        hint: "Active pest management begins. Your clicking determines how much damage reaches the vines over the next 3 months.",
+        effect: s => {
+          s.pestInfestationActive = true;
+          s.pestMonthsLeft = 3;
+          s.pestTotalMonths = 3;
+          s.pestTotalEscaped = 0;
+          startPestMinigame();
+        }
+      },
+      {
+        label: "Call an exterminator ($5,000)",
+        cost: 5000,
+        hint: "Chemical treatment suppresses the infestation. No minigame, but blocks take light disease hit and organic certification is suspended for a season.",
+        effect: s => {
+          s.rows.forEach(r => { r.disease = clamp((r.disease || 0) + 8, 0, 100); r.threat = Math.round(r.disease / 11); });
+          if (s.classification?.organic) {
+            s.classification.organic = false;
+            log(s, "The exterminator came through. The infestation is contained, but the chemical application voids organic certification.");
+          } else {
+            log(s, "The exterminator came through. The infestation is contained. Vines show minor residual disease pressure.");
+          }
+        }
       }
     ]
   },
@@ -3484,6 +3526,9 @@ let guideStep = null;
 let noHelpModalOpen = false;
 let papalQuiz = null; // { questions, idx, score, phase, lastCorrect, lastFeedback, resultTitle, resultBody, prestigeGain }
 let papalQuizTimerId = null;
+let pestState = null;  // { bugs, killed, escaped, escapedThisMonth, killedThisMonth, spawnAccum }
+let pestAnimId = null;
+let pestBugSeq = 0;
 
 const SETUP_STEPS = [
   { key: "region", title: "Choose Region", kicker: "Where the estate lives shapes weather, prestige, land cost, and grape options." },
@@ -3817,6 +3862,8 @@ const ACHIEVEMENTS = [
   { id: "curial-endorsement",    emoji: "✝️",  name: "Curial Endorsement",     desc: "Answered all 7 questions correctly. Rome is satisfied." },
   { id: "nihil-obstat",          emoji: "📜",  name: "Nihil Obstat",            desc: "Passed the papal examination with minor reservations." },
   { id: "genevan-influence",     emoji: "🪤",  name: "Suspected Genevan Influence", desc: "The envoy left early. The secretary has a very long list." },
+  { id: "pest-scout",            emoji: "🐛",  name: "Field Scout",                 desc: "Survived a pest infestation. Some of them made it through." },
+  { id: "pest-clean-sweep",      emoji: "🎯",  name: "Clean Sweep",                 desc: "Kept total escaped bugs under 15 across a full infestation." },
 ];
 
 function createState() {
@@ -3927,6 +3974,10 @@ function createState() {
     vintnerSpawned: false,
     vintnerArrivalEventFired: false,
     papalEnvoyDone: false,
+    pestInfestationActive: false,
+    pestMonthsLeft: 0,
+    pestTotalMonths: 3,
+    pestTotalEscaped: 0,
     prestigeBeforeMonth: r.prestige,
     lastHarvestForecast: 0,
     lastHarvestGrapes: 0
@@ -4679,6 +4730,7 @@ function loadGame() {
   ensureHistory(state);
   ensureAllStaffProgress(state);
   helpOpen = !state.tutorialSeen;
+  if (state.pestInfestationActive) startPestMinigame();
   render();
 }
 
@@ -4716,6 +4768,11 @@ function ensureEconomy(s) {
   if (typeof s.heroicsTotal !== "number") s.heroicsTotal = 0;
   if (typeof s.vintnerSpawned !== "boolean") s.vintnerSpawned = false;
   if (typeof s.vintnerArrivalEventFired !== "boolean") s.vintnerArrivalEventFired = false;
+  if (typeof s.papalEnvoyDone !== "boolean") s.papalEnvoyDone = false;
+  if (typeof s.pestInfestationActive !== "boolean") s.pestInfestationActive = false;
+  if (typeof s.pestMonthsLeft !== "number") s.pestMonthsLeft = 0;
+  if (typeof s.pestTotalMonths !== "number") s.pestTotalMonths = 3;
+  if (typeof s.pestTotalEscaped !== "number") s.pestTotalEscaped = 0;
   if (typeof s.prestigeBeforeMonth !== "number") s.prestigeBeforeMonth = s.prestige;
   if (typeof s.lastHarvestForecast !== "number") s.lastHarvestForecast = 0;
   if (typeof s.lastHarvestGrapes !== "number") s.lastHarvestGrapes = 0;
@@ -6451,6 +6508,7 @@ function profileTier(p) {
 
 function advanceMonth() {
   if (state.event || state.gameOver) return;
+  applyPestMonthEnd(state);
   monthlyTick(state);
   checkGameOver();
   render();
@@ -7626,6 +7684,211 @@ function papalQuizModal() {
       </div>
     </div>
   `;
+}
+
+// ── Pest Infestation Minigame ────────────────────────────────────────────────
+
+function startPestMinigame() {
+  if (pestAnimId) cancelAnimationFrame(pestAnimId);
+  pestState = {
+    bugs: [],
+    killed: 0, escaped: 0,
+    killedThisMonth: 0, escapedThisMonth: 0,
+    spawnAccum: 0,
+    lastTs: null
+  };
+  pestBugSeq = 0;
+  const overlay = document.getElementById("pest-overlay");
+  if (overlay) overlay.innerHTML = "";
+  const hud = document.getElementById("pest-hud");
+  if (hud) hud.style.display = "flex";
+  pestAnimId = requestAnimationFrame(_pestLoop);
+}
+
+function stopPestMinigame() {
+  if (pestAnimId) { cancelAnimationFrame(pestAnimId); pestAnimId = null; }
+  pestState = null;
+  const overlay = document.getElementById("pest-overlay");
+  if (overlay) overlay.innerHTML = "";
+  const hud = document.getElementById("pest-hud");
+  if (hud) { hud.style.display = "none"; hud.innerHTML = ""; }
+}
+
+function _pestLoop(ts) {
+  pestAnimId = requestAnimationFrame(_pestLoop);
+  if (!pestState || !state?.pestInfestationActive) return;
+
+  // Pause during measurement or papal quiz
+  if ((state.wrathState?.mode === "measurement") || papalQuiz) return;
+
+  const overlay = document.getElementById("pest-overlay");
+  if (!overlay) return;
+
+  // Delta time in seconds, capped to avoid burst after tab switch
+  const dt = pestState.lastTs === null ? 0 : Math.min(0.1, (ts - pestState.lastTs) / 1000);
+  pestState.lastTs = ts;
+
+  // Escalating spawn rate (bugs per second): 0.18 → 0.28 → 0.38 across 3 months
+  const monthsDone = (state.pestTotalMonths || 3) - (state.pestMonthsLeft || 3);
+  const bugsPerSec = 0.18 + monthsDone * 0.10;
+  pestState.spawnAccum += bugsPerSec * dt;
+  while (pestState.spawnAccum >= 1) {
+    _spawnBug(overlay);
+    pestState.spawnAccum -= 1;
+  }
+
+  // Update positions
+  const escaped = [];
+  for (const bug of pestState.bugs) {
+    if (bug.dying) continue;
+    bug.x += bug.vx;
+    bug.y += bug.vy;
+    bug.t += 1;
+
+    const wobble = Math.sin(bug.t * bug.wFreq) * bug.wAmp;
+    const perpX = -bug.vy / bug.spd;
+    const perpY =  bug.vx / bug.spd;
+    const wx = bug.x + wobble * perpX;
+    const wy = bug.y + wobble * perpY;
+
+    const el = document.getElementById(`pest-bug-${bug.id}`);
+    if (el) el.style.transform = `translate(${wx}px,${wy}px)`;
+
+    if (wy > window.innerHeight + 60 || wx < -80 || wx > window.innerWidth + 80) {
+      escaped.push(bug.id);
+      pestState.escaped++;
+      pestState.escapedThisMonth++;
+      state.pestTotalEscaped = (state.pestTotalEscaped || 0) + 1;
+      if (el) el.remove();
+    }
+  }
+  if (escaped.length) pestState.bugs = pestState.bugs.filter(b => !escaped.includes(b.id));
+
+  _updatePestHud();
+}
+
+function _spawnBug(overlay) {
+  const type = PEST_TYPES[Math.floor(Math.random() * PEST_TYPES.length)];
+  const id = pestBugSeq++;
+
+  // Spawn from top (60%) or left/right sides
+  const edge = Math.random() < 0.6 ? 0 : (Math.random() < 0.5 ? 1 : 2);
+  let sx, sy;
+  if (edge === 0) {
+    sx = Math.random() * window.innerWidth;
+    sy = -40;
+  } else if (edge === 1) {
+    sx = -40;
+    sy = 60 + Math.random() * window.innerHeight * 0.45;
+  } else {
+    sx = window.innerWidth + 40;
+    sy = 60 + Math.random() * window.innerHeight * 0.45;
+  }
+
+  // Target: lower-center of viewport (the vineyard)
+  const tx = window.innerWidth  * (0.2 + Math.random() * 0.6);
+  const ty = window.innerHeight * (0.65 + Math.random() * 0.3);
+  const dx = tx - sx, dy = ty - sy;
+  const dist = Math.hypot(dx, dy) || 1;
+  const spd = type.speed * (0.7 + Math.random() * 0.6);
+
+  const bug = {
+    id, type,
+    x: sx, y: sy,
+    vx: (dx / dist) * spd,
+    vy: (dy / dist) * spd,
+    spd,
+    t: Math.random() * 100,
+    wFreq: 0.035 + Math.random() * 0.025,
+    wAmp:  6 + Math.random() * 10,
+    hp: type.hp,
+    dying: false
+  };
+  pestState.bugs.push(bug);
+
+  const el = document.createElement("div");
+  el.id = `pest-bug-${id}`;
+  el.className = "pest-bug";
+  el.textContent = type.emoji;
+  el.style.fontSize = type.size + "px";
+  el.style.transform = `translate(${sx}px,${sy}px)`;
+  el.setAttribute("role", "button");
+  el.setAttribute("aria-label", `Kill ${type.name}`);
+  el.setAttribute("tabindex", "0");
+  el.addEventListener("click", () => killBug(id));
+  el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") killBug(id); });
+  overlay.appendChild(el);
+}
+
+function killBug(id) {
+  if (!pestState) return;
+  const bug = pestState.bugs.find(b => b.id === id);
+  if (!bug || bug.dying) return;
+
+  bug.hp -= 1;
+  const el = document.getElementById(`pest-bug-${id}`);
+
+  if (bug.hp > 0) {
+    if (el) { el.classList.add("pest-bug-hit"); setTimeout(() => el?.classList.remove("pest-bug-hit"), 120); }
+    return;
+  }
+
+  bug.dying = true;
+  pestState.killed++;
+  pestState.killedThisMonth++;
+  if (el) {
+    el.classList.add("pest-bug-dying");
+    setTimeout(() => {
+      el.remove();
+      if (pestState) pestState.bugs = pestState.bugs.filter(b => b.id !== id);
+    }, 280);
+  }
+}
+
+function _updatePestHud() {
+  const hud = document.getElementById("pest-hud");
+  if (!hud || !pestState || !state) return;
+  const cur = (state.pestTotalMonths || 3) - (state.pestMonthsLeft || 0) + 1;
+  const tot = state.pestTotalMonths || 3;
+  const mo  = Math.min(cur, tot);
+  hud.innerHTML = `
+    <span class="pest-hud-bug">🐛</span>
+    <span class="pest-hud-label">Infestation · Month ${mo}/${tot}</span>
+    <span class="pest-hud-killed">✓ ${pestState.killed} killed</span>
+    <span class="pest-hud-escaped">✗ ${pestState.escaped} escaped</span>
+  `;
+}
+
+function applyPestMonthEnd(s) {
+  if (!s.pestInfestationActive) return;
+
+  const escaped = pestState?.escapedThisMonth ?? 20;
+  const killed  = pestState?.killedThisMonth  ?? 0;
+  const total   = escaped + killed;
+  const ratio   = total > 0 ? escaped / total : 0.8;
+
+  // Disease delta: 3–22 raw disease points per row
+  const diseaseDelta = Math.round(3 + ratio * 19);
+  s.rows.forEach(r => {
+    r.disease  = clamp((r.disease || 0) + diseaseDelta, 0, 100);
+    r.pressure = "pest pressure";
+    r.threat   = Math.round(r.disease / 11);
+    r.threatName = "pest pressure";
+  });
+
+  const rating = ratio < 0.2 ? "excellently" : ratio < 0.5 ? "adequately" : "poorly";
+  log(s, `Pest scouting: ${killed} eliminated, ${escaped} reached the vines. Canopy defended ${rating}.`);
+
+  if (pestState) { pestState.escapedThisMonth = 0; pestState.killedThisMonth = 0; }
+
+  s.pestMonthsLeft -= 1;
+  if (s.pestMonthsLeft <= 0) {
+    s.pestInfestationActive = false;
+    awardAchievement(s, "pest-scout");
+    if ((s.pestTotalEscaped || 0) < 15) awardAchievement(s, "pest-clean-sweep");
+    stopPestMinigame();
+    log(s, "The infestation has cleared. Scouts report no further activity in the blocks.");
+  }
 }
 
 function tip(text) {
@@ -9249,6 +9512,7 @@ window.closeNoHelpModal = closeNoHelpModal;
 window.papalAnswer = papalAnswer;
 window.papalNext = papalNext;
 window.closePapalQuiz = closePapalQuiz;
+window.killBug = killBug;
 window.useAction = useAction;
 window.advanceMonth = advanceMonth;
 window.setPrice = setPrice;
