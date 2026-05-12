@@ -3991,7 +3991,7 @@ function onVintnerHired(s) {
 
 function currentSeal(s) {
   if (!inWrath(s)) return 0;
-  const thresholds = [12, 25, 38, 52, 66, 80, 92, 100];
+  const thresholds = [12, 25, 37, 50, 62, 75, 88, 100];
   const slow = hasStaff(s, "priest") ? 3 : 0;
   const adjustedCup = Math.max(0, s.wrathState.cup - slow * 3);
   let seal = 0;
