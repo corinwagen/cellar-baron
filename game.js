@@ -1494,8 +1494,10 @@ const EVENT_DECK = [
   },
   {
     id: "frost",
-    title: "Late Frost Warning",
-    body: "Cold air is pooling in the vineyard. Fans and candles are expensive, but losing buds is worse.",
+    title: s => inWrath(s) && s.wrathState.seal >= 4 ? "A Frost Came Down" : "Late Frost Warning",
+    body: s => inWrath(s) && s.wrathState.seal >= 4
+      ? "The air came down from the hills and settled over the vineyard before dawn. It did not behave as frost behaves. The fans are running. The candles are lit. The cold does not care."
+      : "Cold air is pooling in the vineyard. Fans and candles are expensive, but losing buds is worse.",
     type: "frost",
     choices: [
       { label: "Run frost protection", cost: 9000, insured: true,
@@ -1606,8 +1608,10 @@ const EVENT_DECK = [
   },
   {
     id: "mildew",
-    title: "Powdery Mildew Pressure",
-    body: "Humid nights are feeding spores in the canopy.",
+    title: s => inWrath(s) && s.wrathState.seal >= 4 ? "Something in the Canopy" : "Powdery Mildew Pressure",
+    body: s => inWrath(s) && s.wrathState.seal >= 4
+      ? "The white growth appeared on the leaves overnight. It spread without wind. The spray will hold it, or the spray will not matter. The crew is asking questions no one can answer."
+      : "Humid nights are feeding spores in the canopy.",
     type: "rain",
     choices: [
       { label: "Organic spray pass", cost: 7200, insured: true,
@@ -1853,8 +1857,10 @@ const EVENT_DECK = [
   // ── Terroir events ────────────────────────────────────────────
   {
     id: "napa-smoke",
-    title: "Wildfire Smoke Advisory",
-    body: "Smoke from nearby fires is drifting over the valley during veraison. Smoke taint at this stage is hard to reverse once it sets into the skins.",
+    title: s => inWrath(s) && s.wrathState.seal >= 4 ? "Fire and Smoke from the Valley" : "Wildfire Smoke Advisory",
+    body: s => inWrath(s) && s.wrathState.seal >= 4
+      ? "The smoke arrived without a visible fire. It sits at vine height, not above it. Taint is setting into the skins and the crew says the smell is wrong — it smells like something older than wood burning."
+      : "Smoke from nearby fires is drifting over the valley during veraison. Smoke taint at this stage is hard to reverse once it sets into the skins.",
     condition: s => s.region === "napa",
     minMonth: 6,
     choices: [
@@ -1927,8 +1933,10 @@ const EVENT_DECK = [
   },
   {
     id: "mendoza-hail",
-    title: "Hailstorm Warning",
-    body: "A localized storm cell is building over the Andes. Hail at fruit-set can shred clusters and spike disease pressure for the rest of the season.",
+    title: s => inWrath(s) && s.wrathState.seal >= 4 ? "Hail Out of Heaven" : "Hailstorm Warning",
+    body: s => inWrath(s) && s.wrathState.seal >= 4
+      ? "The storm did not build from below. It arrived already formed. Stones are falling on the upper blocks. This is not weather. The netting was not designed for this."
+      : "A localized storm cell is building over the Andes. Hail at fruit-set can shred clusters and spike disease pressure for the rest of the season.",
     condition: s => s.region === "mendoza",
     type: "rain",
     choices: [
@@ -2039,8 +2047,10 @@ const EVENT_DECK = [
   },
   {
     id: "barossa-heat",
-    title: "Extreme Heat Event",
-    body: "A forecasted week of 112°F+ temperatures is arriving during crucial ripening. Without intervention, the fruit will cook on the vine.",
+    title: s => inWrath(s) && s.wrathState.seal >= 4 ? "The Heat from the East" : "Extreme Heat Event",
+    body: s => inWrath(s) && s.wrathState.seal >= 4
+      ? "The heat arrived before the forecast said it would. The air smells of sulphur and dry earth from the north. The fruit on the east-facing blocks is already blackening. This is not a heat wave."
+      : "A forecasted week of 112°F+ temperatures is arriving during crucial ripening. Without intervention, the fruit will cook on the vine.",
     condition: s => s.region === "barossa",
     choices: [
       { label: "Emergency irrigation and shade cloth", cost: 12000,
@@ -2783,8 +2793,10 @@ const EVENT_DECK = [
   // ── Vine disease ──────────────────────────────────────────────────────────
   {
     id: "vine-disease",
-    title: "Trunk Disease in the Vineyard",
-    body: "Your vineyard manager has confirmed it: esca or eutypa trunk disease is progressing through multiple blocks. The fungus travels through old pruning wounds and will slowly hollow out the wood. Every option is expensive in its own way.",
+    title: s => inWrath(s) && s.wrathState.seal >= 5 ? "The Vine Is Consumed" : "Trunk Disease in the Vineyard",
+    body: s => inWrath(s) && s.wrathState.seal >= 5
+      ? "The wood is hollow through three blocks. The vineyard manager says it is not esca, not eutypa — the pattern is wrong, the spread is wrong. No one pruned here recently. The vine is being consumed from within and no one knows by what."
+      : "Your vineyard manager has confirmed it: esca or eutypa trunk disease is progressing through multiple blocks. The fungus travels through old pruning wounds and will slowly hollow out the wood. Every option is expensive in its own way.",
     minMonth: 18,
     condition: s => s.rows.length >= 2,
     choices: [
@@ -6865,6 +6877,18 @@ function harvest(s) {
   };
   s.harvestCount = (s.harvestCount || 0) + 1;
   log(s, `Harvest: ${grapes} CE from ${productive.length} blocks. Disease ${Math.round(avgDisease)}, water ${Math.round(avgWater)}. ${vintageScoreLabel(vintageScore)} vintage. Labor ${money(laborCost)}.`);
+  const harvestMoraleGain = ({ 1: -3, 2: 0, 3: 3, 4: 6, 5: 10 })[clamp(vintageScore, 1, 5)];
+  s.morale = clamp(s.morale + harvestMoraleGain, 0, 100);
+  if (harvestMoraleGain > 0) {
+    const harvestMsg = vintageScore >= 5
+      ? "The crew knows what they brought in. Morale is high."
+      : vintageScore >= 4
+      ? "A strong harvest lifts the crew's mood going into cellar season."
+      : "Solid harvest. The team is in good shape.";
+    log(s, harvestMsg);
+  } else if (harvestMoraleGain < 0) {
+    log(s, "A difficult harvest. The crew is tired and disappointed. Morale took a hit.");
+  }
   return s.harvestReport;
 }
 
@@ -6958,10 +6982,11 @@ function resolveEvent(choiceIndex) {
     );
   }
   const displayLabel = choice.iniquity ? "Severin dealt with it" : choice.label;
-  if (!choice.iniquity) log(state, `${event.title}: ${displayLabel}.`);
+  const resolvedEventTitle = typeof event.title === "function" ? event.title(state) : event.title;
+  if (!choice.iniquity) log(state, `${resolvedEventTitle}: ${displayLabel}.`);
   const summary = state.log.slice(0, Math.max(1, state.log.length - beforeLog)).map(entry => entry.text).reverse().join(" ");
   state.lastEventResult = {
-    title: `${event.title} resolved`,
+    title: `${resolvedEventTitle} resolved`,
     choice: displayLabel,
     summary: summary || "Outcome recorded in the estate ledger."
   };
@@ -7298,8 +7323,8 @@ function topbar() {
         <div class="brand">
           <div class="mark">${wineryInitials(state.wineryName)}</div>
           <div>
-            <h1>${escapeHtml(state.wineryName || "Unnamed Estate")}</h1>
-            <p>${region().name} • ${varietal().name} • ${philosophy().name} • ${difficulty().name}</p>
+            <h1>${corruptChars(state, wrathLabel(state, state.wineryName || "Unnamed Estate", [[8, "the estate"]]))}</h1>
+            <p>${corruptChars(state, wrathLabel(state, region().name, [[7, "the press at Bozrah"], [6, "Bozrah"]]))} • ${corruptChars(state, wrathLabel(state, varietal().name, [[7, "the fruit of the vine"]]))} • ${corruptChars(state, wrathLabel(state, philosophy().name, [[6, "the old way"]]))} • ${corruptChars(state, wrathLabel(state, difficulty().name, [[7, "the appointed time"]]))}</p>
           </div>
         </div>
         <div class="kpis">
@@ -7338,9 +7363,9 @@ function eventPanel() {
   });
   return `
     <section class="panel event-banner ${state.event.image ? (state.event.largeArt ? "with-art-large" : "with-art") : ""}">
-      ${state.event.image ? `<img src="${state.event.image}" alt="${state.event.title}">` : ""}
+      ${state.event.image ? `<img src="${state.event.image}" alt="${typeof state.event.title === "function" ? state.event.title(state) : state.event.title}">` : ""}
       <div>
-        <strong>${state.event.title}</strong>
+        <strong>${typeof state.event.title === "function" ? state.event.title(state) : state.event.title}</strong>
         <div class="small">${typeof state.event.body === "function" ? state.event.body(state) : state.event.body}</div>
         <div class="event-buttons">
           ${state.event.choices.map((choice, index) => {
@@ -8814,9 +8839,9 @@ function gameOverModal() {
     "endured-alone": "The estate stood by what it had done."
   };
   return `
-    <div class="modal">
-      <div class="modal-card score-screen">
-        <h2>Five seasons at ${escapeHtml(state.wineryName)}</h2>
+    <div class="modal${wrathEnding ? " wrath-ending-modal" : ""}">
+      <div class="modal-card score-screen${wrathEnding ? " wrath-ending-card" : ""}">
+        <h2>${wrathEnding ? "The record" : `Five seasons at ${escapeHtml(state.wineryName)}`}</h2>
         <p class="score-tagline">${wrathEnding ? wrathTaglines[wrathEnding] || "Here's how you did." : "Here's how you did."}</p>
         <div class="score-grid">
           <div class="stat-box"><span>Peak prestige</span><strong>${state.maxPrestige || state.prestige}</strong></div>

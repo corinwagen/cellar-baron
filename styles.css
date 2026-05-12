@@ -3293,20 +3293,102 @@ body.corruption-stage-6 .panel { border-color: rgba(139,34,34,0.28); background:
 body.corruption-stage-6 .topbar { background: color-mix(in srgb, #fff 90%, #3a0a0a 10%); }
 body.corruption-stage-6 .kpi strong { animation: clock-flicker 6s infinite; }
 
-/* Seal 7 — heavy */
-body.corruption-stage-7 { background: color-mix(in srgb, var(--paper) 82%, #1a0808 18%); color: #3a2020; }
-body.corruption-stage-7 .panel { border-color: rgba(139,34,34,0.38); background: color-mix(in srgb, var(--panel) 90%, #1a0808 10%); }
-body.corruption-stage-7 .topbar { background: color-mix(in srgb, #fff 83%, #1a0808 17%); }
-body.corruption-stage-7 .kpi strong { animation: clock-flicker 4s infinite; }
-body.corruption-stage-7 button:not(.primary) { border-color: rgba(139,34,34,0.30); }
+/* Seal 7 — blood red (Joel: sun to sackcloth, moon to blood) */
+body.corruption-stage-7 { background: #1c0606; color: #d4b0b0; }
+body.corruption-stage-7 .panel { background: #220a0a; border-color: #5a1414; color: #d4b0b0; }
+body.corruption-stage-7 .topbar { background: #140404; border-bottom-color: #5a1414; }
+body.corruption-stage-7 .kpi { background: #260808; border-color: #5a1414; color: #c4a0a0; }
+body.corruption-stage-7 strong { color: #f0d0d0; }
+body.corruption-stage-7 button:not(.primary) { background: #2a0e0e; border-color: #5a1414; color: #c4a0a0; }
+body.corruption-stage-7 .kpi strong { animation: clock-flicker 2.5s infinite; color: #e8b0b0; }
+body.corruption-stage-7 .cue-italic { color: #c06060; }
+body.corruption-stage-7 .stat-box { background: #260808; border-color: #5a1414; color: #d4b0b0; }
+body.corruption-stage-7 .stat-box span { color: #8a4040; }
+body.corruption-stage-7 .stat-box strong { color: #e8c0c0; }
+body.corruption-stage-7 .row-card { background: #200808; border-color: #5a1414; color: #d4b0b0; }
+body.corruption-stage-7 .row-badge { background: #3a1010; color: #a07070; }
+body.corruption-stage-7 .row-meter-track { background: #3a1212; }
+body.corruption-stage-7 .row-meter-fill.health { background: #7a2020; }
+body.corruption-stage-7 .action-card { background: #200808; border-color: #5a1414; }
+body.corruption-stage-7 .action-card span { color: #9a6060; }
+body.corruption-stage-7 .action-card .effect { color: #c08080; }
+body.corruption-stage-7 .empty { background: #200808; border-color: #5a1414; color: #9a6060; }
+body.corruption-stage-7 .channel-row { background: #200808; border-color: #5a1414; color: #d4b0b0; }
+body.corruption-stage-7 .channel-row.warn { background: #260a0a; border-color: #7a2020; }
+body.corruption-stage-7 .channel-row.danger { background: #2a0808; border-color: #8a1a1a; }
+body.corruption-stage-7 .channel-row span { color: #8a4040; }
+body.corruption-stage-7 .pnl-block { background: #200808; border-color: #5a1414; }
+body.corruption-stage-7 .debt-panel { background: #200808; border-color: #5a1414; }
+body.corruption-stage-7 .flow-step { background: #200808; border-color: #5a1414; }
+body.corruption-stage-7 .flow-step span, body.corruption-stage-7 .flow-step em { color: #8a4040; }
+body.corruption-stage-7 .capacity-strip span { background: #200808; border-color: #5a1414; color: #9a6060; }
+body.corruption-stage-7 .archive-card { background: #200808; border-color: #5a1414; }
+body.corruption-stage-7 .archive-card.sold-out { background: #260808; border-color: #7a2020; }
+body.corruption-stage-7 .archive-stats span { background: #1c0606; border-color: #5a1414; color: #9a6060; }
+body.corruption-stage-7 .archive-head span, body.corruption-stage-7 .archive-card p { color: #8a4040; }
 
-/* Seal 8 / measurement — near-black */
+/* Stage 9 / measurement — near-black, KPIs and log hidden */
 body.corruption-stage-9 { background: #1a1210; color: #d4c4b4; }
 body.corruption-stage-9 .panel { background: #221a16; border-color: #3a2a22; color: #d4c4b4; }
 body.corruption-stage-9 .topbar { background: #161008; border-bottom-color: #3a2a22; }
 body.corruption-stage-9 button:not(.primary) { background: #2a1e18; border-color: #3a2a22; color: #c4b4a4; }
 body.corruption-stage-9 .kpi { color: #c4b4a4; }
 body.corruption-stage-9 strong { color: #e8d8c8; }
+body.corruption-stage-9 .kpis { visibility: hidden; }
+body.corruption-stage-9 .side-rail > *:not(.measurement-panel) { visibility: hidden; }
+
+.wrath-ending-modal {
+  background: rgba(10, 4, 4, 0.92);
+}
+
+.wrath-ending-card {
+  background: #1c0808;
+  border-color: #5a1414;
+  color: #d4b0b0;
+}
+
+.wrath-ending-card h2 {
+  color: #e8c8c8;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+}
+
+.wrath-ending-card .score-tagline {
+  color: #a07070;
+  font-style: italic;
+}
+
+.wrath-ending-card .score-grid .stat-box {
+  background: #240c0c;
+  border-color: #5a1414;
+  color: #d4b0b0;
+}
+
+.wrath-ending-card .score-grid .stat-box span {
+  color: #8a5050;
+}
+
+.wrath-ending-card .score-grid .stat-box strong {
+  color: #e8c0c0;
+}
+
+.wrath-ending-card .achievement-section {
+  border-top-color: #5a1414;
+}
+
+.wrath-ending-card .achievement-section h3 {
+  color: #8a5050;
+}
+
+.wrath-ending-card button.primary {
+  background: #4a1010;
+  border-color: #7a2020;
+  color: #e8c8c8;
+}
+
+.wrath-ending-card button.primary:hover {
+  background: #5a1414;
+}
 
 .staff-arrival-banner {
   width: 100%;
