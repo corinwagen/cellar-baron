@@ -1655,9 +1655,9 @@ const EVENT_DECK = [
         }
       },
       {
-        label: "Call an exterminator ($5,000)",
+        label: "Call an exterminator",
         cost: 5000,
-        hint: "Chemical treatment suppresses the infestation. No minigame, but blocks take light disease hit and organic certification is suspended for a season.",
+        hint: "Chemical treatment suppresses the infestation. Blocks take a light disease hit and organic certification is suspended for a season.",
         effect: s => {
           s.rows.forEach(r => { r.disease = clamp((r.disease || 0) + 8, 0, 100); r.threat = Math.round(r.disease / 11); });
           if (s.classification?.organic) {
