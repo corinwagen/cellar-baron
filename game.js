@@ -3730,7 +3730,18 @@ function shortMoney(v) {
 }
 
 function currentDateLabel(s = state) {
-  return monthDateLabel(s.month, false);
+  if (!inWrath(s)) return monthDateLabel(s.month, false);
+  const seal = s.wrathState?.seal || 0;
+  const cup  = s.wrathState?.cup  || 0;
+  if (seal >= 7) return "the appointed time";
+  const index = START_MONTH_INDEX + s.month - 1;
+  const name  = MONTH_NAMES[index % 12];
+  const trueYear = START_YEAR + Math.floor(index / 12);
+  if (seal >= 3) {
+    const drift = Math.floor(cup / 3); // ~12 yrs at seal 3, ~29 yrs by seal 6
+    return `${name} ${trueYear - drift}`;
+  }
+  return `${name} ${trueYear}`;
 }
 
 function monthDateLabel(month, short = true) {
@@ -7199,7 +7210,7 @@ function resolveEvent(choiceIndex) {
 function checkGameOver() {
   if (!state) return;
   if (inWrath(state) && state.wrathState.mode === "measurement") return;
-  if (state.month > state.maxMonths) {
+  if (state.month > state.maxMonths && !inWrath(state)) {
     state.gameOver = { score: true };
     checkAchievements(state);
   } else if (state.debt > state.creditLine + 65000 || (state.cash < -50000 && availableCredit(state) <= 0) || state.prestige <= 0 || (state.morale <= 0 && !inWrath(state))) {
