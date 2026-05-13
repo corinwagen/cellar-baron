@@ -487,7 +487,15 @@ const EVENT_RULES = {
   "harvest-labor": { cooldown: 14 },
   "prestige-dinner": { cooldown: 14 },
   "cellar-heat": { cooldown: 16 },
-  "used-barrels": { cooldown: 20 },
+  "auction":       { cooldown: 20, max: 3 },
+  "frost":         { cooldown: 8  },
+  "critic":        { cooldown: 12 },
+  "union":         { cooldown: 18 },
+  "restaurant":    { cooldown: 14 },
+  "mildew":        { cooldown: 10 },
+  "viral":         { cooldown: 20, max: 2 },
+  "glass":         { cooldown: 16 },
+  "used-barrels":  { cooldown: 20 },
   "cork-tca": { cooldown: 18 },
   "expansion-loan": { cooldown: 30, max: 2 },
   "fingerlakes-comp": { cooldown: 18 },
@@ -2044,7 +2052,7 @@ const EVENT_DECK = [
     id: "competition",
     title: "Regional Wine Competition",
     body: "Your reputation has earned an invitation to a prestigious blind tasting. Judges are collecting entries from the region's best producers.",
-    condition: s => s.quality >= 85 && s.prestige >= 48 && !s.competitionEntered,
+    condition: s => !s.competitionEntered && (s.month >= 42 || (s.quality >= 85 && s.prestige >= 48)),
     minMonth: 10,
     choices: [
       {
@@ -3435,7 +3443,7 @@ const ACTIONS = [
     id: "hospitality",
     name: "Run Hospitality",
     detail: "Open the tasting room. Visitor numbers peak in harvest season and dip in winter, but you can always open the door.",
-    consequence: "Sells premium cases, raises demand and morale. Prestige +1 if quality ≥ 75 and tasting room is built.",
+    consequence: "Sells premium cases, raises demand, morale, and prestige.",
     cost: 1600,
     apply: s => {
       const visitorSeasonMod = { Dormant: 0.55, Budbreak: 0.8, Flowering: 0.9, Veraison: 1.0, Harvest: 1.15, Cellar: 0.7 }[s.season] ?? 1.0;
@@ -3448,7 +3456,10 @@ const ACTIONS = [
       s.totalRevenue += revenue + visits * 14;
       recordArchiveSale(s, cases, revenue, "cellarDoor");
       s.morale += 3 + staffBonus(s, "hospitality");
-      s.prestige += (s.quality >= 75 && s.buildings.room >= 1) ? 1 : 0;
+      // Prestige gain is probabilistic: chance scales with quality and room tier.
+      // A quality-90 estate with a room gains prestige most runs; quality-60 rarely does.
+      const hospPrestigeChance = clamp((s.quality - 55) / 50 + (s.buildings.room || 0) * 0.15, 0.05, 0.95);
+      if (rand() < hospPrestigeChance) s.prestige += 1;
       if (cases > 0) {
         addChannelDemand(s, ["cellarDoor"], 2 + staffBonus(s, "hospitality"));
         addChannelDemand(s, ["club"], 1 + Math.floor(staffBonus(s, "hospitality") / 2));
