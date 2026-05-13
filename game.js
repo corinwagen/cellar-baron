@@ -620,6 +620,134 @@ const ACTION_CAPACITY = {
   "natural-cellar": "cellar"
 };
 
+// ── Wine Battle Minigame ─────────────────────────────────────────────────────
+// Type chart: tannin/acid/floral form one triangle; fruit/earth/oak form another.
+// Each type beats one and loses to one within its triangle; cross-triangle is neutral.
+const BATTLE_TYPE_CHART = {
+  tannin: { beats: "floral",  losesTo: "acid"  },
+  acid:   { beats: "tannin",  losesTo: "floral" },
+  floral: { beats: "acid",    losesTo: "tannin" },
+  fruit:  { beats: "earth",   losesTo: "oak"   },
+  earth:  { beats: "oak",     losesTo: "fruit"  },
+  oak:    { beats: "fruit",   losesTo: "earth"  },
+};
+
+function battleEffectiveness(moveType, defWeakTo, defResistTo) {
+  if (moveType === defWeakTo)   return 2;
+  if (moveType === defResistTo) return 0.5;
+  return 1;
+}
+
+// 4 moves per varietal — { name, type, power, announcer, hit }
+const BATTLE_MOVES = {
+  shiraz: [
+    { name: "Blackberry Barrage",  type: "fruit",  power: 30, announcer: "Shiraz unleashes a torrent of dark jammy fruit!",                    hit: "Direct hit to the palate!" },
+    { name: "Pepper Assault",      type: "tannin", power: 25, announcer: "White pepper notes hit the back of the palate!",                       hit: "Spicy persistence!" },
+    { name: "Velvet Uppercut",     type: "oak",    power: 30, announcer: "Eighteen months in French oak, deployed as a weapon.",                 hit: "The weight is staggering." },
+    { name: "Heatwave",            type: "fruit",  power: 40, announcer: "The full Barossa sun, compressed into a single devastating sip!",      hit: "Judges fan themselves." },
+  ],
+  cabernet: [
+    { name: "Cassis Cannon",       type: "fruit",  power: 25, announcer: "Blackcurrant intensity at unnerving velocity!",                        hit: "A classic right-bank impact." },
+    { name: "Pencil Shaving",      type: "earth",  power: 20, announcer: "Distinctive Bordeaux minerality deployed without warning.",            hit: "The judges lean in." },
+    { name: "Cedar Slam",          type: "oak",    power: 30, announcer: "Structurally imposing. The judges straighten up involuntarily.",       hit: "Cedar and cigar box." },
+    { name: "Iron Grip",           type: "tannin", power: 40, announcer: "Twenty-year potential. The tannins do not yield.",                     hit: "The finish goes on forever." },
+  ],
+  cabfranc: [
+    { name: "Bell Pepper Blitz",   type: "floral", power: 30, announcer: "The characteristic vegetal note divides the room instantly.",          hit: "The Loire has spoken." },
+    { name: "Loire Lightning",     type: "acid",   power: 35, announcer: "Chinon acidity! Sharp as crystal dropped on marble.",                  hit: "The freshness is violent." },
+    { name: "Pencil Box Pursuit",  type: "earth",  power: 25, announcer: "Graphite complexity. The judges furrow their brows approvingly.",      hit: "Mineral and resolute." },
+    { name: "Violet Surge",        type: "floral", power: 20, announcer: "Aromatic florals of extraordinary delicacy rush the panel.",           hit: "Fragrant. Uncomfortably beautiful." },
+  ],
+  chardonnay: [
+    { name: "Butter Blitz",        type: "oak",    power: 35, announcer: "Full malolactic fermentation deployed as ordnance.",                   hit: "Rich, heavy, inescapable." },
+    { name: "Tropical Sideswipe",  type: "fruit",  power: 25, announcer: "Unexpected mango! The panel is visibly surprised.",                   hit: "A New World declaration." },
+    { name: "Mineral Precision",   type: "acid",   power: 20, announcer: "Chablis comparisons are made reverently.",                             hit: "Surgical and cold." },
+    { name: "Lemon Curd Offensive",type: "floral", power: 30, announcer: "Pastry notes in dense aromatic formation!",                           hit: "Like a very elegant pastry." },
+  ],
+  pinot: [
+    { name: "Cherry Serenade",     type: "floral", power: 25, announcer: "Ethereal aromatics drift gently across the tasting panel.",            hit: "A hush falls over the room." },
+    { name: "Silk Ribbon",         type: "acid",   power: 20, announcer: "Impossibly precise. The acidity is surgical.",                         hit: "Clean and haunting." },
+    { name: "Autumn Reverie",      type: "earth",  power: 30, announcer: "Forest floor. Underbrush. A memory of rain.",                          hit: "The judges close their eyes." },
+    { name: "Heartbreak Finish",   type: "floral", power: 40, announcer: "The finish lingers for a full minute. One judge weeps openly.",        hit: "Terrifyingly beautiful." },
+  ],
+  merlot: [
+    { name: "Plum Fist",           type: "fruit",  power: 30, announcer: "Ripe and generous. Difficult to argue with.",                          hit: "Soft impact, maximum effect." },
+    { name: "Clay Stomp",          type: "earth",  power: 25, announcer: "Pomerol terroir expressed with quiet confidence.",                     hit: "Heavy clay authority." },
+    { name: "Velvet Haymaker",     type: "fruit",  power: 35, announcer: "Approachable. Dangerously approachable.",                              hit: "The judges reach for more." },
+    { name: "Truffle Shuffle",     type: "earth",  power: 20, announcer: "Secondary notes emerge. The sommelier gasps audibly.",                 hit: "Earthy and expensive." },
+  ],
+  sauvignon: [
+    { name: "Gooseberry Grenade",   type: "acid",   power: 35, announcer: "The classic Loire descriptor. The panel is divided!",                  hit: "Polarizing. Effective." },
+    { name: "Grapefruit Blitz",    type: "acid",   power: 30, announcer: "Eye-watering freshness! The acidity is frankly violent!",              hit: "Bracing." },
+    { name: "Herb Garden",         type: "floral", power: 25, announcer: "Green notes cascade across the palate in pleasant waves.",             hit: "Herbal panic." },
+    { name: "Passion Fruit Press", type: "fruit",  power: 20, announcer: "New World expression! Confident. Slightly caffeinated.",               hit: "Bold tropical declaration." },
+  ],
+  riesling: [
+    { name: "Petrol Bomb",         type: "earth",  power: 40, announcer: "The classic aged Riesling marker. Divisive but devastating.",          hit: "No one saw it coming." },
+    { name: "Lime Zest Flurry",    type: "acid",   power: 35, announcer: "Bone-dry finish! The acidity is extraordinary!",                      hit: "Electrifying." },
+    { name: "Slate Strike",        type: "earth",  power: 25, announcer: "Mosel minerality. The slate speaks.",                                  hit: "Old stone and cold water." },
+    { name: "Apricot Ambush",      type: "floral", power: 20, announcer: "Off-dry florals at the finish. Disarming and effective.",              hit: "Softer than expected." },
+  ],
+  malbec: [
+    { name: "Plum Avalanche",      type: "fruit",  power: 35, announcer: "Mendoza brings its full Andean force!",                               hit: "Dense purple fruit impact." },
+    { name: "Violet Blast",        type: "floral", power: 25, announcer: "Characteristic floral lift! Malbec's secret weapon deployed!",        hit: "Unexpectedly pretty." },
+    { name: "Leather Smash",       type: "tannin", power: 30, announcer: "Dense tannins. Reminiscent of a very firm handshake.",                hit: "Rustic authority." },
+    { name: "Altitude Rush",       type: "fruit",  power: 40, announcer: "High-altitude concentration unleashed at full force!",                hit: "Dense. Focused. Unyielding." },
+  ],
+  gamay: [
+    { name: "Carbonic Surge",      type: "fruit",  power: 35, announcer: "Carbonic maceration delivers pure, joyful, relentless fruit!",        hit: "Bouncy and unstoppable." },
+    { name: "Raspberry Wave",      type: "floral", power: 25, announcer: "Light, beautiful, and dangerously easy to drink.",                    hit: "The judges smile involuntarily." },
+    { name: "Banana Flash",        type: "fruit",  power: 30, announcer: "Beaujolais character fully deployed. Critics are divided.",            hit: "Very forward fruit." },
+    { name: "Granite Gambit",      type: "earth",  power: 20, announcer: "Morgon shows its mineral teeth. Surprisingly.",                       hit: "The terroir asserts itself." },
+  ],
+  nebbiolo: [
+    { name: "Tar and Roses",       type: "tannin", power: 40, announcer: "The classic Barolo profile. Uncompromising. Ancient.",                hit: "Heavy and inevitable." },
+    { name: "Garnet Grip",         type: "tannin", power: 30, announcer: "The tannins demand respect. And time. Mostly time.",                  hit: "The judges check their watches." },
+    { name: "Cherry Granite",      type: "earth",  power: 25, announcer: "Langhe minerality cuts through everything.",                          hit: "Mountain stone and tart cherry." },
+    { name: "Barolo Ultimatum",    type: "tannin", power: 45, announcer: "The King of Italian wines asserts dominance forcefully.",              hit: "Judges reach for water. There is none." },
+  ],
+  tempranillo: [
+    { name: "Rioja Reverb",        type: "tannin", power: 30, announcer: "Gran Reserva confidence. Measured. Historic.",                        hit: "Decades in the making." },
+    { name: "Leather & Tobacco",   type: "earth",  power: 35, announcer: "Classic Rioja complexity. A judge reaches for a notebook.",           hit: "Smoky and considered." },
+    { name: "Strawberry Uppercut", type: "fruit",  power: 25, announcer: "Bright red fruit! The freshness is completely deceptive.",            hit: "Light on its feet." },
+    { name: "Vanilla Ambush",      type: "oak",    power: 20, announcer: "American oak. The vanilla arrives without warning.",                  hit: "Sweet and imposing." },
+  ],
+};
+
+const BATTLE_GRAPE_PROFILE = {
+  shiraz:      { weakTo: "earth",  resistTo: "acid"   },
+  cabernet:    { weakTo: "acid",   resistTo: "floral"  },
+  cabfranc:    { weakTo: "fruit",  resistTo: "acid"    },
+  chardonnay:  { weakTo: "tannin", resistTo: "oak"     },
+  pinot:       { weakTo: "tannin", resistTo: "acid"    },
+  merlot:      { weakTo: "acid",   resistTo: "fruit"   },
+  sauvignon:   { weakTo: "tannin", resistTo: "floral"  },
+  riesling:    { weakTo: "oak",    resistTo: "acid"    },
+  malbec:      { weakTo: "floral", resistTo: "tannin"  },
+  gamay:       { weakTo: "oak",    resistTo: "fruit"   },
+  nebbiolo:    { weakTo: "acid",   resistTo: "floral"  },
+  tempranillo: { weakTo: "floral", resistTo: "earth"   },
+};
+
+const BATTLE_OPPONENTS = [
+  { id: "formidable", name: "Château Formidable",  label: "Grand Cuvée Réserve",    varietal: "merlot",      hp: 90,
+    intro: "The label is gilded. The bottle arrives wrapped in tissue. The judges greet it like an old friend." },
+  { id: "apex",       name: "Apex Ridge Reserve",  label: "Private Selection",       varietal: "cabernet",    hp: 95,
+    intro: "A Californian red with a reputation and a publicist. The label features a mountain." },
+  { id: "contemplator", name: "The Contemplator",  label: "Alte Reben Trocken",      varietal: "riesling",    hp: 80,
+    intro: "An Alsatian Riesling with a philosophy on the back label. The judges take it very seriously." },
+  { id: "benchmark",  name: "Benchmark Series No. 7", label: "Reserve",              varietal: "chardonnay",  hp: 85,
+    intro: "A well-funded Chardonnay from a large estate. The bottle is inexplicably heavy." },
+  { id: "testament",  name: "Old Vine Testament", label: "Centenario",               varietal: "tempranillo", hp: 92,
+    intro: "Eighty-year-old vines from Rioja. The winemaker makes no jokes. The wine makes none either." },
+  { id: "iron-fist",  name: "Iron Fist Cuvée",    label: "McLaren Vale",             varietal: "shiraz",      hp: 98,
+    intro: "A Shiraz built for export. Big, dark, and unapologetically Australian." },
+  { id: "petit-mystere", name: "Le Petit Mystère", label: "Premier Cru",             varietal: "pinot",       hp: 88,
+    intro: "A Burgundian Pinot with an unpronounceable village name. The sommelier whispers it." },
+  { id: "signal-fire", name: "Signal Fire",        label: "High Altitude Malbec",    varietal: "malbec",      hp: 93,
+    intro: "An Argentine Malbec grown at 1,400 meters. The winemaker wore a parka during harvest." },
+];
+
 const REGION_CLIMATE = {
   napa: {
     avgHigh: [56, 61, 65, 70, 76, 83, 87, 87, 84, 76, 64, 56],
@@ -1518,7 +1646,7 @@ const EVENT_DECK = [
     image: "assets/vintner-arrival.png",
     largeArt: true,
     priority: true,
-    condition: s => s.vintnerSpawned && !s.vintnerArrivalEventFired,
+    condition: s => s.vintnerSpawned && !s.vintnerArrivalEventFired && !s.staff.includes("vintner"),
     choices: [
       {
         label: "Acknowledge",
@@ -1922,20 +2050,9 @@ const EVENT_DECK = [
       {
         label: "Submit your best bottles",
         cost: 4500,
-        hint: "Prestige +6–16 and Demand +6–14 depending on wine quality and prestige.",
+        hint: "Enter your wine in head-to-head combat against a regional rival. Results determine the medal tier.",
         effect: s => {
-          s.competitionEntered = true;
-          const score = rand() + (s.quality - 80) / 100 + (s.prestige - 40) / 140;
-          if (score > 1.5) {
-            s.prestige += 16;
-            s.demand += 14;
-            s.morale += 8;
-            log(s, "Gold medal at the regional competition. Allocation requests are flooding in.");
-          } else {
-            s.prestige += 6;
-            s.demand += 6;
-            log(s, "Solid placement at the competition. The wine is on reviewers' radar.");
-          }
+          startWineBattle(s);
         }
       },
       { label: "Decline this year",
@@ -3209,7 +3326,7 @@ const ACTIONS = [
       });
       s.morale  += vBonus + 1;
       s.fatigue += 2;
-      s.quality += 1 + vBonus;
+      qualityGain(s, 1 + vBonus);
       log(s, `Vineyard crew cleaned canopies and scouted disease. Average disease now ${Math.round(averageDisease(s))}.`);
     }
   },
@@ -3235,7 +3352,7 @@ const ACTIONS = [
       } else {
         log(s, "Cellar work: blending, racking, and tasting with no unfermented grapes on hand.");
       }
-      s.quality += 2 + s.buildings.barrel + staffBonus(s, "cellar");
+      qualityGain(s, 2 + staffBonus(s, "cellar"));
       s.prestige += Math.max(1, Math.floor((s.buildings.barrel * varietal(s).barrelNeed) / 2));
       s.fatigue += 3;
     }
@@ -3318,7 +3435,7 @@ const ACTIONS = [
     id: "hospitality",
     name: "Run Hospitality",
     detail: "Open the tasting room. Visitor numbers peak in harvest season and dip in winter, but you can always open the door.",
-    consequence: "Sells premium cases, raises demand, prestige, and morale.",
+    consequence: "Sells premium cases, raises demand and morale. Prestige +1 if quality ≥ 75 and tasting room is built.",
     cost: 1600,
     apply: s => {
       const visitorSeasonMod = { Dormant: 0.55, Budbreak: 0.8, Flowering: 0.9, Veraison: 1.0, Harvest: 1.15, Cellar: 0.7 }[s.season] ?? 1.0;
@@ -3331,7 +3448,7 @@ const ACTIONS = [
       s.totalRevenue += revenue + visits * 14;
       recordArchiveSale(s, cases, revenue, "cellarDoor");
       s.morale += 3 + staffBonus(s, "hospitality");
-      s.prestige += 1 + Math.floor(s.buildings.room / 2);
+      s.prestige += (s.quality >= 75 && s.buildings.room >= 1) ? 1 : 0;
       if (cases > 0) {
         addChannelDemand(s, ["cellarDoor"], 2 + staffBonus(s, "hospitality"));
         addChannelDemand(s, ["club"], 1 + Math.floor(staffBonus(s, "hospitality") / 2));
@@ -3442,7 +3559,7 @@ const ACTIONS = [
           row.threat  = Math.round(row.disease / 11);
           row.pressure = "sprayed";
         });
-        s.quality += 1;
+        qualityGain(s, 1);
         s.fatigue += 1;
         log(s, `Spray program knocked disease pressure down to ${Math.round(averageDisease(s))} avg. Frost protection ready.`);
       } else if (s.season === "Flowering") {
@@ -3454,7 +3571,7 @@ const ACTIONS = [
           row.threat  = Math.round(row.disease / 11);
           row.pressure = "canopy thinned";
         });
-        s.quality += 2;
+        qualityGain(s, 2);
         s.fatigue += 1;
         log(s, `Canopy thinning opened the fruit zone. Disease ${Math.round(averageDisease(s))}, water ${Math.round(averageWater(s))}.`);
       } else if (s.season === "Veraison") {
@@ -3468,7 +3585,7 @@ const ACTIONS = [
           row.threat  = Math.round(row.disease / 11);
           row.pressure = "green harvested";
         });
-        s.quality += 4;
+        qualityGain(s, 4);
         addChannelDemand(s, ["collector", "restaurant"], 1);
         s.profile = (s.profile ?? 50) + 3;
         s.fatigue += 2;
@@ -3476,7 +3593,7 @@ const ACTIONS = [
       } else if (s.season === "Harvest") {
         if (isHarvestMonth(s.month, s.region)) {
           s.marketMods.harvestCrew = 2;
-          s.quality += 3;
+          qualityGain(s, 3);
           s.morale  -= 1;
           s.fatigue += 4;
           log(s, "Selective picking crews are booked for harvest.");
@@ -3486,7 +3603,7 @@ const ACTIONS = [
             row.disease = clamp(row.disease - 10, 0, 100);
             row.threat  = Math.round(row.disease / 11);
           });
-          s.quality += 1;
+          qualityGain(s, 1);
           s.fatigue += 1;
           log(s, "Post-harvest vineyard walk: disease pressure eased.");
         }
@@ -3506,7 +3623,7 @@ const ACTIONS = [
           });
           log(s, "Cellar topping and racking tightened the post-harvest pipeline.");
         }
-        s.quality += 1;
+        qualityGain(s, 1);
       } else {
         // Dormant — winter pruning recovers health and resets water toward neutral
         s.rows.forEach(row => {
@@ -3517,7 +3634,7 @@ const ACTIONS = [
           row.threat  = Math.round(row.disease / 11);
           row.pressure = "pruned";
         });
-        s.quality += 1;
+        qualityGain(s, 1);
         s.morale  += 2;
         s.fatigue = Math.max(0, s.fatigue - 8 - staffBonus(s, "finance") * 2);
         s.marketMods.winterPlan = 8;
@@ -3535,7 +3652,7 @@ const ACTIONS = [
     apply: s => {
       s.naturalCellarUsedMonth = s.month;
       s.profile = clamp((s.profile ?? 50) + 6, 0, 100);
-      s.quality += 2;
+      qualityGain(s, 2);
       s.prestige += (s.buildings.tank || 0) >= 3 || (s.buildings.barrel || 0) >= 4 ? 2 : 0;
       (s.vintages || []).forEach(lot => {
         if (lot.bulkWine > 0) lot.flawRisk = clamp((lot.flawRisk || baseLotFlawRisk(s, lot)) + 8 - staffBonus(s, "cellar"), 1, 90);
@@ -3561,6 +3678,7 @@ let papalQuizTimerId = null;
 let pestState = null;  // { bugs, killed, escaped, escapedThisMonth, killedThisMonth, spawnAccum }
 let pestAnimId = null;
 let pestBugSeq = 0;
+let wineBattleState = null; // { phase, playerHp, playerMaxHp, opponentHp, opponentMaxHp, opponent, turnLog, result, turnCount }
 
 const SETUP_STEPS = [
   { key: "region", title: "Choose Region", kicker: "Where the estate lives shapes weather, prestige, land cost, and grape options." },
@@ -3687,6 +3805,15 @@ const AGING_TARGETS = {
   nebbiolo: 10, tempranillo: 7, cabfranc: 5
 };
 const REGION_AGING_BONUS = { bordeaux: 2, burgundy: 3, napa: 1, mosel: 0, mendoza: 0, barossa: 0, piedmont: 3, rioja: 1, fingerlakes: 0 };
+
+// Quality gains diminish above 80 — high-quality estates are harder to improve further.
+function qualityGain(s, amount) {
+  const q = s.quality;
+  const scaled = q >= 95 ? Math.ceil(amount * 0.25)
+               : q >= 80 ? Math.ceil(amount * 0.5)
+               : amount;
+  s.quality = clamp(s.quality + scaled, 0, 120);
+}
 
 function rand() {
   return Math.random();
@@ -3907,6 +4034,8 @@ const ACHIEVEMENTS = [
   { id: "genevan-influence",     emoji: "🪤",  name: "Suspected Genevan Influence", desc: "The envoy left early. The secretary has a very long list." },
   { id: "pest-scout",            emoji: "🐛",  name: "Field Scout",                 desc: "Survived a pest infestation. Some of them made it through." },
   { id: "pest-clean-sweep",      emoji: "🎯",  name: "Clean Sweep",                 desc: "Kept total escaped bugs under 15 across a full infestation." },
+  { id: "battle-champion",       emoji: "🥇",  name: "Gold Medal",                  desc: "Won the regional wine competition through combat." },
+  { id: "battle-participant",    emoji: "🥂",  name: "A Good Showing",              desc: "Entered the wine competition and saw it through to the end." },
 ];
 
 function createState() {
@@ -4023,7 +4152,8 @@ function createState() {
     pestTotalEscaped: 0,
     prestigeBeforeMonth: r.prestige,
     lastHarvestForecast: 0,
-    lastHarvestGrapes: 0
+    lastHarvestGrapes: 0,
+    battleOpponentsUsed: [],
   };
   ensureStaffTraits(s);
   // Long-aging varietals (nebbiolo, cabernet in high-bonus regions) face a ~20-month gap before
@@ -4248,6 +4378,8 @@ function maybeSpawnVintner(s) {
     if (!s.staffMarket.includes("vintner")) {
       s.staffMarket = [...s.staffMarket, "vintner"];
     }
+    // If already hired via staff market before spawn fired, skip the arrival card
+    if (s.staff.includes("vintner")) s.vintnerArrivalEventFired = true;
   }
 }
 
@@ -4816,6 +4948,7 @@ function ensureEconomy(s) {
   if (typeof s.prestigeBeforeMonth !== "number") s.prestigeBeforeMonth = s.prestige;
   if (typeof s.lastHarvestForecast !== "number") s.lastHarvestForecast = 0;
   if (typeof s.lastHarvestGrapes !== "number") s.lastHarvestGrapes = 0;
+  if (!Array.isArray(s.battleOpponentsUsed)) s.battleOpponentsUsed = [];
   ensureLotRisk(s);
 }
 
@@ -6448,11 +6581,11 @@ function seasonWindows(regionId = state?.region) {
 
 function normalizeState(s) {
   s.cash = Math.round(s.cash);
+  s.quality = clamp(Math.round(s.quality), 0, 120);
   s.prestige = clamp(Math.round(s.prestige), 0, 120);
   reconcileGlobalDemand(s);
   s.morale = clamp(Math.round(s.morale), 0, 100);
   s.fatigue = clamp(Math.round(s.fatigue || 0), 0, 100);
-  s.quality = clamp(Math.round(s.quality), 0, 120);
   s.sustainability = clamp(Math.round(s.sustainability), 0, 100);
   s.influence = clamp(Math.round(s.influence), 0, 100);
   s.profile = clamp(Math.round(s.profile ?? 50), 0, 100);
@@ -6607,6 +6740,13 @@ function monthlyTick(s) {
   const qualityPressure = s.quality > 100 ? 2 : s.quality > 85 ? 1 : 0;
   const load = loadPressure(s);
   s.quality = clamp(s.quality - 1 + Math.floor(s.morale / 55) - qualityPressure - Math.floor(load / 8), 0, 120);
+  // Prestige decays toward quality + 20 when punching above that ceiling
+
+  const prestigeSoftCap = Math.min(120, s.quality + 20);
+  if (s.prestige > prestigeSoftCap) {
+    const excess = s.prestige - prestigeSoftCap;
+    s.prestige -= Math.max(1, Math.ceil(excess / 3));
+  }
   const traitPassive = staffTraitPassiveEffects(s);
   const frictionDelta = staffFrictionMorale(s);
   const fatigueClear = 4 + staffBonus(s, "finance") + staffBonus(s, "bottling") + (s.season === "Dormant" ? 4 : 0);
@@ -7425,6 +7565,7 @@ function gameView() {
     ${state.gameOver ? gameOverModal() : (guideStep !== null && guideStep < GUIDE_PAGES.length ? guideModal() : (!state.introSeen ? introModal() : (state.pendingNaming ? namingModal() : "")))}
     ${noHelpModal()}
     ${papalQuizModal()}
+    ${wineBattleModal()}
     ${achievementToast()}
   `;
 }
@@ -7929,6 +8070,298 @@ function applyPestMonthEnd(s) {
     stopPestMinigame();
     log(s, "The infestation has cleared. Scouts report no further activity in the blocks.");
   }
+}
+
+// ── Wine Battle Minigame ─────────────────────────────────────────────────────
+
+function startWineBattle(s) {
+  const used = s.battleOpponentsUsed || [];
+  const pool = BATTLE_OPPONENTS.filter(o => !used.includes(o.id));
+  const candidates = pool.length > 0 ? pool : BATTLE_OPPONENTS;
+  const opponent = candidates[randint(0, candidates.length - 1)];
+
+  const playerHp = clamp(s.quality, 70, 130);
+  const vintageMod = vintageScoreMultiplier(s.currentVintageScore || 3);
+
+  wineBattleState = {
+    phase: "intro",
+    playerVarietal: s.varietal,
+    playerHp,
+    playerMaxHp: playerHp,
+    vintageMod,
+    vintageScore: s.currentVintageScore || 3,
+    opponent,
+    opponentHp: opponent.hp,
+    opponentMaxHp: opponent.hp,
+    turnLog: null,
+    result: null,
+    turnCount: 0,
+  };
+
+  s.competitionEntered = true;
+  if (!s.battleOpponentsUsed) s.battleOpponentsUsed = [];
+  s.battleOpponentsUsed.push(opponent.id);
+
+  render();
+}
+
+function wineBattleBegin() {
+  if (!wineBattleState || wineBattleState.phase !== "intro") return;
+  wineBattleState.phase = "move-select";
+  render();
+}
+
+function wineBattleMove(moveIdx) {
+  if (!wineBattleState || wineBattleState.phase !== "move-select") return;
+  const ws = wineBattleState;
+
+  const playerMoves  = BATTLE_MOVES[ws.playerVarietal] || BATTLE_MOVES.cabernet;
+  const opponentMoves = BATTLE_MOVES[ws.opponent.varietal] || BATTLE_MOVES.cabernet;
+  const playerMove   = playerMoves[moveIdx];
+
+  const oppProfile    = BATTLE_GRAPE_PROFILE[ws.opponent.varietal]  || { weakTo: "acid",   resistTo: "floral" };
+  const playerProfile = BATTLE_GRAPE_PROFILE[ws.playerVarietal]     || { weakTo: "tannin", resistTo: "floral" };
+
+  // Player attacks — vintage score scales all damage output
+  const playerEff = battleEffectiveness(playerMove.type, oppProfile.weakTo, oppProfile.resistTo);
+  const playerDmg = Math.max(1, Math.round(playerMove.power * playerEff * ws.vintageMod * (0.85 + rand() * 0.30)));
+
+  // Opponent picks: 60% chance to pick most-effective move
+  const scored = opponentMoves.map((m, i) => ({ m, i, eff: battleEffectiveness(m.type, playerProfile.weakTo, playerProfile.resistTo) }));
+  scored.sort((a, b) => b.eff - a.eff);
+  const opponentMove = rand() < 0.6 ? scored[0].m : opponentMoves[randint(0, 3)];
+  const oppEff = battleEffectiveness(opponentMove.type, playerProfile.weakTo, playerProfile.resistTo);
+  const opponentDmg = Math.max(1, Math.round(opponentMove.power * oppEff * (0.85 + rand() * 0.30)));
+
+  // Apply in sequence: player hits first, opponent retaliates if alive
+  const newOppHp = Math.max(0, ws.opponentHp - playerDmg);
+  const opponentFainted = newOppHp <= 0;
+  const newPlayerHp = opponentFainted ? ws.playerHp : Math.max(0, ws.playerHp - opponentDmg);
+  const playerFainted = !opponentFainted && newPlayerHp <= 0;
+
+  ws.opponentHp = newOppHp;
+  ws.playerHp   = newPlayerHp;
+  ws.turnCount++;
+  ws.turnLog = {
+    playerMove, playerDmg, playerEff,
+    opponentMove, opponentDmg: opponentFainted ? 0 : opponentDmg, oppEff,
+    playerFainted, opponentFainted,
+  };
+  ws.phase = "turn-result";
+  render();
+}
+
+function wineBattleNext() {
+  if (!wineBattleState) return;
+  const ws = wineBattleState;
+
+  if (ws.phase === "result") {
+    _wineBattleFinish();
+    return;
+  }
+
+  if (ws.phase === "turn-result") {
+    const { playerFainted, opponentFainted } = ws.turnLog;
+    if (playerFainted || opponentFainted) {
+      const won = opponentFainted;
+      let resultTitle, resultBody, prestigeGain, demandGain, moraleGain;
+      if (won) {
+        const dominant = ws.playerHp >= Math.round(ws.playerMaxHp * 0.5);
+        resultTitle  = dominant ? "Gold Medal" : "Narrow Gold Medal";
+        resultBody   = dominant
+          ? "A commanding performance. The judges awarded the Gold without deliberation. Allocation requests are flooding in."
+          : "A close-fought victory. The Gold went to the estate after a tense final round. The room applauded.";
+        prestigeGain = dominant ? 16 : 12;
+        demandGain   = dominant ? 14 : 10;
+        moraleGain   = dominant ? 8  : 5;
+      } else {
+        resultTitle  = "Silver Medal";
+        resultBody   = "A creditable showing. The wine made its mark — the competition raised the estate's regional profile considerably.";
+        prestigeGain = 6;
+        demandGain   = 6;
+        moraleGain   = 3;
+      }
+      ws.result = { won, resultTitle, resultBody, prestigeGain, demandGain, moraleGain };
+      ws.phase = "result";
+      render();
+      return;
+    }
+    ws.phase = "move-select";
+    render();
+  }
+}
+
+function _wineBattleFinish() {
+  if (!wineBattleState?.result) return;
+  const { won, resultTitle, prestigeGain, demandGain, moraleGain } = wineBattleState.result;
+
+  state.prestige = clamp(state.prestige + prestigeGain, 0, 120);
+  state.demand   = clamp(state.demand   + demandGain,   0, 130);
+  state.morale   = clamp(state.morale   + moraleGain,   0, 100);
+  log(state, `Regional Competition — ${resultTitle}. Prestige +${prestigeGain}, Demand +${demandGain}.`);
+
+  awardAchievement(state, "battle-participant");
+  if (won) awardAchievement(state, "battle-champion");
+
+  wineBattleState = null;
+  normalizeState(state);
+  checkGameOver();
+  render();
+}
+
+function _wbHpBarHtml(hp, maxHp, side) {
+  const pct = Math.round((hp / maxHp) * 100);
+  const tone = pct > 50 ? "wb-hp-ok" : pct > 20 ? "wb-hp-warn" : "wb-hp-crit";
+  return `
+    <div class="wb-hp-row ${side}">
+      <span class="wb-hp-label">HP</span>
+      <div class="wb-hp-track"><div class="wb-hp-fill ${tone}" style="width:${pct}%"></div></div>
+      <span class="wb-hp-num">${hp}/${maxHp}</span>
+    </div>`;
+}
+
+function _wbEffText(eff) {
+  if (eff >= 2)   return `<span class="wb-super">It's super effective!</span>`;
+  if (eff <= 0.5) return `<span class="wb-resist">It's not very effective...</span>`;
+  return "";
+}
+
+function _wbVarietalLabel(varietal) {
+  return (VARIETALS[varietal]?.name) || varietal;
+}
+
+function wineBattleModal() {
+  if (!wineBattleState) return "";
+  const ws = wineBattleState;
+  const { playerVarietal, playerHp, playerMaxHp, opponent, opponentHp, opponentMaxHp } = ws;
+  const playerMoves = BATTLE_MOVES[playerVarietal] || BATTLE_MOVES.cabernet;
+  const playerName  = state.wineryName || "Your Estate";
+  const playerLabel = _wbVarietalLabel(playerVarietal);
+  const oppLabel    = _wbVarietalLabel(opponent.varietal);
+
+  let inner = "";
+
+  if (ws.phase === "intro") {
+    const playerProfile = BATTLE_GRAPE_PROFILE[playerVarietal] || { weakTo: "tannin", resistTo: "floral" };
+    const oppProfile    = BATTLE_GRAPE_PROFILE[opponent.varietal] || { weakTo: "acid", resistTo: "floral" };
+    inner = `
+      <div class="wb-intro-opp">${opponent.name}</div>
+      <div class="wb-intro-wine">"${opponent.label}"</div>
+      <div class="wb-intro-desc">${opponent.intro}</div>
+      <div class="wb-vs-row">
+        <div class="wb-vs-card">
+          <div class="wb-sprite player-sprite">🍾</div>
+          <div class="wb-vs-name">${escapeHtml(playerName)}</div>
+          <div class="wb-vs-sub">${escapeHtml(playerLabel)}</div>
+          <div class="wb-vs-vintage">${vintageScoreStars(ws.vintageScore)} ${vintageScoreLabel(ws.vintageScore)}</div>
+          <div class="wb-matchup-row">
+            <span class="wb-weak-tag">weak: ${playerProfile.weakTo}</span>
+            <span class="wb-resist-tag">resists: ${playerProfile.resistTo}</span>
+          </div>
+        </div>
+        <div class="wb-vs-text">VS</div>
+        <div class="wb-vs-card">
+          <div class="wb-sprite opp-sprite">🍷</div>
+          <div class="wb-vs-name">${escapeHtml(opponent.name)}</div>
+          <div class="wb-vs-sub">${escapeHtml(oppLabel)}</div>
+          <div class="wb-matchup-row">
+            <span class="wb-weak-tag">weak: ${oppProfile.weakTo}</span>
+            <span class="wb-resist-tag">resists: ${oppProfile.resistTo}</span>
+          </div>
+        </div>
+      </div>
+      <div class="wb-continue-row">
+        <button class="wb-btn-primary" onclick="wineBattleBegin()">▶  Begin tasting</button>
+      </div>
+    `;
+  } else if (ws.phase === "move-select") {
+    inner = `
+      <div class="wb-field">
+        <div class="wb-combatant opp-side">
+          <div class="wb-sprite opp-sprite">🍷</div>
+          <div class="wb-name-plate">${escapeHtml(opponent.name)}<br><span class="wb-sub">${escapeHtml(oppLabel)}</span></div>
+          ${_wbHpBarHtml(opponentHp, opponentMaxHp, "opp")}
+        </div>
+        <div class="wb-combatant player-side">
+          <div class="wb-name-plate">${escapeHtml(playerName)}<br><span class="wb-sub">${escapeHtml(playerLabel)}</span></div>
+          ${_wbHpBarHtml(playerHp, playerMaxHp, "player")}
+          <div class="wb-sprite player-sprite">🍾</div>
+        </div>
+      </div>
+      <div class="wb-textbox">What will you serve?</div>
+      <div class="wb-move-grid">
+        ${playerMoves.map((m, i) => `
+          <button class="wb-move-btn" onclick="wineBattleMove(${i})">
+            <span class="wb-move-name">${escapeHtml(m.name)}</span>
+            <span class="wb-move-type wb-type-${m.type}">${m.type}</span>
+          </button>
+        `).join("")}
+      </div>
+    `;
+  } else if (ws.phase === "turn-result") {
+    const { playerMove, playerDmg, playerEff, opponentMove, opponentDmg, oppEff, playerFainted, opponentFainted } = ws.turnLog;
+    inner = `
+      <div class="wb-field">
+        <div class="wb-combatant opp-side ${opponentFainted ? "wb-fainted" : ""}">
+          <div class="wb-sprite opp-sprite">🍷</div>
+          <div class="wb-name-plate">${escapeHtml(opponent.name)}<br><span class="wb-sub">${escapeHtml(oppLabel)}</span></div>
+          ${_wbHpBarHtml(opponentHp, opponentMaxHp, "opp")}
+        </div>
+        <div class="wb-combatant player-side ${playerFainted ? "wb-fainted" : ""}">
+          <div class="wb-name-plate">${escapeHtml(playerName)}<br><span class="wb-sub">${escapeHtml(playerLabel)}</span></div>
+          ${_wbHpBarHtml(playerHp, playerMaxHp, "player")}
+          <div class="wb-sprite player-sprite">🍾</div>
+        </div>
+      </div>
+      <div class="wb-textbox">
+        <p><strong>${escapeHtml(playerName)}</strong> used <strong>${escapeHtml(playerMove.name)}</strong>!</p>
+        <p>${escapeHtml(playerMove.announcer)}</p>
+        <p>${escapeHtml(playerMove.hit)} <em>(−${playerDmg} HP)</em></p>
+        ${_wbEffText(playerEff)}
+        ${ws.vintageMod >= 1.2 ? `<span class="wb-vintage-boost">Exceptional vintage — bonus damage!</span>` : ws.vintageMod <= 0.85 ? `<span class="wb-vintage-drag">Poor vintage — reduced damage.</span>` : ""}
+        ${opponentFainted
+          ? `<p class="wb-faint-msg">${escapeHtml(opponent.name)} can't continue! The judges reach for their scorecards.</p>`
+          : `<p class="wb-divider">———</p>
+             <p><strong>${escapeHtml(opponent.name)}</strong> used <strong>${escapeHtml(opponentMove.name)}</strong>!</p>
+             <p>${escapeHtml(opponentMove.announcer)}</p>
+             <p>${escapeHtml(opponentMove.hit)} <em>(−${opponentDmg} HP)</em></p>
+             ${_wbEffText(oppEff)}
+             ${playerFainted ? `<p class="wb-faint-msg">Your wine falters! The judges reach for their scorecards.</p>` : ""}`}
+      </div>
+      <div class="wb-continue-row">
+        <button class="wb-btn-primary" onclick="wineBattleNext()">
+          ${playerFainted || opponentFainted ? "See result" : "Next turn ▶"}
+        </button>
+      </div>
+    `;
+  } else if (ws.phase === "result") {
+    const { won, resultTitle, resultBody, prestigeGain, demandGain } = ws.result;
+    inner = `
+      <div class="wb-result-medal">${won ? "🥇" : "🥈"}</div>
+      <div class="wb-result-title">${escapeHtml(resultTitle)}</div>
+      <div class="wb-result-body">${escapeHtml(resultBody)}</div>
+      <div class="wb-result-gains">
+        <span class="wb-gain">Prestige +${prestigeGain}</span>
+        <span class="wb-gain">Demand +${demandGain}</span>
+      </div>
+      <div class="wb-continue-row">
+        <button class="wb-btn-primary" onclick="wineBattleNext()">Collect medal ▶</button>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="modal wb-backdrop" onclick="return false">
+      <div class="wb-screen" onclick="event.stopPropagation()">
+        <div class="wb-header">
+          <span class="wb-header-txt">★  REGIONAL WINE COMPETITION  ★</span>
+        </div>
+        <div class="wb-body">
+          ${inner}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function tip(text) {
@@ -9554,6 +9987,9 @@ window.papalAnswer = papalAnswer;
 window.papalNext = papalNext;
 window.closePapalQuiz = closePapalQuiz;
 window.killBug = killBug;
+window.wineBattleBegin = wineBattleBegin;
+window.wineBattleMove = wineBattleMove;
+window.wineBattleNext = wineBattleNext;
 window.useAction = useAction;
 window.advanceMonth = advanceMonth;
 window.setPrice = setPrice;

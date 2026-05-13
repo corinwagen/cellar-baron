@@ -2582,7 +2582,7 @@ input[type="range"] {
   height: auto;
   max-height: 240px;
   object-fit: cover;
-  object-position: center;
+  object-position: top;
   background: transparent;
   border: none;
   border-radius: 4px;
@@ -3714,4 +3714,355 @@ body.corruption-stage-9 .side-rail > *:not(.measurement-panel) { visibility: hid
   color: #2f6b2f;
   margin-bottom: 20px;
   letter-spacing: 0.04em;
+}
+
+/* ── Wine Battle Minigame ────────────────────────────────────────────────── */
+/* Retro Game Boy palette: #0f380f / #306230 / #8bac0f / #9bbc0f */
+
+.wb-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+
+.wb-screen {
+  background: #0f380f;
+  color: #9bbc0f;
+  font-family: 'Courier New', Courier, monospace;
+  width: min(520px, 96vw);
+  max-height: 92vh;
+  border-radius: 4px;
+  border: 3px solid #306230;
+  box-shadow: 0 0 0 2px #8bac0f, 0 0 30px #0f380f;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wb-header {
+  background: #306230;
+  padding: 6px 12px;
+  text-align: center;
+  border-bottom: 2px solid #8bac0f;
+}
+
+.wb-header-txt {
+  color: #9bbc0f;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  font-weight: bold;
+}
+
+.wb-body {
+  padding: 14px 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ── Intro phase ─────────────────────────────────── */
+.wb-intro-opp {
+  font-size: 17px;
+  font-weight: bold;
+  color: #9bbc0f;
+  text-align: center;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.wb-intro-wine {
+  font-size: 12px;
+  color: #8bac0f;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.wb-intro-desc {
+  font-size: 12px;
+  color: #8bac0f;
+  text-align: center;
+  line-height: 1.55;
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
+.wb-vs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin-bottom: 18px;
+  gap: 8px;
+}
+
+.wb-vs-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.wb-vs-text {
+  font-size: 20px;
+  font-weight: bold;
+  color: #8bac0f;
+  flex-shrink: 0;
+}
+
+.wb-vs-name {
+  font-size: 11px;
+  font-weight: bold;
+  color: #9bbc0f;
+  text-align: center;
+  letter-spacing: 0.03em;
+}
+
+.wb-vs-sub {
+  font-size: 10px;
+  color: #8bac0f;
+  text-align: center;
+}
+
+/* ── Battle field ────────────────────────────────── */
+.wb-field {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+  min-height: 100px;
+}
+
+.wb-combatant {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: opacity 0.3s;
+}
+
+.wb-combatant.opp-side { align-items: flex-start; }
+.wb-combatant.player-side { align-items: flex-end; text-align: right; }
+
+.wb-combatant.wb-fainted { opacity: 0.35; }
+
+.wb-sprite {
+  font-size: 36px;
+  line-height: 1;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.opp-side .wb-sprite { font-size: 32px; margin-left: 8px; }
+.player-side .wb-sprite { font-size: 40px; margin-right: 8px; }
+
+.wb-name-plate {
+  font-size: 11px;
+  font-weight: bold;
+  color: #9bbc0f;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+}
+
+.wb-sub {
+  color: #8bac0f;
+  font-size: 10px;
+  font-weight: normal;
+}
+
+/* ── HP bars ─────────────────────────────────────── */
+.wb-hp-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.wb-hp-row.opp    { flex-direction: row; }
+.wb-hp-row.player { flex-direction: row-reverse; }
+
+.wb-hp-label {
+  font-size: 9px;
+  font-weight: bold;
+  color: #8bac0f;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.wb-hp-track {
+  flex: 1;
+  height: 7px;
+  background: #0f380f;
+  border: 1px solid #306230;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.wb-hp-fill {
+  height: 100%;
+  transition: width 0.4s ease;
+  border-radius: 1px;
+}
+
+.wb-hp-ok   { background: #9bbc0f; }
+.wb-hp-warn { background: #e8b800; }
+.wb-hp-crit { background: #d94f00; }
+
+.wb-hp-num {
+  font-size: 10px;
+  color: #8bac0f;
+  flex-shrink: 0;
+  min-width: 40px;
+}
+.wb-hp-row.player .wb-hp-num { text-align: right; }
+
+/* ── Text box ────────────────────────────────────── */
+.wb-textbox {
+  background: #1a4a1a;
+  border: 2px solid #306230;
+  border-radius: 2px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #9bbc0f;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.wb-textbox p {
+  margin: 0 0 4px 0;
+}
+
+.wb-textbox p:last-child { margin-bottom: 0; }
+
+.wb-super  { display: block; color: #e8b800; font-weight: bold; font-size: 12px; }
+.wb-resist { display: block; color: #8bac0f; font-style: italic; font-size: 11px; }
+.wb-vintage-boost { display: block; color: #7de89a; font-size: 11px; }
+.wb-vintage-drag  { display: block; color: #d4a85a; font-style: italic; font-size: 11px; }
+.wb-vs-vintage { font-size: 10px; color: #e8b800; letter-spacing: 0.02em; }
+.wb-matchup-row { display: flex; flex-direction: column; gap: 2px; align-items: center; margin-top: 4px; }
+.wb-weak-tag    { font-size: 9px; color: #d94f00; letter-spacing: 0.04em; }
+.wb-resist-tag  { font-size: 9px; color: #7de89a; letter-spacing: 0.04em; }
+
+.wb-divider { color: #306230; text-align: center; }
+
+.wb-faint-msg {
+  color: #e8b800;
+  font-weight: bold;
+  margin-top: 4px !important;
+}
+
+/* ── Move grid ───────────────────────────────────── */
+.wb-move-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.wb-move-btn {
+  background: #1a4a1a;
+  border: 2px solid #306230;
+  border-radius: 2px;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  font-family: inherit;
+  color: #9bbc0f;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.wb-move-btn:hover {
+  background: #255025;
+  border-color: #9bbc0f;
+}
+
+.wb-move-name {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.02em;
+}
+
+.wb-move-type {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 2px;
+  align-self: flex-start;
+}
+
+.wb-type-tannin  { background: #5a2d0c; color: #e8b800; }
+.wb-type-acid    { background: #1a4a35; color: #7de89a; }
+.wb-type-floral  { background: #3d1a4a; color: #e89bbc; }
+.wb-type-fruit   { background: #4a1a1a; color: #e87a5a; }
+.wb-type-earth   { background: #2d2d0c; color: #c8c87a; }
+.wb-type-oak     { background: #3d2d10; color: #d4a85a; }
+
+/* ── Continue button ─────────────────────────────── */
+.wb-continue-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.wb-btn-primary {
+  background: #306230;
+  border: 2px solid #9bbc0f;
+  border-radius: 2px;
+  color: #9bbc0f;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: bold;
+  padding: 8px 18px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: background 0.15s;
+}
+
+.wb-btn-primary:hover {
+  background: #4a8a4a;
+}
+
+/* ── Result phase ────────────────────────────────── */
+.wb-result-medal {
+  font-size: 52px;
+  text-align: center;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.wb-result-title {
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  color: #9bbc0f;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.wb-result-body {
+  font-size: 12px;
+  color: #8bac0f;
+  text-align: center;
+  line-height: 1.6;
+  font-style: italic;
+  margin-bottom: 14px;
+}
+
+.wb-result-gains {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.wb-gain {
+  font-size: 13px;
+  font-weight: bold;
+  color: #e8b800;
+  letter-spacing: 0.03em;
 }
