@@ -496,7 +496,7 @@ const EVENT_RULES = {
   "viral":         { cooldown: 20, max: 2 },
   "glass":         { cooldown: 16 },
   "used-barrels":  { cooldown: 20 },
-  "cork-tca": { cooldown: 18 },
+  "cork-tca": { cooldown: 22, max: 2 },
   "expansion-loan": { cooldown: 30, max: 2 },
   "fingerlakes-comp": { cooldown: 18 },
   "napa-earthquake": { cooldown: 30 },
@@ -512,7 +512,7 @@ const EVENT_RULES = {
   "supermarket-renegotiation": { cooldown: 16 },
   "distributor-ultimatum": { cooldown: 20 },
   "brand-fatigue": { cooldown: 30, max: 2 },
-  "mouse-taint": { cooldown: 22 },
+  "mouse-taint": { cooldown: 28, max: 1 },
   "vine-disease": { cooldown: 999, max: 1 },
   "fingerlakes-icewine": { cooldown: 30, max: 2 },
   "mendoza-inflacion": { cooldown: 24, max: 2 },
@@ -738,21 +738,25 @@ const BATTLE_GRAPE_PROFILE = {
 };
 
 const BATTLE_OPPONENTS = [
-  { id: "formidable", name: "Château Formidable",  label: "Grand Cuvée Réserve",    varietal: "merlot",      hp: 90,
-    intro: "The label is gilded. The bottle arrives wrapped in tissue. The judges greet it like an old friend." },
-  { id: "apex",       name: "Apex Ridge Reserve",  label: "Private Selection",       varietal: "cabernet",    hp: 95,
-    intro: "A Californian red with a reputation and a publicist. The label features a mountain." },
-  { id: "contemplator", name: "The Contemplator",  label: "Alte Reben Trocken",      varietal: "riesling",    hp: 80,
+  // tier 1 — year-2 circuit: younger estates, lighter HP, still credible
+  { id: "contemplator", name: "The Contemplator",  label: "Alte Reben Trocken",      varietal: "riesling",    hp: 80, tier: 1,
     intro: "An Alsatian Riesling with a philosophy on the back label. The judges take it very seriously." },
-  { id: "benchmark",  name: "Benchmark Series No. 7", label: "Reserve",              varietal: "chardonnay",  hp: 85,
+  { id: "benchmark",  name: "Benchmark Series No. 7", label: "Reserve",              varietal: "chardonnay",  hp: 85, tier: 1,
     intro: "A well-funded Chardonnay from a large estate. The bottle is inexplicably heavy." },
-  { id: "testament",  name: "Old Vine Testament", label: "Centenario",               varietal: "tempranillo", hp: 92,
-    intro: "Eighty-year-old vines from Rioja. The winemaker makes no jokes. The wine makes none either." },
-  { id: "iron-fist",  name: "Iron Fist Cuvée",    label: "McLaren Vale",             varietal: "shiraz",      hp: 98,
-    intro: "A Shiraz built for export. Big, dark, and unapologetically Australian." },
-  { id: "petit-mystere", name: "Le Petit Mystère", label: "Premier Cru",             varietal: "pinot",       hp: 88,
+  { id: "petit-mystere", name: "Le Petit Mystère", label: "Premier Cru",             varietal: "pinot",       hp: 88, tier: 1,
     intro: "A Burgundian Pinot with an unpronounceable village name. The sommelier whispers it." },
-  { id: "signal-fire", name: "Signal Fire",        label: "High Altitude Malbec",    varietal: "malbec",      hp: 93,
+  { id: "rising-sun", name: "Rising Sun Estate",   label: "Inaugural Release",       varietal: "cabfranc",    hp: 82, tier: 1,
+    intro: "A debut vintage from a well-capitalized newcomer. The label is very tasteful. The winemaker is very confident." },
+  // tier 2 — year-4 main event: established names, full HP, real opposition
+  { id: "formidable", name: "Château Formidable",  label: "Grand Cuvée Réserve",    varietal: "merlot",      hp: 90, tier: 2,
+    intro: "The label is gilded. The bottle arrives wrapped in tissue. The judges greet it like an old friend." },
+  { id: "apex",       name: "Apex Ridge Reserve",  label: "Private Selection",       varietal: "cabernet",    hp: 95, tier: 2,
+    intro: "A Californian red with a reputation and a publicist. The label features a mountain." },
+  { id: "testament",  name: "Old Vine Testament", label: "Centenario",               varietal: "tempranillo", hp: 92, tier: 2,
+    intro: "Eighty-year-old vines from Rioja. The winemaker makes no jokes. The wine makes none either." },
+  { id: "iron-fist",  name: "Iron Fist Cuvée",    label: "McLaren Vale",             varietal: "shiraz",      hp: 98, tier: 2,
+    intro: "A Shiraz built for export. Big, dark, and unapologetically Australian." },
+  { id: "signal-fire", name: "Signal Fire",        label: "High Altitude Malbec",    varietal: "malbec",      hp: 93, tier: 2,
     intro: "An Argentine Malbec grown at 1,400 meters. The winemaker wore a parka during harvest." },
 ];
 
@@ -1654,7 +1658,7 @@ const EVENT_DECK = [
     image: "assets/vintner-arrival.png",
     largeArt: true,
     priority: true,
-    condition: s => s.vintnerSpawned && !s.vintnerArrivalEventFired && !s.staff.includes("vintner"),
+    condition: s => s.vintnerSpawned && !s.vintnerArrivalEventFired && s.staff.includes("vintner"),
     choices: [
       {
         label: "Acknowledge",
@@ -1752,7 +1756,10 @@ const EVENT_DECK = [
       {
         label: "Send him away",
         hint: "Refuse the offer. The estate is on its own.",
-        effect: s => { log(s, "The note was burned. The lane was empty by morning. The accounts remain what they are."); }
+        effect: s => {
+          s.vintnerArrivalEventFired = true;
+          log(s, "The note was burned. The lane was empty by morning. The accounts remain what they are.");
+        }
       }
     ]
   },
@@ -2049,18 +2056,36 @@ const EVENT_DECK = [
     ]
   },
   {
+    id: "competition-early",
+    title: "District Young Producers Competition",
+    body: "An invitation arrived to a regional showcase for newer estates — a blind tasting where rising producers compete alongside a handful of more established names. A chance to measure the wine against the field.",
+    condition: s => !s.earlyCompetitionEntered && (s.month >= 24 || (s.quality >= 65 && s.prestige >= 30)),
+    minMonth: 8,
+    choices: [
+      { label: "Enter and pour",
+        cost: 2000,
+        hint: "Head-to-head against a regional rival. Don't expect an easy win.",
+        effect: s => { startWineBattle(s, 1); }
+      },
+      { label: "Not ready yet",
+        hint: "Skip this one. The main competition comes later.",
+        effect: s => { s.earlyCompetitionEntered = true; log(s, "Declined the district competition. The next invitation will carry more weight."); }
+      },
+    ]
+  },
+  {
     id: "competition",
     title: "Regional Wine Competition",
     body: "Your reputation has earned an invitation to a prestigious blind tasting. Judges are collecting entries from the region's best producers.",
     condition: s => !s.competitionEntered && (s.month >= 42 || (s.quality >= 85 && s.prestige >= 48)),
-    minMonth: 10,
+    minMonth: 18,
     choices: [
       {
         label: "Submit your best bottles",
         cost: 4500,
         hint: "Enter your wine in head-to-head combat against a regional rival. Results determine the medal tier.",
         effect: s => {
-          startWineBattle(s);
+          startWineBattle(s, 2);
         }
       },
       { label: "Decline this year",
@@ -2354,7 +2379,7 @@ const EVENT_DECK = [
     body: s => inWrath(s) && s.wrathState.seal >= 4
       ? "The heat arrived before the forecast said it would. The air smells of sulphur and dry earth from the north. The fruit on the east-facing blocks is already blackening. This is not a heat wave."
       : "A forecasted week of 112°F+ temperatures is arriving during crucial ripening. Without intervention, the fruit will cook on the vine.",
-    condition: s => s.region === "barossa",
+    condition: s => s.region === "barossa" && (s.season === "Veraison" || s.season === "Flowering"),
     choices: [
       { label: "Emergency irrigation and shade cloth", cost: 12000,
         hint: "Vintage protected — Quality −1 only.",
@@ -2467,18 +2492,24 @@ const EVENT_DECK = [
     id: "barrel-taint",
     title: "Corked Barrel Lot",
     body: "A buyer alerted you after smelling must on a recent barrel sample. A TCA-positive stave may have contaminated an entire batch. You need to decide quickly before more wine absorbs the taint.",
+    condition: s => !hasStaff(s, "cellar") || rand() < 0.45,
     choices: [
       { label: "Isolate, strip, and reblend", cost: 8000,
-        hint: "Saves most of the lot — Quality −3, flaw risk on affected lots −12.",
+        hint: "Saves most of the lot — Quality −2 to −3, flaw risk on affected lots −12 to −15. Cellar staff reduces damage.",
         effect: s => {
-          s.quality -= 3;
-          (s.vintages || []).filter(v => v.bulkWine > 0).forEach(v => { v.flawRisk = Math.max(1, (v.flawRisk || 30) - 12); });
-          log(s, "Tainted staves isolated and the lot reblended. Wine recovered, with modest quality cost.");
+          const hasCellar = hasStaff(s, "cellar");
+          s.quality -= hasCellar ? 2 : 3;
+          const flawImprove = hasCellar ? 15 : 12;
+          (s.vintages || []).filter(v => v.bulkWine > 0).forEach(v => { v.flawRisk = Math.max(1, (v.flawRisk || 30) - flawImprove); });
+          log(s, hasCellar
+            ? "Tainted staves isolated early — cellar staff caught it before it spread. Modest quality cost."
+            : "Tainted staves isolated and the lot reblended. Wine recovered, with modest quality cost.");
         }},
       { label: "Wait and monitor",
-        hint: "40% chance it clears. Otherwise Quality −8, flaw risk +16 on active lots.",
+        hint: "40–55% chance it clears (higher with cellar staff). Otherwise Quality −8, flaw risk +16 on active lots.",
         effect: s => {
-          if (rand() < 0.4) { log(s, "The barrel sample was a false alarm — the rest of the lot is clean."); return; }
+          const clearChance = hasStaff(s, "cellar") ? 0.55 : 0.4;
+          if (rand() < clearChance) { log(s, "The barrel sample was a false alarm — the rest of the lot is clean."); return; }
           s.quality -= 8;
           (s.vintages || []).filter(v => v.bulkWine > 0).forEach(v => { v.flawRisk = clamp((v.flawRisk || 30) + 16, 1, 95); });
           log(s, "TCA spread through the batch. The affected wine is compromised and flaw risk climbed.");
@@ -2489,17 +2520,19 @@ const EVENT_DECK = [
     id: "staff-poaching",
     title: "Headhunter Call",
     body: s => {
-      const targetId = [...s.staff].sort((a, b) => (STAFF_POOL.find(p => p.id === b)?.salary || 0) - (STAFF_POOL.find(p => p.id === a)?.salary || 0))[0];
+      const eligible = s.staff.filter(id => id !== "vintner" && id !== "priest");
+      const targetId = [...eligible].sort((a, b) => (STAFF_POOL.find(p => p.id === b)?.salary || 0) - (STAFF_POOL.find(p => p.id === a)?.salary || 0))[0];
       const person = STAFF_POOL.find(p => p.id === targetId);
       const cost = money((person?.salary || 5000) * 3);
       return `${person?.name || "One of your team"} has been approached by a larger operation offering a meaningful raise. They're loyal, but asking you to match within the month. Matching costs ${cost} (3 months salary).`;
     },
-    condition: s => s.staff.length >= 2,
+    condition: s => s.staff.filter(id => id !== "vintner" && id !== "priest").length >= 1,
     choices: [
       { label: "Match the offer", cost: 0,
         hint: "Costs 3 months of the target's salary. Staff retained, Morale +6.",
         effect: s => {
-          const targetId = [...s.staff].sort((a, b) => {
+          const eligible = s.staff.filter(id => id !== "vintner" && id !== "priest");
+          const targetId = [...eligible].sort((a, b) => {
             const pa = STAFF_POOL.find(p => p.id === a)?.salary || 0;
             const pb = STAFF_POOL.find(p => p.id === b)?.salary || 0;
             return pb - pa;
@@ -2513,7 +2546,8 @@ const EVENT_DECK = [
       { label: "Let them walk",
         hint: "Staff member leaves. Morale −10, Quality −3.",
         effect: s => {
-          const targetId = [...s.staff].sort((a, b) => {
+          const eligible = s.staff.filter(id => id !== "vintner" && id !== "priest");
+          const targetId = [...eligible].sort((a, b) => {
             const pa = STAFF_POOL.find(p => p.id === a)?.salary || 0;
             const pb = STAFF_POOL.find(p => p.id === b)?.salary || 0;
             return pb - pa;
@@ -2621,20 +2655,29 @@ const EVENT_DECK = [
     id: "cellar-heat",
     title: "Fermentation Temperature Spike",
     body: "A heat wave pushed the cellar above optimal for three consecutive days. Active fermentations may have run too fast and hot — volatile acidity and off-aromas develop quickly in these conditions.",
-    condition: s => (s.vintages || []).some(v => v.grapes > 0 || (v.bulkWine > 0 && (v.agingMonths || 0) < 3)),
+    condition: s => (s.vintages || []).some(v => v.grapes > 0 || (v.bulkWine > 0 && (v.agingMonths || 0) < 3)) && (!hasStaff(s, "cellar") || rand() < 0.5),
     choices: [
-      { label: "Emergency cooling and enzyme addition", cost: 6500,
-        hint: "No quality damage. Morale +1.",
-        effect: s => { s.morale += 1; log(s, "Cooling held the fermentation steady. No flaw development detected."); } },
-      { label: "Monitor and adjust manually",
-        hint: "50% chance: Quality −4, flaw risk +12 on active lots. 50%: fine.",
+      { label: "Emergency cooling and enzyme addition",
+        cost: 6500,
+        hint: "No quality damage. Morale +1. Tank tier reduces cost by $800 per level.",
         effect: s => {
-          if (rand() < 0.5) {
+          const discount = (s.buildings.tank || 0) * 800;
+          s.cash += Math.min(discount, 5000);
+          s.morale += 1;
+          log(s, discount > 0
+            ? `Cooling held the fermentation steady. Tank infrastructure saved ${money(Math.min(discount, 5000))} on the intervention.`
+            : "Cooling held the fermentation steady. No flaw development detected.");
+        } },
+      { label: "Monitor and adjust manually",
+        hint: "50% chance: Quality −4, flaw risk +12 on active lots. Cellar staff improves odds to 60% safe.",
+        effect: s => {
+          const safeChance = hasStaff(s, "cellar") ? 0.6 : 0.5;
+          if (rand() < safeChance) {
+            log(s, "Fermentations ran warm but stayed clean. A close call.");
+          } else {
             s.quality -= 4;
             (s.vintages || []).filter(v => v.bulkWine > 0 && (v.agingMonths || 0) < 3).forEach(v => { v.flawRisk = clamp((v.flawRisk || 25) + 12, 1, 95); });
             log(s, "The heat got into the must. Flaw risk on young lots is elevated.");
-          } else {
-            log(s, "Fermentations ran warm but stayed clean. A close call.");
           }
         }}
     ]
@@ -2658,7 +2701,7 @@ const EVENT_DECK = [
     title: "Corked Bottle Complaint",
     body: "A restaurant buyer reported four corked bottles from the last allocation — musty, undrinkable. The claim is credible and the buyer is waiting to see how you respond.",
     minMonth: 8,
-    condition: s => s.inventory.cases > 30,
+    condition: s => s.inventory.cases > 30 && (!hasStaff(s, "cellar") || rand() < 0.45),
     choices: [
       { label: "Replace and credit immediately", cost: 3500,
         hint: "Morale +4, Demand +2. Relationship preserved.",
@@ -2898,16 +2941,19 @@ const EVENT_DECK = [
     id: "mouse-taint",
     title: "Mouse Taint in the Cellar",
     body: "Your cellar hand caught something during routine barrel tasting: a mousey, biscuity off-character spreading through one of the active lots. Spoilage organism — almost certainly Lactobacillus or Brettanomyces working without the protection of sulfites. Caught early, but the window to act is short and none of the options are comfortable.",
-    condition: s => (s.profile ?? 50) >= 55 && (s.vintages || []).some(v => v.bulkWine > 50),
+    condition: s => (s.profile ?? 50) >= 55 && (s.vintages || []).some(v => v.bulkWine > 50) && (!hasStaff(s, "cellar") || rand() < 0.35),
     choices: [
       { label: "Pull and dump the affected portion",
-        hint: "Lose 38% of the largest active bulk lot. Morale −5, Prestige −2. Reputation intact.",
+        hint: "Lose 25–38% of the largest active bulk lot (less with cellar staff). Morale −5, Prestige −2. Reputation intact.",
         effect: s => {
           const lot = [...(s.vintages || [])].filter(v => v.bulkWine > 0).sort((a, b) => b.bulkWine - a.bulkWine)[0];
           if (lot) {
-            const lost = Math.round(lot.bulkWine * 0.38);
+            const lossRate = hasStaff(s, "cellar") ? 0.25 : 0.38;
+            const lost = Math.round(lot.bulkWine * lossRate);
             lot.bulkWine = Math.max(0, lot.bulkWine - lost);
-            log(s, `${lost} CE of ${lot.label} poured out. Painful and expensive, but nothing mousey leaves this cellar.`);
+            log(s, hasStaff(s, "cellar")
+              ? `Cellar staff caught it early — ${lost} CE of ${lot.label} poured out, but the spread was contained.`
+              : `${lost} CE of ${lot.label} poured out. Painful and expensive, but nothing mousey leaves this cellar.`);
           }
           s.morale -= 5; s.prestige -= 2;
         }},
@@ -3204,7 +3250,7 @@ const EVENT_DECK = [
     priority: true,
     title: "The Bank Has Reached Its Limit",
     body: "The account manager's call came Tuesday morning. The credit facility is at its ceiling and the bank is not extending further. Operating costs will continue regardless. The estate needs a solution — none of them comfortable.",
-    condition: s => availableCredit(s) <= 15000 && s.debt > 30000 && s.month > 3,
+    condition: s => availableCredit(s) <= 15000 && s.debt > 30000 && s.cash < 0 && s.month > 3,
     choices: [
       {
         label: "Emergency bridge loan",
@@ -3315,7 +3361,7 @@ const ORDER_TYPES = {
 const ACTIONS = [
   {
     id: "vineyard",
-    name: "Work Vineyard",
+    name: s => wrathLabel(s, "Work Vineyard", [[3, "Toil in the Vineyard"]]),
     detail: "Canopy management, irrigation checks, and disease scouting.",
     seasons: ["Budbreak", "Flowering", "Veraison", "Harvest"],
     consequence: s => {
@@ -3402,6 +3448,7 @@ const ACTIONS = [
         : effectiveScore;
       if (!lot.criticScore) {
         lot.criticScore = calcCriticScore(effectiveScore, s.quality);
+        lot.tastingNote = tastingNote(s, lot);
         if (lot.dominantMaturity === "old vine") {
           lot.criticScore = Math.min(lot.criticScore + 3, 100);
           s.prestige += 2;
@@ -3420,7 +3467,7 @@ const ACTIONS = [
   },
   {
     id: "sales",
-    name: "Sell and Court Buyers",
+    name: s => wrathLabel(s, "Sell and Court Buyers", [[4, "Hawk the Vintage"]]),
     detail: "Generate direct sales, new orders, and market heat.",
     seasons: ["Budbreak", "Flowering", "Veraison", "Harvest", "Cellar", "Dormant"],
     consequence: "Sells unreserved cases and may create a buyer request.",
@@ -3441,7 +3488,7 @@ const ACTIONS = [
   },
   {
     id: "hospitality",
-    name: "Run Hospitality",
+    name: s => wrathLabel(s, "Run Hospitality", [[3, "Lure the Wayward"]]),
     detail: "Open the tasting room. Visitor numbers peak in harvest season and dip in winter, but you can always open the door.",
     consequence: "Sells premium cases, raises demand, morale, and prestige.",
     cost: 1600,
@@ -3476,7 +3523,7 @@ const ACTIONS = [
   },
   {
     id: "finance",
-    name: "Negotiate and Hedge",
+    name: s => wrathLabel(s, "Negotiate and Hedge", [[5, "Deceive the Creditors"]]),
     detail: "Talk to banks, suppliers, landlords, and grant programs.",
     consequence: "Adds cash and influence, but cools demand slightly.",
     cost: 800,
@@ -3545,7 +3592,7 @@ const ACTIONS = [
   },
   {
     id: "upgrade",
-    name: "Upgrade Estate",
+    name: s => wrathLabel(s, "Upgrade Estate", [[4, "Magnify the Barns"]]),
     detail: "Open the Estate pane to add blocks, tanks, barrels, labs, bottling, or hospitality.",
     seasons: ["Budbreak", "Flowering", "Veraison", "Harvest", "Cellar", "Dormant"],
     consequence: "Building an upgrade spends cash and one monthly placement.",
@@ -4045,8 +4092,12 @@ const ACHIEVEMENTS = [
   { id: "genevan-influence",     emoji: "🪤",  name: "Suspected Genevan Influence", desc: "The envoy left early. The secretary has a very long list." },
   { id: "pest-scout",            emoji: "🐛",  name: "Field Scout",                 desc: "Survived a pest infestation. Some of them made it through." },
   { id: "pest-clean-sweep",      emoji: "🎯",  name: "Clean Sweep",                 desc: "Kept total escaped bugs under 15 across a full infestation." },
-  { id: "battle-champion",       emoji: "🥇",  name: "Gold Medal",                  desc: "Won the regional wine competition through combat." },
-  { id: "battle-participant",    emoji: "🥂",  name: "A Good Showing",              desc: "Entered the wine competition and saw it through to the end." },
+  { id: "battle-participant",    emoji: "🥂",  name: "A Good Showing",              desc: "Entered a wine competition and saw it through to the end." },
+  { id: "district-gold",        emoji: "🌟",  name: "District Gold",               desc: "Won the young producers district competition in year two." },
+  { id: "battle-champion",      emoji: "🥇",  name: "Regional Gold Medal",         desc: "Won the main regional wine competition." },
+  { id: "double-gold",          emoji: "🏅",  name: "Double Gold",                 desc: "Won both the district and regional competitions." },
+  { id: "collector-dinner",     emoji: "🍽️",  name: "The Room Was Listening",      desc: "Attended a collector vertical dinner and presented in person." },
+  { id: "charity-pour",         emoji: "🎗️",  name: "Poured for the Cause",        desc: "Headlined a charity wine dinner." },
 ];
 
 function createState() {
@@ -4165,6 +4216,7 @@ function createState() {
     lastHarvestForecast: 0,
     lastHarvestGrapes: 0,
     battleOpponentsUsed: [],
+    earlyCompetitionEntered: false,
   };
   ensureStaffTraits(s);
   // Long-aging varietals (nebbiolo, cabernet in high-bonus regions) face a ~20-month gap before
@@ -4336,7 +4388,7 @@ function onVintnerHired(s) {
 
 function currentSeal(s) {
   if (!inWrath(s)) return 0;
-  const thresholds = [12, 25, 37, 50, 62, 75, 88, 100];
+  const thresholds = [12, 25, 37, 50, 62, 75, 84, 110];
   const slow = hasStaff(s, "priest") ? 3 : 0;
   const adjustedCup = Math.max(0, s.wrathState.cup - slow * 3);
   let seal = 0;
@@ -4438,7 +4490,7 @@ function wrathTick(s) {
   checkPriestDeparture(s);
 
   // Cup full → enter measurement
-  if (ws.cup >= 100 && ws.mode === "normal") {
+  if (ws.cup >= 110 && ws.mode === "normal") {
     enterMeasurement(s);
   }
 }
@@ -4960,6 +5012,9 @@ function ensureEconomy(s) {
   if (typeof s.lastHarvestForecast !== "number") s.lastHarvestForecast = 0;
   if (typeof s.lastHarvestGrapes !== "number") s.lastHarvestGrapes = 0;
   if (!Array.isArray(s.battleOpponentsUsed)) s.battleOpponentsUsed = [];
+  if (s.earlyCompetitionEntered === undefined) s.earlyCompetitionEntered = false;
+  if (s.districtWon === undefined) s.districtWon = false;
+  if (s.regionalWon === undefined) s.regionalWon = false;
   ensureLotRisk(s);
 }
 
@@ -5543,7 +5598,7 @@ function recordArchiveBottling(s, lot, cases) {
       avgPrice: 0,
       accolades: [],
       channels: {},
-      summary: tastingNote(s, lot),
+      summary: lot.tastingNote || tastingNote(s, lot),
       bottledMonth: s.month,
       soldOutMonth: null
     };
@@ -5597,109 +5652,183 @@ function tastingNote(s, lot) {
   const quality = lot.criticScore || calcCriticScore(lot.score || 3, s.quality);
   const v = s.varietal;
   const reg = s.region;
+  const vintageScore = lot.score || 3;
+  const pick = arr => arr[randint(0, arr.length - 1)];
 
   const varietalNotes = {
     nebbiolo: [
-      "dried rose, iron, and tar; a wine that demands time",
-      "violet, red cherry, and forest floor; built for the cellar",
-      "ripe fruit beneath austere tannin; classic Langhe structure",
-      "compressed fruit, fine acid, and the promise of something longer"
+      "dried rose, iron, and tar",
+      "violet, red cherry, and forest floor",
+      "compressed red fruit, brick-edged tannin, and mineral depth",
+      "crushed flowers, blood orange, and mineral severity",
+      "dark cherry, woodsmoke, and classic Langhe grip",
+      "earthy and perfumed, wound tight with fine acid",
+      "faded rose, licorice root, and a long, drying finish",
+      "ripe fruit beneath austere tannin; the tannin will outlast you",
     ],
     shiraz: [
-      "blackberry, smoked meat, and cracked pepper; warm-climate and full-bodied",
-      "dark plum, olive tapenade, and iron; bold and structured",
-      "inky fruit, licorice, and fine tannin; rich and long",
-      "ripe fruit, leather, and a savory mineral close"
+      "blackberry, smoked meat, and cracked pepper",
+      "dark plum, olive tapenade, and iron",
+      "inky fruit, licorice, and fine-grained tannin",
+      "ripe fruit, leather, and a savory, mineral close",
+      "blueberry compote, violets, and dark chocolate",
+      "roasted meat, black olive, and a long peppery finish",
+      "dense and driven, with blackcurrant and game at the core",
     ],
     tempranillo: [
-      "ripe cherry, dried herbs, and vanilla oak; classic Mediterranean warmth",
-      "dark plum, leather, and tobacco; long barrel aging on display",
-      "fig, cedar, and structured fruit; traditional and cellar-worthy",
-      "warm fruit, red berries, and integrated wood spice"
+      "ripe cherry, dried herbs, and vanilla oak",
+      "dark plum, leather, and tobacco leaf",
+      "fig, cedar, and structured fruit",
+      "warm fruit, red berries, and integrated wood spice",
+      "sun-dried tomato, balsamic, and a dusty finish",
+      "earthy red fruit, clove, and long vanilla oak",
+      "bramble, charred wood, and a classically Spanish close",
     ],
     malbec: [
-      "juicy plum, mocha, and violets; Mendoza in its most generous form",
-      "dark cherry, chocolate, and velvety tannin; ripe and approachable",
-      "ripe fruit, coffee, and leather; altitude fruit with broad appeal",
-      "concentrated dark berry, lavender, and a smooth, generous finish"
+      "juicy plum, mocha, and violets",
+      "dark cherry, chocolate, and velvety tannin",
+      "ripe fruit, roasted coffee, and a lavender note",
+      "concentrated dark berry, cassis, and a smooth, generous finish",
+      "inky and plush — blackberry, praline, and soft oak",
+      "altitude fruit: purple and precise, with an unexpected freshness",
+      "deep-fruited and generous, with cocoa powder on the close",
     ],
     cabernet: [
-      "blackcurrant, cedar, and fine tannin; restrained and long",
-      "cassis, graphite, and dried herb; classic structure and precision",
-      "dark fruit, tobacco, and new oak; power tempered by careful extraction",
-      "firm tannin, dark cherry, and pencil lead; classic and cellar-worthy"
+      "blackcurrant, cedar, and fine tannin",
+      "cassis, graphite, and dried herb",
+      "dark fruit, tobacco, and new oak",
+      "firm tannin, dark cherry, and pencil lead",
+      "crushed blackcurrant, iron, and a drying, classical finish",
+      "lead pencil, violets, and green herb over dense dark fruit",
+      "serious, structured, and not yet ready — come back in five years",
     ],
     merlot: [
-      "plum, soft tannin, and dark chocolate; early appeal with genuine depth",
-      "red cherry, velvet texture, and bay leaf; plush and food-friendly",
+      "plum, soft tannin, and dark chocolate",
+      "red cherry, velvet texture, and bay leaf",
       "approachable fruit, gentle oak, and a smooth, persistent finish",
-      "blueberry, mocha, and soft structure; generous and honest"
+      "blueberry, mocha, and soft structure",
+      "ripe and round — dark plum, coffee, and a velvet close",
+      "mulberry, cassis, and a warm, gentle finish; immediately likeable",
+      "supple tannin, dark berry, and a fine milk-chocolate note",
     ],
     chardonnay: [
-      "citrus, stone fruit, and integrated oak; precise and creamy",
-      "apple, cream, and toasty lees; well-structured and persistent",
-      "fresh acidity, pear, and subtle nuttiness; mineral-driven",
-      "peach, vanilla, and light toast; balanced and expressive"
+      "citrus, stone fruit, and integrated oak",
+      "apple, cream, and toasty lees",
+      "fresh acidity, pear, and subtle nuttiness",
+      "peach, vanilla, and light toast",
+      "brioche, yellow plum, and a long buttery close",
+      "honeysuckle and ripe lemon curd over a mineral spine",
+      "broad but precise — white peach, cashew, and a lifted citrus edge",
+      "oatmeal, apple blossom, and a finish that goes on and on",
     ],
     sauvignon: [
       "grapefruit, freshly cut grass, and chalky minerality",
-      "citrus zest, white currant, and a saline edge; long and vibrant",
+      "citrus zest, white currant, and a saline edge",
       "lifted aromatics, passion fruit, and a textural mid-palate",
-      "gooseberry, green herb, and precise, focused acidity"
+      "gooseberry, green herb, and precise, focused acidity",
+      "lime, nettles, and a razor-sharp, persistent finish",
+      "vivid and almost angular — grapefruit pith, snow pea, and chalk",
+      "tropical and precise at once: guava, lemon verbena, and flint",
     ],
     riesling: [
-      "lime blossom, wet slate, and laser-precise acidity; crystalline",
-      "stone fruit, petrol note, and honeyed complexity; built for decades",
+      "lime blossom, wet slate, and laser-precise acidity",
+      "stone fruit, petrol note, and honeyed complexity",
       "off-dry balance, mandarin peel, and a steely backbone",
-      "white flowers, citrus oil, and a long mineral finish"
+      "white flowers, citrus oil, and a long mineral finish",
+      "green apple, ginger, and a crystalline mineral close",
+      "electric acidity, apricot kernel, and the faintest whiff of kerosene",
+      "tightly coiled: lime, slate, and a barely-there sweetness",
+      "ten-year potential: right now all tension, with fruit hiding behind acid",
     ],
     pinot: [
-      "red fruit, forest floor, and silky tannin; elegant and site-expressive",
-      "dried cherry, earth, and subtle spice; Burgundian in weight and length",
+      "red fruit, forest floor, and silky tannin",
+      "dried cherry, earth, and subtle spice",
       "translucent fruit, iron minerality, and fine-grained structure",
-      "raspberry, violet, and a delicate, lingering finish"
+      "raspberry, violet, and a delicate, lingering finish",
+      "cranberry, wild mushroom, and a ghostly perfume",
+      "pale but serious — strawberry, wet leaves, and a haunting close",
+      "pure and fragile-looking; underneath is real precision and length",
+      "red fruit, old rose, and something almost meaty that builds on the palate",
     ],
     gamay: [
-      "bright cherry, violet, and fresh earthiness; light and immediately joyful",
-      "juicy red fruit, gentle grip, and a floral lift; drink young",
-      "fragrant, crunchy, and energetically fruited; honest and undemanding",
-      "red berries, pepper, and a lively, peppery close"
+      "bright cherry, violet, and fresh earthiness",
+      "juicy red fruit, gentle grip, and a floral lift",
+      "fragrant, crunchy, and energetically fruited",
+      "red berries, pepper, and a lively, peppery close",
+      "sappy and immediate — fresh raspberry, black pepper, and spring flowers",
+      "light-footed and joyful; nothing here but pleasure",
+      "kirsch, crunchy red fruit, and a finish you could follow for minutes",
     ],
     cabfranc: [
-      "red pepper, blackcurrant leaf, and pencil shavings; precise and restrained",
-      "floral lift, dark fruit, and a mineral core; medium weight with length",
-      "graphite, raspberry, and fine tannin; elegant and true to type",
-      "herbs, dark cherry, and a long savory finish"
+      "red pepper, blackcurrant leaf, and pencil shavings",
+      "floral lift, dark fruit, and a mineral core",
+      "graphite, raspberry, and fine tannin",
+      "herbs, dark cherry, and a long savory finish",
+      "bell pepper, violet, and a cool, mineral close",
+      "pyrazines and dark berries in a taut, medium-bodied frame",
+      "lifted and a little wild — dried flowers, iron, and sharp red fruit",
     ],
   };
 
-  const regionCtx = {
-    napa:       "California warmth and impressive concentration",
-    bordeaux:   "old-world structure and classical restraint",
-    burgundy:   "Burgundian subtlety and terroir fidelity",
-    mosel:      "Mosel precision and mineral tension",
-    mendoza:    "Andean altitude and generous, open-knit fruit",
-    barossa:    "Barossa richness and old-vine intensity",
-    piedmont:   "Piemontese austerity and long aging potential",
-    rioja:      "traditional oak integration and Rioja warmth",
-    fingerlakes: "cool-climate energy and tightly wound acidity",
+  const regionLines = {
+    napa:        ["California warmth with impressive concentration", "the estate shows the valley at its most ripe and assured", "power and opulence are the vocabulary here"],
+    bordeaux:    ["old-world structure and classical restraint on display", "the appellation's discipline is evident throughout", "a serious, cellar-worthy expression of the left bank tradition"],
+    burgundy:    ["Burgundian subtlety and terroir fidelity", "place speaks clearly above all else", "the kind of reticence that rewards patience"],
+    mosel:       ["Mosel precision and mineral tension are unmistakable", "the slate soils announce themselves", "cool-climate focus with the river's influence throughout"],
+    mendoza:     ["Andean altitude gives unexpected freshness to generous fruit", "the high desert contributes purple color and a bright, open finish", "latitude and elevation balanced against the valley's natural richness"],
+    barossa:     ["Barossa richness and old-vine intensity", "the valley's warmth is unapologetic here", "concentrated and sun-drenched, with the authority of old wood beneath"],
+    piedmont:    ["Piemontese austerity and long aging potential", "the hills demand patience; this wine will repay it", "classic Langhe severity — uncompromising and necessary"],
+    rioja:       ["traditional oak integration and Rioja warmth", "the estate has respected the region's long aging tradition", "American oak, old vines, and the high plateau's drying influence"],
+    fingerlakes: ["cool-climate energy and tightly wound acidity", "the lake's moderating influence is written all over the finish", "a Northern expression: precise, cool-toned, and built for food"],
   };
 
-  const styleCtx = tier === "cult" ? "Minimal-intervention" :
-    tier === "artisan" ? "Thoughtfully crafted" :
-    tier === "commercial" ? "Reliably produced" : "Classically made";
+  const styleOpener = {
+    cult:       ["Minimal intervention", "Hands-off and attentive", "Low-input, high-attention"],
+    artisan:    ["Thoughtfully crafted", "Made with care and restraint", "A considered, small-production effort"],
+    classic:    ["Classically made", "Traditional in approach", "A conventional but honest effort"],
+    commercial: ["Reliably produced", "Clean and well-executed", "Competent and ready"],
+  };
 
-  const qualityTail = quality >= 94 ? "exceptional depth; will reward the cellar" :
-    quality >= 90 ? "real finesse and a long, rewarding finish" :
-    quality >= 86 ? "honest balance and good regional character" :
-    quality >= 82 ? "clean varietal expression and early appeal" :
-    "simple and best drunk young";
+  const qualityClose = quality >= 94 ? [
+    "exceptional in all respects; will improve for a decade or more",
+    "one of the finest examples from this estate; cellar without hesitation",
+    "the kind of bottle you mark with a date and revisit",
+  ] : quality >= 90 ? [
+    "long, rewarding, and made to last",
+    "real finesse on the finish; don't rush this one",
+    "shows genuine depth and a finish that earns the score",
+  ] : quality >= 86 ? [
+    "honest balance and good regional character",
+    "drinks well now; hold a few if you can",
+    "a confident, characterful effort",
+  ] : quality >= 82 ? [
+    "clean varietal expression and early appeal",
+    "best in the next two to three years",
+    "approachable and unpretentious",
+  ] : [
+    "simple and best enjoyed young",
+    "a straightforward effort; drink soon",
+    "honest, if uncomplicated",
+  ];
+
+  const vintageNote = vintageScore >= 5 ? pick(["An exceptional vintage elevated every decision made in the cellar.", "The season was generous and the wine shows it.", "A great year — this bottle carries that weight."]) :
+    vintageScore >= 4 ? pick(["A strong vintage backed the careful work here.", "Favorable conditions gave the cellar plenty to work with.", "The year cooperated; the results speak for themselves."]) :
+    vintageScore <= 2 ? pick(["A difficult vintage; the effort shows in the result.", "The season tested the cellar, and the wine is honest about it.", "Not an easy year, but handled with care."]) :
+    "";
 
   const notes = varietalNotes[v];
-  const note = notes ? notes[randint(0, notes.length - 1)] : "ripe fruit and clean structure";
-  const ctx = regionCtx[reg] || "regional character on display";
+  const note = notes ? pick(notes) : "ripe fruit and clean structure";
+  const regionLine = regionLines[reg] ? pick(regionLines[reg]) : "regional character on display";
+  const opener = pick(styleOpener[tier] || styleOpener.classic);
+  const close = pick(qualityClose);
 
-  return `${styleCtx} ${VARIETALS[v]?.name || "wine"}: ${note}. ${ctx}; ${qualityTail}.`;
+  const templates = [
+    () => `${opener} ${VARIETALS[v]?.name || "wine"}: ${note}. ${regionLine.charAt(0).toUpperCase() + regionLine.slice(1)}; ${close}.${vintageNote ? " " + vintageNote : ""}`,
+    () => `${note.charAt(0).toUpperCase() + note.slice(1)} — ${opener.toLowerCase()} and expressive of ${regionLine}. ${close.charAt(0).toUpperCase() + close.slice(1)}.${vintageNote ? " " + vintageNote : ""}`,
+    () => `${vintageNote ? vintageNote + " " : ""}${opener} ${VARIETALS[v]?.name || "wine"} showing ${note}. ${close.charAt(0).toUpperCase() + close.slice(1)}, with ${regionLine}.`,
+  ];
+
+  return pick(templates)();
 }
 
 function archiveMemory(s) {
@@ -6368,7 +6497,7 @@ function averageDisease(s) {
 
 function averageWater(s) {
   const rows = s.rows;
-  return rows.length ? rows.reduce((sum, r) => sum + (r.water || 50), 0) / rows.length : 50;
+  return rows.length ? rows.reduce((sum, r) => sum + (r.water ?? 50), 0) / rows.length : 50;
 }
 
 function capexTier(id, level) {
@@ -6471,6 +6600,7 @@ function hireStaff(id) {
   state.staff.push(id);
   state.totalStaffHired = (state.totalStaffHired || 0) + 1;
   ensureStaffProgress(state, id);
+  state.staffProgress[id].hiredMonth = state.month;
   state.staffMarket = buildStaffMarket(state);
   applyCapacityDelta(state, beforeCap);
   applyStaffPassive(state, person);
@@ -6526,6 +6656,7 @@ function useAction(id) {
   const action = ACTIONS.find(a => a.id === id);
   ensureActionBudgets(state);
   if (!action || state.event || state.gameOver) return;
+  if (inWrath(state) && state.wrathState?.mode === "measurement") return;
   if (action.navigateTab) {
     activeTab = action.navigateTab;
     render();
@@ -6663,6 +6794,11 @@ function checkAchievements(s) {
   if (s.prestige >= 100) award("centenaire");
   if (s.morale >= 100) award("esprit-de-corps");
   if ((s.fatigue || 0) === 0) award("well-rested");
+  if (s.districtWon) award("district-gold");
+  if (s.regionalWon) award("battle-champion");
+  if (s.districtWon && s.regionalWon) award("double-gold");
+  if ((s.eventMemory?.["prestige-dinner"]?.count || 0) > 0) award("charity-pour");
+  if ((s.eventMemory?.["vertical-collector"]?.count || 0) > 0) award("collector-dinner");
 }
 
 function profilePriceCeil(s) {
@@ -6771,7 +6907,11 @@ function monthlyTick(s) {
     s.lowMoraleMonths = 0;
   }
   if ((s.lowMoraleMonths || 0) >= 4 && s.staff.length > 0) {
-    const eligibleLeavers = s.staff.filter(id => id !== "priest" && id !== "vintner");
+    const eligibleLeavers = s.staff.filter(id => {
+      if (id === "priest" || id === "vintner") return false;
+      const hiredMonth = s.staffProgress?.[id]?.hiredMonth ?? 0;
+      return (s.month - hiredMonth) >= 3;
+    });
     const leaverId = eligibleLeavers[Math.floor(rand() * eligibleLeavers.length)];
     if (leaverId) {
       const person = STAFF_POOL.find(p => p.id === leaverId);
@@ -7325,6 +7465,7 @@ function resolveEvent(choiceIndex) {
   if (choice.insured && state.insurance?.crop && choice.cost) {
     log(state, `Crop insurance covered ${money((choice.cost || 0) - cost)} of the damage cost.`);
   }
+  const statsBefore = { prestige: state.prestige, demand: state.demand, morale: state.morale, quality: state.quality, cash: state.cash };
   const beforeLog = state.log.length;
   choice.effect(state);
   if (choice.iniquity && inWrath(state)) {
@@ -7344,10 +7485,17 @@ function resolveEvent(choiceIndex) {
   const resolvedEventTitle = typeof event.title === "function" ? event.title(state) : event.title;
   if (!choice.iniquity) log(state, `${resolvedEventTitle}: ${displayLabel}.`);
   const summary = state.log.slice(0, Math.max(1, state.log.length - beforeLog)).map(entry => entry.text).reverse().join(" ");
+  const GAIN_LABELS = [["prestige", "Prestige"], ["demand", "Demand"], ["morale", "Morale"], ["quality", "Quality"]];
+  const gains = GAIN_LABELS
+    .map(([k, label]) => ({ label, delta: Math.round(state[k] - statsBefore[k]) }))
+    .filter(g => g.delta !== 0);
+  const cashDelta = state.cash - statsBefore.cash;
+  if (Math.abs(cashDelta) >= 100) gains.push({ label: "Cash", delta: cashDelta });
   state.lastEventResult = {
     title: `${resolvedEventTitle} resolved`,
     choice: displayLabel,
-    summary: summary || "Outcome recorded in the estate ledger."
+    summary: summary || "Outcome recorded in the estate ledger.",
+    gains,
   };
   ensureEventMemory(state);
   const memory = state.eventMemory[event.id] || { count: 0, lastMonth: -999 };
@@ -8085,10 +8233,11 @@ function applyPestMonthEnd(s) {
 
 // ── Wine Battle Minigame ─────────────────────────────────────────────────────
 
-function startWineBattle(s) {
+function startWineBattle(s, tier) {
   const used = s.battleOpponentsUsed || [];
-  const pool = BATTLE_OPPONENTS.filter(o => !used.includes(o.id));
-  const candidates = pool.length > 0 ? pool : BATTLE_OPPONENTS;
+  const tiered = BATTLE_OPPONENTS.filter(o => o.tier === tier);
+  const pool = tiered.filter(o => !used.includes(o.id));
+  const candidates = pool.length > 0 ? pool : (tiered.length > 0 ? tiered : BATTLE_OPPONENTS);
   const opponent = candidates[randint(0, candidates.length - 1)];
 
   const playerHp = clamp(s.quality, 70, 130);
@@ -8107,9 +8256,11 @@ function startWineBattle(s) {
     turnLog: null,
     result: null,
     turnCount: 0,
+    battleTier: tier,
   };
 
-  s.competitionEntered = true;
+  if (tier === 1) s.earlyCompetitionEntered = true;
+  else s.competitionEntered = true;
   if (!s.battleOpponentsUsed) s.battleOpponentsUsed = [];
   s.battleOpponentsUsed.push(opponent.id);
 
@@ -8175,22 +8326,41 @@ function wineBattleNext() {
     const { playerFainted, opponentFainted } = ws.turnLog;
     if (playerFainted || opponentFainted) {
       const won = opponentFainted;
+      const isEarly = ws.battleTier === 1;
       let resultTitle, resultBody, prestigeGain, demandGain, moraleGain;
       if (won) {
         const dominant = ws.playerHp >= Math.round(ws.playerMaxHp * 0.5);
-        resultTitle  = dominant ? "Gold Medal" : "Narrow Gold Medal";
-        resultBody   = dominant
-          ? "A commanding performance. The judges awarded the Gold without deliberation. Allocation requests are flooding in."
-          : "A close-fought victory. The Gold went to the estate after a tense final round. The room applauded.";
-        prestigeGain = dominant ? 16 : 12;
-        demandGain   = dominant ? 14 : 10;
-        moraleGain   = dominant ? 8  : 5;
+        if (isEarly) {
+          resultTitle  = dominant ? "District Gold" : "District Gold (Narrow)";
+          resultBody   = dominant
+            ? "An unexpected sweep at the young-producers circuit. Word travels fast — the estate is one to watch."
+            : "A hard-earned win at the district tasting. The judges noted the result; so did your neighbors.";
+          prestigeGain = dominant ? 8 : 6;
+          demandGain   = dominant ? 7 : 5;
+          moraleGain   = dominant ? 6 : 4;
+        } else {
+          resultTitle  = dominant ? "Gold Medal" : "Narrow Gold Medal";
+          resultBody   = dominant
+            ? "A commanding performance. The judges awarded the Gold without deliberation. Allocation requests are flooding in."
+            : "A close-fought victory. The Gold went to the estate after a tense final round. The room applauded.";
+          prestigeGain = dominant ? 16 : 12;
+          demandGain   = dominant ? 14 : 10;
+          moraleGain   = dominant ? 8  : 5;
+        }
       } else {
-        resultTitle  = "Silver Medal";
-        resultBody   = "A creditable showing. The wine made its mark — the competition raised the estate's regional profile considerably.";
-        prestigeGain = 6;
-        demandGain   = 6;
-        moraleGain   = 3;
+        if (isEarly) {
+          resultTitle  = "District Silver";
+          resultBody   = "A good showing for an early-career estate. The wine held its own. There will be another competition — and by then, the cellar will be ready.";
+          prestigeGain = 4;
+          demandGain   = 3;
+          moraleGain   = 2;
+        } else {
+          resultTitle  = "Silver Medal";
+          resultBody   = "A creditable showing. The wine made its mark — the competition raised the estate's regional profile considerably.";
+          prestigeGain = 6;
+          demandGain   = 6;
+          moraleGain   = 3;
+        }
       }
       ws.result = { won, resultTitle, resultBody, prestigeGain, demandGain, moraleGain };
       ws.phase = "result";
@@ -8209,10 +8379,13 @@ function _wineBattleFinish() {
   state.prestige = clamp(state.prestige + prestigeGain, 0, 120);
   state.demand   = clamp(state.demand   + demandGain,   0, 130);
   state.morale   = clamp(state.morale   + moraleGain,   0, 100);
-  log(state, `Regional Competition — ${resultTitle}. Prestige +${prestigeGain}, Demand +${demandGain}.`);
+  const compLabel = wineBattleState?.battleTier === 1 ? "District Competition" : "Regional Competition";
+  log(state, `${compLabel} — ${resultTitle}. Prestige +${prestigeGain}, Demand +${demandGain}.`);
 
   awardAchievement(state, "battle-participant");
-  if (won) awardAchievement(state, "battle-champion");
+  const tier = wineBattleState.battleTier;
+  if (won && tier === 1) state.districtWon = true;
+  if (won && tier === 2) state.regionalWon = true;
 
   wineBattleState = null;
   normalizeState(state);
@@ -8401,10 +8574,10 @@ function topbar() {
         <div class="kpis">
           ${kpi("Date", currentDateLabel(state), "Current month. Most operations, weather, contracts, and costs advance monthly.")}
           ${kpi(wrathLabel(state, "Cash", [[4, "Mammon"]]), money(state.cash), "Available cash after operating costs, sales, debt draws, and repayments. Running out forces credit-line use.", state.cash < 0 ? "danger" : state.cash < 30000 ? "warn" : state.cash >= 200000 ? "good" : "")}
-          ${kpi("Prestige", `${state.prestige}/120`, "Reputation with critics, buyers, and collectors.", state.prestige >= 75 ? "good" : state.prestige < 40 ? "warn" : "")}
-          ${kpi("Demand", `${state.demand}/130`, "Commercial pull for your wine. Higher demand improves direct sales and buyer interest.", state.demand >= 100 ? "good" : state.demand < 50 ? "warn" : "")}
-          ${kpi("Quality", `${state.quality}/120`, "Current house quality. Vineyard health, weather, cellar work, and barrels move this. Decays faster above 85.", state.quality >= 85 ? "good" : state.quality < 50 ? "warn" : "")}
-          ${kpi("Morale", `${state.morale}/100`, "Staff and crew confidence. Below 20 loses an action/month and triggers labor events; 0 ends the game.", state.morale < 20 ? "danger" : state.morale < 40 ? "warn" : state.morale >= 70 ? "good" : "")}
+          ${kpi(wrathLabel(state, "Prestige", [[3, "Vainglory"]]), `${state.prestige}/120`, "Reputation with critics, buyers, and collectors.", state.prestige >= 75 ? "good" : state.prestige < 40 ? "warn" : "")}
+          ${kpi(wrathLabel(state, "Demand", [[4, "Appetite"]]), `${state.demand}/130`, "Commercial pull for your wine. Higher demand improves direct sales and buyer interest.", state.demand >= 100 ? "good" : state.demand < 50 ? "warn" : "")}
+          ${kpi(wrathLabel(state, "Quality", [[6, "Corruption"]]), `${state.quality}/120`, "Current house quality. Vineyard health, weather, cellar work, and barrels move this. Decays faster above 85.", state.quality >= 85 ? "good" : state.quality < 50 ? "warn" : "")}
+          ${kpi(wrathLabel(state, "Morale", [[5, "Submission"]]), `${state.morale}/100`, "Staff and crew confidence. Below 20 loses an action/month and triggers labor events; 0 ends the game.", state.morale < 20 ? "danger" : state.morale < 40 ? "warn" : state.morale >= 70 ? "good" : "")}
           ${kpi("Fatigue", `${state.fatigue || 0}/100`, "Operational strain. Harvest, bottling, hospitality, emergencies, and heroics add fatigue; winter rest and operations capacity clear it.", (state.fatigue || 0) > 75 ? "danger" : (state.fatigue || 0) > 50 ? "warn" : (state.fatigue || 0) < 20 ? "good" : "")}
           ${kpi("Grape CE", totalGrapes(state), "Case-equivalent grapes across all vintage lots. Harvest adds these; cellar work converts them to bulk wine.")}
           ${kpi("Bulk CE", totalBulkWine(state), "Case-equivalent bulk wine aging across all vintage lots. Bottling converts this into finished cases.")}
@@ -8462,6 +8635,12 @@ function eventPanel() {
 function eventResultPanel() {
   const result = state.lastEventResult;
   if (!result) return "";
+  const gainsHtml = result.gains?.length
+    ? `<div class="event-result-gains">${result.gains.map(g => {
+        const sign = g.delta >= 0 ? "+" : "";
+        const val = g.label === "Cash" ? `${sign}${money(g.delta)}` : `${sign}${g.delta}`;
+        return `<span class="event-gain ${g.delta >= 0 ? "pos" : "neg"}">${val} ${g.label}</span>`;
+      }).join("")}</div>` : "";
   return `
     <section class="panel event-result">
       <div class="panel-head">
@@ -8469,6 +8648,7 @@ function eventResultPanel() {
         <button class="ghost compact" onclick="dismissEventResult()">Dismiss</button>
       </div>
       <p>${escapeHtml(result.choice)}</p>
+      ${gainsHtml}
       <div class="small">${escapeHtml(result.summary)}</div>
     </section>
   `;
@@ -8944,11 +9124,13 @@ function sparkline(title, history, key, options = {}) {
 }
 
 function artBanner(kind, label) {
-  const wrath = inWrath(state) && (state.wrathState?.seal || 0) >= 3;
+  const seal = inWrath(state) ? (state.wrathState?.seal || 0) : 0;
+  const phase3 = seal >= 6;
+  const wrath  = seal >= 3;
   const map = {
-    vineyard:   wrath ? "assets/vineyard-wrath.png"      : "assets/vineyard.png",
-    commercial: wrath ? "assets/tasting-room-wrath.png"  : "assets/tasting-room.png",
-    cellar:     wrath ? "assets/cellar-wrath.png"        : "assets/cellar.png"
+    vineyard:   phase3 ? "assets/vineyard-wrath-3.png"       : wrath ? "assets/vineyard-wrath.png"      : "assets/vineyard.png",
+    commercial: phase3 ? "assets/tasting-room-wrath-3.png"   : wrath ? "assets/tasting-room-wrath.png"  : "assets/tasting-room.png",
+    cellar:     phase3 ? "assets/cellar-wrath-3.png"         : wrath ? "assets/cellar-wrath.png"        : "assets/cellar.png"
   };
   return `
     <section class="scene-art ${kind}" style="background-image: linear-gradient(90deg, rgba(31,36,33,.58), rgba(31,36,33,.08)), url('${map[kind]}');">
@@ -9101,6 +9283,7 @@ function actionsPanel() {
       <div class="actions">
         ${sorted.map(action => {
           const cost = actionCost(action, state);
+          const inSeason = !action.seasons || action.seasons.includes(state.season);
           const available = isActionAvailable(action, state);
           const invNote = actionInventoryNote(action, state);
           const capKey = actionCapacityKey(action, state);
@@ -9112,7 +9295,8 @@ function actionsPanel() {
             : !available || !canSpendForAction(action, state) || state.cash < cost || state.event || state.gameOver || (invNote && invNote.hard);
           const effectText = invNote
             ? invNote.text
-            : available ? actionConsequence(action, state) : `Off-season: available ${seasonListLabel(action.seasons)}`;
+            : !inSeason ? `Off-season: available ${seasonListLabel(action.seasons)}`
+            : actionConsequence(action, state);
           const effectClass = invNote ? "effect effect-note" : "effect";
           return `
             <button class="action-card ${available ? "" : "offseason"}" onclick="useAction('${action.id}')" ${disabled ? "disabled" : ""}>

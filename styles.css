@@ -309,14 +309,7 @@ button:disabled {
 .hero-title {
   width: min(860px, 100%);
   aspect-ratio: 3 / 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  background: url("assets/title-plaque-with-title.png");
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
+  background: url("assets/title-plaque-with-title.png") center center / 100% 100% no-repeat;
 }
 
 
@@ -2558,6 +2551,31 @@ input[type="range"] {
   font-weight: 700;
 }
 
+.event-result-gains {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 6px 0 8px;
+}
+
+.event-gain {
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.event-gain.pos {
+  background: #d4edda;
+  color: #155724;
+}
+
+.event-gain.neg {
+  background: #f8d7da;
+  color: #721c24;
+}
+
 .event-banner.with-art {
   grid-template-columns: 112px minmax(0, 1fr);
   align-items: start;
@@ -2578,14 +2596,27 @@ input[type="range"] {
 }
 
 .event-banner.with-art-large img {
-  width: 100%;
+  width: 80%;
   height: auto;
-  max-height: 240px;
+  max-height: 400px;
+  display: block;
+  margin: 0 auto;
   object-fit: cover;
   object-position: top;
   background: transparent;
   border: none;
   border-radius: 4px;
+}
+
+.event-banner.with-art-large .event-buttons {
+  margin-top: 14px;
+}
+
+.event-banner.with-art-large .event-buttons .event-choice:only-child {
+  grid-column: 1 / -1;
+  padding: 12px 20px;
+  align-items: center;
+  text-align: center;
 }
 
 .event-banner strong {
@@ -2596,6 +2627,8 @@ input[type="range"] {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  margin-top: 14px;
+  margin-bottom: 4px;
 }
 
 .modal {
@@ -3275,27 +3308,33 @@ body.corruption-stage-6 { background: color-mix(in srgb, var(--paper) 89%, #3a0a
 body.corruption-stage-6 .panel { border-color: rgba(139,34,34,0.28); background: color-mix(in srgb, var(--panel) 96%, #3a0a0a 4%); }
 body.corruption-stage-6 .topbar { background: color-mix(in srgb, #fff 90%, #3a0a0a 10%); }
 body.corruption-stage-6 .kpi strong { animation: clock-flicker 6s infinite; }
+body.corruption-stage-6 .chart-card,
+body.corruption-stage-6 .staff,
+body.corruption-stage-6 .building { background: color-mix(in srgb, #fffdfa 93%, #3a0a0a 7%); border-color: rgba(139,34,34,0.22); }
 
 /* Seal 7 — blood red (Joel: sun to sackcloth, moon to blood) */
-body.corruption-stage-7 { background: #1c0606; color: #d4b0b0; }
-body.corruption-stage-7 .panel { background: #220a0a; border-color: #5a1414; color: #d4b0b0; }
-body.corruption-stage-7 .topbar { background: #140404; border-bottom-color: #5a1414; }
-body.corruption-stage-7 .kpi { background: #260808; border-color: #5a1414; color: #c4a0a0; }
-body.corruption-stage-7 strong { color: #f0d0d0; }
-body.corruption-stage-7 button:not(.primary) { background: #2a0e0e; border-color: #5a1414; color: #c4a0a0; }
-body.corruption-stage-7 .kpi strong { animation: clock-flicker 2.5s infinite; color: #e8b0b0; }
-body.corruption-stage-7 .cue-italic { color: #c06060; }
-body.corruption-stage-7 .stat-box { background: #260808; border-color: #5a1414; color: #d4b0b0; }
-body.corruption-stage-7 .stat-box span { color: #8a4040; }
-body.corruption-stage-7 .stat-box strong { color: #e8c0c0; }
-body.corruption-stage-7 .row-card { background: #200808; border-color: #5a1414; color: #d4b0b0; }
-body.corruption-stage-7 .row-badge { background: #3a1010; color: #a07070; }
-body.corruption-stage-7 .row-meter-track { background: #3a1212; }
-body.corruption-stage-7 .row-meter-fill.health { background: #7a2020; }
-body.corruption-stage-7 .action-card { background: #200808; border-color: #5a1414; }
-body.corruption-stage-7 .action-card span { color: #9a6060; }
-body.corruption-stage-7 .action-card .effect { color: #c08080; }
-body.corruption-stage-7 .empty { background: #200808; border-color: #5a1414; color: #9a6060; }
+body.corruption-stage-7 { background: #2e0d0d; color: #eacfcf; }
+body.corruption-stage-7 .panel { background: #3a1212; border-color: #7a2424; color: #eacfcf; }
+body.corruption-stage-7 .chart-card,
+body.corruption-stage-7 .staff,
+body.corruption-stage-7 .building { background: #361010; border-color: #7a2424; color: #eacfcf; }
+body.corruption-stage-7 .topbar { background: #260a0a; border-bottom-color: #7a2424; }
+body.corruption-stage-7 .kpi { background: #3e1414; border-color: #7a2424; color: #dab8b8; }
+body.corruption-stage-7 strong { color: #fff4f4; }
+body.corruption-stage-7 button:not(.primary) { background: #421616; border-color: #7a2424; color: #dab8b8; }
+body.corruption-stage-7 .kpi strong { animation: clock-flicker 2.5s infinite; color: #f0c8c8; }
+body.corruption-stage-7 .cue-italic { color: #d07070; }
+body.corruption-stage-7 .stat-box { background: #3e1414; border-color: #7a2424; color: #eacfcf; }
+body.corruption-stage-7 .stat-box span { color: #a05858; }
+body.corruption-stage-7 .stat-box strong { color: #f0d0d0; }
+body.corruption-stage-7 .row-card { background: #361010; border-color: #7a2424; color: #eacfcf; }
+body.corruption-stage-7 .row-badge { background: #4e1818; color: #b88080; }
+body.corruption-stage-7 .row-meter-track { background: #4e1818; }
+body.corruption-stage-7 .row-meter-fill.health { background: #8a2828; }
+body.corruption-stage-7 .action-card { background: #361010; border-color: #7a2424; }
+body.corruption-stage-7 .action-card span { color: #b07070; }
+body.corruption-stage-7 .action-card .effect { color: #d09090; }
+body.corruption-stage-7 .empty { background: #361010; border-color: #7a2424; color: #a07070; }
 body.corruption-stage-7 .channel-row { background: #200808; border-color: #5a1414; color: #d4b0b0; }
 body.corruption-stage-7 .channel-row.warn { background: #260a0a; border-color: #7a2020; }
 body.corruption-stage-7 .channel-row.danger { background: #2a0808; border-color: #8a1a1a; }
@@ -3722,7 +3761,8 @@ body.corruption-stage-9 .side-rail > *:not(.measurement-panel) { visibility: hid
 .wb-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.85);
+  background: url("assets/wine-battle-bg.png") center center / cover no-repeat;
+  background-color: rgba(0,0,0,0.85);
   display: flex;
   align-items: center;
   justify-content: center;
