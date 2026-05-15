@@ -521,6 +521,7 @@ const EVENT_RULES = {
   "priest-arrives-again": { max: 1 },
   "vintner-arrives": { max: 1 },
   "severin-debt-offer": { max: 1 },
+  "severin-returns": { max: 1 },
   "papal-envoy": { cooldown: 999, max: 1 },
   "pest-infestation": { max: 1 }
 };
@@ -1759,6 +1760,36 @@ const EVENT_DECK = [
         effect: s => {
           s.vintnerArrivalEventFired = true;
           log(s, "The note was burned. The lane was empty by morning. The accounts remain what they are.");
+        }
+      }
+    ]
+  },
+  {
+    id: "severin-returns",
+    title: "He Has Come Back",
+    body: "There was no announcement. No letter, no knock. The cellar door was found open this morning, and the equipment had been moved. Severin Apollos is at the press. He is working as though he never left. He has not looked up.",
+    priority: true,
+    condition: s => s.severinReturnMonth != null && s.month >= s.severinReturnMonth && !hasStaff(s, "vintner"),
+    choices: [
+      {
+        label: "Say nothing",
+        hint: "He is already inside. The account resumes.",
+        effect: s => {
+          s.staff = s.staff.filter(id => id !== "vintner");
+          s.staff.push("vintner");
+          s.wrathState = {
+            ...initWrathState(),
+            vintnerHired: true,
+            vintnerHiredMonth: s.month,
+            cup: 55,
+            seal: 4,
+            cueCount: 4,
+            severinLocked: true,
+          };
+          s.severinReturnMonth = null;
+          awardAchievement(s, "what-is-dead");
+          log(s, "Severin Apollos returned. He did not knock. The cellar register was current to the day.");
+          log(s, WRATH_SEAL_CUES[4], { italic: true });
         }
       }
     ]
@@ -4098,6 +4129,8 @@ const ACHIEVEMENTS = [
   { id: "double-gold",          emoji: "🏅",  name: "Double Gold",                 desc: "Won both the district and regional competitions." },
   { id: "collector-dinner",     emoji: "🍽️",  name: "The Room Was Listening",      desc: "Attended a collector vertical dinner and presented in person." },
   { id: "charity-pour",         emoji: "🎗️",  name: "Poured for the Cause",        desc: "Headlined a charity wine dinner." },
+  { id: "deceiver-deceived",    emoji: "🃏",  name: "The Deceiver Deceived",       desc: "Dismissed Severin Apollos before his hold on the estate became permanent." },
+  { id: "what-is-dead",         emoji: "⛓️",  name: "What Is Dead May Never Die",  desc: "Severin Apollos returned to the estate. He cannot be removed." },
 ];
 
 function createState() {
@@ -4217,6 +4250,7 @@ function createState() {
     lastHarvestGrapes: 0,
     battleOpponentsUsed: [],
     earlyCompetitionEntered: false,
+    severinReturnMonth: null,
   };
   ensureStaffTraits(s);
   // Long-aging varietals (nebbiolo, cabernet in high-bonus regions) face a ~20-month gap before
@@ -5015,6 +5049,7 @@ function ensureEconomy(s) {
   if (s.earlyCompetitionEntered === undefined) s.earlyCompetitionEntered = false;
   if (s.districtWon === undefined) s.districtWon = false;
   if (s.regionalWon === undefined) s.regionalWon = false;
+  if (s.severinReturnMonth === undefined) s.severinReturnMonth = null;
   ensureLotRisk(s);
 }
 
@@ -6618,7 +6653,7 @@ function fireStaff(id) {
   const person = STAFF_POOL.find(p => p.id === id);
   if (!person || state.actionsLeft <= 0 || state.event || state.gameOver) return;
   if (id === "priest") return;
-  if (id === "vintner" && inWrath(state) && state.wrathState.seal >= 4) {
+  if (id === "vintner" && inWrath(state) && (state.wrathState.seal >= 4 || state.wrathState.severinLocked)) {
     log(state, "He remains.");
     render();
     return;
@@ -6631,7 +6666,9 @@ function fireStaff(id) {
   if (!person.hidden && !state.staffMarket.includes(id)) state.staffMarket.push(id);
   if (id === "vintner" && inWrath(state)) {
     state.wrathState = null;
-    log(state, `${person.name} left the estate.`);
+    state.severinReturnMonth = state.month + 12;
+    awardAchievement(state, "deceiver-deceived");
+    log(state, `${person.name} left the estate. The cellar was quiet. Something was still in the walls.`);
   } else {
     log(state, `${person.name} left the estate. The transition used owner attention.`);
   }
@@ -9860,7 +9897,7 @@ function staffView(person, employed) {
   const isHidden = !!person.hidden;
   const isVintner = person.id === "vintner";
   const isPriest = person.id === "priest";
-  const vintnerLocked = isVintner && inWrath(state) && state.wrathState.seal >= 4;
+  const vintnerLocked = isVintner && inWrath(state) && (state.wrathState.seal >= 4 || state.wrathState.severinLocked);
   const nameClass = isHidden ? "staff-name-hidden" : "";
   return `
     <div class="staff ${isHidden ? "staff-hidden" : ""}">
